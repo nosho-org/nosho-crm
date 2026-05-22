@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useContext } from "react";
 import {
   Form,
   useDataProvider,
@@ -14,15 +15,21 @@ import { FormToolbar } from "@/components/admin/simple-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import type { Deal } from "../types";
+import { useConfigurationContext } from "../root/ConfigurationContext";
 import { DealInputs } from "./DealInputs";
+import { DealListViewContext } from "./DealListContent";
+import { getDefaultDealStage } from "./dealUtils";
 
 export const DealCreate = ({ open }: { open: boolean }) => {
   const redirect = useRedirect();
   const dataProvider = useDataProvider();
   const { data: allDeals } = useListContext<Deal>();
+  const { dealStages } = useConfigurationContext();
+  const { companyType, initialVisibleStages } = useContext(DealListViewContext);
   const location = useLocation();
   const viewMatch = matchPath("/views/:viewId/*", location.pathname);
   const basePath = viewMatch ? `/views/${viewMatch.params.viewId}` : "/deals";
+  const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
 
   const handleClose = () => {
     redirect(basePath);
@@ -32,7 +39,8 @@ export const DealCreate = ({ open }: { open: boolean }) => {
 
   const onSuccess = async (deal: Deal) => {
     if (!allDeals) {
-      redirect("/deals");
+      await queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+      redirect(basePath);
       return;
     }
     // increase the index of all deals in the same stage as the new deal
@@ -71,6 +79,7 @@ export const DealCreate = ({ open }: { open: boolean }) => {
       },
       { updatedAt: now },
     );
+    await queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
     redirect(basePath);
   };
 
@@ -85,6 +94,8 @@ export const DealCreate = ({ open }: { open: boolean }) => {
               sales_id: identity?.id,
               contact_ids: [],
               index: 0,
+              company_type: companyType || null,
+              stage: defaultStage,
             }}
           >
             <DealInputs />
