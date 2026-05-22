@@ -22,6 +22,7 @@ import { contactOptionText } from "../misc/ContactOption";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { DealListViewContext } from "./DealListContent";
+import { getDefaultDealStage } from "./dealUtils";
 import type { Sale } from "../types";
 
 export const DealInputs = () => {
@@ -158,6 +159,9 @@ const DealSalesInput = () => {
 
 const DealMiscInputs = () => {
   const { dealStages, dealCategories } = useConfigurationContext();
+  const { initialVisibleStages } = useContext(DealListViewContext);
+  const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
+
   return (
     <div className="flex flex-col gap-4 flex-1">
       <h3 className="text-base font-medium">Divers</h3>
@@ -192,7 +196,7 @@ const DealMiscInputs = () => {
         choices={dealStages}
         optionText="label"
         optionValue="value"
-        defaultValue="opportunity"
+        defaultValue={defaultStage}
         helperText={false}
         validate={required()}
       />
