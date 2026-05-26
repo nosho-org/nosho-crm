@@ -1,6 +1,6 @@
 import { commands } from "vitest/browser";
 
-import { formatISODateString } from "./dealUtils";
+import { formatISODateString, getDefaultDealStage } from "./dealUtils";
 
 describe("formatISODateString", () => {
   let originalTimezone: string;
@@ -50,5 +50,24 @@ describe("formatISODateString", () => {
     expect(() => formatISODateString(invalidDate)).toThrow(
       "Invalid date format. Expected YYYY-MM-DD.",
     );
+  });
+});
+
+describe("getDefaultDealStage", () => {
+  const dealStages = [
+    { value: "lead", label: "Lead" },
+    { value: "qualified", label: "Qualifié" },
+    { value: "closed-won", label: "Gagné" },
+  ];
+
+  it("uses the first visible stage for a custom view", () => {
+    expect(getDefaultDealStage(dealStages, ["qualified", "closed-won"])).toBe(
+      "qualified",
+    );
+  });
+
+  it("falls back to the first configured stage when visible stages are missing or stale", () => {
+    expect(getDefaultDealStage(dealStages, ["opportunity"])).toBe("lead");
+    expect(getDefaultDealStage(dealStages)).toBe("lead");
   });
 });

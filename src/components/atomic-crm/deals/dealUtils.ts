@@ -1,5 +1,16 @@
 import { format } from "date-fns";
 
+import type { ConfigurationContextValue } from "../root/ConfigurationContext";
+
+export function getDefaultDealStage(
+  dealStages: ConfigurationContextValue["dealStages"],
+  visibleStages?: string[],
+) {
+  return visibleStages?.find((stage) =>
+    dealStages.some((dealStage) => dealStage.value === stage),
+  ) ?? dealStages[0]?.value;
+}
+
 export function getRelativeTimeString(dateString: string): string {
   const date = new Date(dateString);
   date.setHours(0, 0, 0, 0);
