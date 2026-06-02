@@ -18,6 +18,7 @@ import { useLocation } from "react-router";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealColumn } from "./DealColumn";
+import { getCustomViewCompanyType } from "./dealUtils";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
 
@@ -123,14 +124,17 @@ export const DealListContent = () => {
     const sourceDeal = dealsByStage[sourceStage][source.index]!;
 
     if (destination.droppableId.startsWith(CUSTOM_VIEW_DROPPABLE_PREFIX)) {
+      const targetView = visibleCustomViews.find(
+        (view) =>
+          `${CUSTOM_VIEW_DROPPABLE_PREFIX}${view.id}` ===
+          destination.droppableId,
+      );
       const targetCompanyType =
         destination.droppableId === DEFAULT_VIEW_DROPPABLE_ID
           ? null
-          : (visibleCustomViews.find(
-              (view) =>
-                `${CUSTOM_VIEW_DROPPABLE_PREFIX}${view.id}` ===
-                destination.droppableId,
-            )?.companyType ?? null);
+          : targetView
+            ? getCustomViewCompanyType(targetView, customViews)
+            : null;
 
       if ((sourceDeal.company_type ?? null) === targetCompanyType) {
         return;
