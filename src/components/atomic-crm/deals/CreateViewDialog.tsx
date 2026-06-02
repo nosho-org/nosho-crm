@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toSlug } from "@/lib/toSlug";
 import {
   Select,
   SelectContent,
@@ -46,17 +47,33 @@ export const CreateViewDialog = ({ open, onClose }: CreateViewDialogProps) => {
   const { companyTypes } = config;
 
   const handleSubmit = async () => {
-    if (!label.trim() || !companyType) return;
+    const trimmedLabel = label.trim();
+    const defaultCompanyType = toSlug(trimmedLabel);
+    const finalCompanyType = companyType || defaultCompanyType;
+
+    if (!trimmedLabel || !finalCompanyType) return;
 
     const id = `view-${Date.now()}`;
     const newView: CustomView = {
       id,
-      label: label.trim(),
-      companyType,
+      label: trimmedLabel,
+      companyType: finalCompanyType,
     };
+    const nextCompanyTypes = companyTypes.some(
+      (type) => type.value === finalCompanyType,
+    )
+      ? companyTypes
+      : [
+          ...companyTypes,
+          {
+            value: finalCompanyType,
+            label: trimmedLabel,
+          },
+        ];
 
     const newConfig = {
       ...config,
+      companyTypes: nextCompanyTypes,
       customViews: [...(config.customViews ?? []), newView],
     };
 
@@ -92,7 +109,7 @@ export const CreateViewDialog = ({ open, onClose }: CreateViewDialogProps) => {
             <Label htmlFor="view-label">Nom de la vue</Label>
             <Input
               id="view-label"
-              placeholder="Ex: Partenaires, Investisseurs..."
+              placeholder="Ex: Leads chauds, Leads froids..."
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -100,10 +117,16 @@ export const CreateViewDialog = ({ open, onClose }: CreateViewDialogProps) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="view-type">Type de société à afficher</Label>
+            <Label htmlFor="view-type">Destination</Label>
             <Select value={companyType} onValueChange={setCompanyType}>
               <SelectTrigger id="view-type">
-                <SelectValue placeholder="Choisir un type..." />
+                <SelectValue
+                  placeholder={
+                    label.trim()
+                      ? `Créer "${label.trim()}"`
+                      : "Créer une destination dédiée"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {companyTypes.map((type) => (
@@ -119,10 +142,7 @@ export const CreateViewDialog = ({ open, onClose }: CreateViewDialogProps) => {
           <Button variant="outline" onClick={handleClose}>
             Annuler
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!label.trim() || !companyType || saving}
-          >
+          <Button onClick={handleSubmit} disabled={!label.trim() || saving}>
             Créer la vue
           </Button>
         </DialogFooter>

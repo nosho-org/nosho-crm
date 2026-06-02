@@ -1,6 +1,10 @@
 import { commands } from "vitest/browser";
 
-import { formatISODateString, getDefaultDealStage } from "./dealUtils";
+import {
+  formatISODateString,
+  getCompanyTypeChoices,
+  getDefaultDealStage,
+} from "./dealUtils";
 
 describe("formatISODateString", () => {
   let originalTimezone: string;
@@ -69,5 +73,34 @@ describe("getDefaultDealStage", () => {
   it("falls back to the first configured stage when visible stages are missing or stale", () => {
     expect(getDefaultDealStage(dealStages, ["opportunity"])).toBe("lead");
     expect(getDefaultDealStage(dealStages)).toBe("lead");
+  });
+});
+
+describe("getCompanyTypeChoices", () => {
+  it("shows custom view labels as destinations and falls back to static choices", () => {
+    expect(
+      getCompanyTypeChoices(
+        [
+          { value: "prospect", label: "Prospect" },
+          { value: "client", label: "Client" },
+        ],
+        [
+          {
+            id: "view-hot",
+            label: "Leads chauds",
+            companyType: "leads-chauds",
+          },
+          {
+            id: "view-prospect",
+            label: "Prospects prioritaires",
+            companyType: "prospect",
+          },
+        ],
+      ),
+    ).toEqual([
+      { value: "leads-chauds", label: "Leads chauds" },
+      { value: "prospect", label: "Prospects prioritaires" },
+      { value: "client", label: "Client" },
+    ]);
   });
 });

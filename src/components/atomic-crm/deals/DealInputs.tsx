@@ -22,7 +22,7 @@ import { contactOptionText } from "../misc/ContactOption";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { DealListViewContext } from "./DealListContent";
-import { getDefaultDealStage } from "./dealUtils";
+import { getCompanyTypeChoices, getDefaultDealStage } from "./dealUtils";
 import type { Sale } from "../types";
 
 export const DealInputs = () => {
@@ -72,7 +72,8 @@ const DealLinkedToInputs = ({
   companyTypeFilter: string;
   onCompanyTypeFilterChange: (type: string) => void;
 }) => {
-  const { companyTypes } = useConfigurationContext();
+  const { companyTypes, customViews } = useConfigurationContext();
+  const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
   const { setValue, getValues } = useFormContext();
 
   // Initialise company_type au montage si pas encore défini (création)
@@ -104,7 +105,7 @@ const DealLinkedToInputs = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_TYPES}>Toutes les vues</SelectItem>
-            {companyTypes.map((type) => (
+            {companyTypeChoices.map((type) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.label}
               </SelectItem>
