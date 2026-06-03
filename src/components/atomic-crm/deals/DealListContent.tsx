@@ -1,15 +1,29 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd";
+import {
+  DragDropContext,
+  Droppable,
+  type OnDragEndResponder,
+} from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
-import { useDataProvider, useListContext, type DataProvider } from "ra-core";
+import {
+  useCanAccess,
+  useDataProvider,
+  useGetIdentity,
+  useListContext,
+  type DataProvider,
+} from "ra-core";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealColumn } from "./DealColumn";
+import { getCustomViewCompanyType } from "./dealUtils";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
+
+const CUSTOM_VIEW_DROPPABLE_PREFIX = "custom-view:";
+const DEFAULT_VIEW_DROPPABLE_ID = `${CUSTOM_VIEW_DROPPABLE_PREFIX}__default__`;
 
 interface DealListViewContextValue {
   initialVisibleStages?: string[];
@@ -19,13 +33,25 @@ export const DealListViewContext = createContext<DealListViewContextValue>({});
 export const DealListViewProvider = DealListViewContext.Provider;
 
 export const DealListContent = () => {
-  const { dealStages } = useConfigurationContext();
+  const { customViews, dealStages } = useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
   const { data: unorderedDeals, isPending } = useListContext<Deal>();
   const dataProvider = useDataProvider();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const { identity } = useGetIdentity();
+  const { canAccess: isAdmin } = useCanAccess({
+    resource: "configuration",
+    action: "edit",
+  });
   const storageKey = `dealListVisibleStages:${location.pathname}`;
+  const currentSaleId = identity?.id as number | undefined;
+  const visibleCustomViews = customViews.filter(
+    (view) =>
+      isAdmin ||
+      !view.allowedUserIds?.length ||
+      (currentSaleId != null && view.allowedUserIds.includes(currentSaleId)),
+  );
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
     getDealsByStage([], dealStages),
@@ -42,7 +68,9 @@ export const DealListContent = () => {
         );
         if (valid.length > 0) return new Set(valid);
       }
-    } catch {}
+    } catch {
+      // Ignore malformed or unavailable localStorage preferences.
+    }
     return initialVisibleStages
       ? new Set(initialVisibleStages)
       : new Set(dealStages.map((s) => s.value));
@@ -59,7 +87,9 @@ export const DealListContent = () => {
       }
       try {
         localStorage.setItem(storageKey, JSON.stringify([...next]));
-      } catch {}
+      } catch {
+        // Ignore unavailable localStorage.
+      }
       return next;
     });
   };
@@ -91,8 +121,38 @@ export const DealListContent = () => {
     }
 
     const sourceStage = source.droppableId;
-    const destinationStage = destination.droppableId;
     const sourceDeal = dealsByStage[sourceStage][source.index]!;
+
+    if (destination.droppableId.startsWith(CUSTOM_VIEW_DROPPABLE_PREFIX)) {
+      const targetView = visibleCustomViews.find(
+        (view) =>
+          `${CUSTOM_VIEW_DROPPABLE_PREFIX}${view.id}` ===
+          destination.droppableId,
+      );
+      const targetCompanyType =
+        destination.droppableId === DEFAULT_VIEW_DROPPABLE_ID
+          ? null
+          : targetView
+            ? getCustomViewCompanyType(targetView, customViews)
+            : null;
+
+      if ((sourceDeal.company_type ?? null) === targetCompanyType) {
+        return;
+      }
+
+      setDealsByStage(
+        removeDealFromStageLocal(sourceStage, source.index, dealsByStage),
+      );
+
+      updateDealCompanyType(sourceDeal, targetCompanyType, dataProvider).then(
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+        },
+      );
+      return;
+    }
+
+    const destinationStage = destination.droppableId;
     const destinationDeal = dealsByStage[destinationStage][
       destination.index
     ] ?? {
@@ -122,54 +182,77 @@ export const DealListContent = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Stage filter toggles */}
-      <div className="flex flex-wrap gap-2 pb-1">
-        {dealStages.map((stage) => {
-          const isVisible = visibleStages.has(stage.value);
-          const count = dealsByStage[stage.value]?.length ?? 0;
-          return (
-            <button
-              key={stage.value}
-              onClick={() => toggleStage(stage.value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                isVisible
-                  ? "bg-[var(--nosho-orange)]/10 border-[var(--nosho-orange)]/40 text-[var(--nosho-orange-dark)]"
-                  : "bg-muted/50 border-border text-muted-foreground/50 line-through"
-              }`}
-            >
-              <span>{stage.label}</span>
-              {count > 0 && (
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex flex-col gap-3">
+          {visibleCustomViews.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                Déplacer vers
+              </span>
+              <ViewDropTarget
+                droppableId={DEFAULT_VIEW_DROPPABLE_ID}
+                label="Opportunités"
+              />
+              {visibleCustomViews.map((view) => (
+                <ViewDropTarget
+                  key={view.id}
+                  droppableId={`${CUSTOM_VIEW_DROPPABLE_PREFIX}${view.id}`}
+                  label={view.label}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Stage filter toggles */}
+          <div className="flex flex-wrap gap-2 pb-1">
+            {dealStages.map((stage) => {
+              const isVisible = visibleStages.has(stage.value);
+              const count = dealsByStage[stage.value]?.length ?? 0;
+              return (
+                <button
+                  key={stage.value}
+                  onClick={() => toggleStage(stage.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     isVisible
-                      ? "bg-[var(--nosho-orange)]/20 text-[var(--nosho-orange-dark)]"
-                      : "bg-muted text-muted-foreground/50"
+                      ? "bg-[var(--nosho-orange)]/10 border-[var(--nosho-orange)]/40 text-[var(--nosho-orange-dark)]"
+                      : "bg-muted/50 border-border text-muted-foreground/50 line-through"
                   }`}
                 >
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-        {visibleStages.size < dealStages.length && (
-          <button
-            onClick={() => {
-              const all = new Set(dealStages.map((s) => s.value));
-              setVisibleStages(all);
-              try {
-                localStorage.setItem(storageKey, JSON.stringify([...all]));
-              } catch {}
-            }}
-            className="px-3 py-1.5 rounded-full text-xs font-medium text-[var(--nosho-green-dark)] bg-[var(--nosho-green)]/10 border border-[var(--nosho-green)]/30 transition-all hover:bg-[var(--nosho-green)]/20"
-          >
-            Tout afficher
-          </button>
-        )}
-      </div>
+                  <span>{stage.label}</span>
+                  {count > 0 && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        isVisible
+                          ? "bg-[var(--nosho-orange)]/20 text-[var(--nosho-orange-dark)]"
+                          : "bg-muted text-muted-foreground/50"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {visibleStages.size < dealStages.length && (
+              <button
+                onClick={() => {
+                  const all = new Set(dealStages.map((s) => s.value));
+                  setVisibleStages(all);
+                  try {
+                    localStorage.setItem(storageKey, JSON.stringify([...all]));
+                  } catch {
+                    // Ignore unavailable localStorage.
+                  }
+                }}
+                className="px-3 py-1.5 rounded-full text-xs font-medium text-[var(--nosho-green-dark)] bg-[var(--nosho-green)]/10 border border-[var(--nosho-green)]/30 transition-all hover:bg-[var(--nosho-green)]/20"
+              >
+                Tout afficher
+              </button>
+            )}
+          </div>
+        </div>
 
-      {/* Kanban columns */}
-      <DragDropContext onDragEnd={onDragEnd}>
+        {/* Kanban columns */}
         <div className="flex gap-4 overflow-auto pb-4 h-[calc(100dvh-14rem)] min-h-[420px]">
           {visibleDealStages.map((stage) => (
             <DealColumn
@@ -182,6 +265,45 @@ export const DealListContent = () => {
       </DragDropContext>
     </div>
   );
+};
+
+const ViewDropTarget = ({
+  droppableId,
+  label,
+}: {
+  droppableId: string;
+  label: string;
+}) => (
+  <Droppable droppableId={droppableId} direction="horizontal">
+    {(provided, snapshot) => (
+      <div
+        ref={provided.innerRef}
+        {...provided.droppableProps}
+        className={`flex items-center min-h-8 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+          snapshot.isDraggingOver
+            ? "bg-[var(--nosho-green)]/15 border-[var(--nosho-green)] text-[var(--nosho-green-dark)]"
+            : "bg-muted/40 border-border text-muted-foreground"
+        }`}
+      >
+        {label}
+        <div className="hidden">{provided.placeholder}</div>
+      </div>
+    )}
+  </Droppable>
+);
+
+const removeDealFromStageLocal = (
+  sourceStage: string,
+  sourceIndex: number,
+  dealsByStage: DealsByStage,
+) => {
+  const sourceColumn = [...dealsByStage[sourceStage]];
+  sourceColumn.splice(sourceIndex, 1);
+
+  return {
+    ...dealsByStage,
+    [sourceStage]: sourceColumn,
+  };
 };
 
 const updateDealStageLocal = (
@@ -341,4 +463,16 @@ const updateDealStage = async (
       }),
     ]);
   }
+};
+
+const updateDealCompanyType = async (
+  source: Deal,
+  companyType: string | null,
+  dataProvider: DataProvider,
+) => {
+  await dataProvider.update("deals", {
+    id: source.id,
+    data: { company_type: companyType },
+    previousData: source,
+  });
 };

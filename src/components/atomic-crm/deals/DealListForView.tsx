@@ -25,6 +25,7 @@ import { DealEmpty } from "./DealEmpty";
 import { DealListContent, DealListViewProvider } from "./DealListContent";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
+import { getCustomViewCompanyType } from "./dealUtils";
 
 export const DealListForView = () => {
   const { viewId } = useParams<{ viewId: string }>();
@@ -36,6 +37,7 @@ export const DealListForView = () => {
   });
 
   const view = customViews.find((v) => v.id === viewId);
+  const companyType = view ? getCustomViewCompanyType(view, customViews) : "";
   const currentSaleId = identity?.id as number | undefined;
 
   // Access check: admins always allowed; regular users must be in allowedUserIds (or it's open)
@@ -71,7 +73,7 @@ export const DealListForView = () => {
     <DealListViewProvider
       value={{
         initialVisibleStages: view.visibleStages,
-        companyType: view.companyType,
+        companyType,
       }}
     >
       <List
@@ -83,7 +85,7 @@ export const DealListForView = () => {
           // declares one. Passing `company_type: undefined` would leak into
           // PostgREST as `company_type=eq.undefined` (literal string match)
           // and silently return zero results — including for the search box.
-          ...(view.companyType ? { company_type: view.companyType } : {}),
+          ...(companyType ? { company_type: companyType } : {}),
         }}
         title={false}
         sort={{ field: "index", order: "DESC" }}

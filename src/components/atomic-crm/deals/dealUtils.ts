@@ -1,14 +1,60 @@
 import { format } from "date-fns";
+import { toSlug } from "@/lib/toSlug";
 
 import type { ConfigurationContextValue } from "../root/ConfigurationContext";
+import type { CustomView } from "../root/ConfigurationContext";
 
 export function getDefaultDealStage(
   dealStages: ConfigurationContextValue["dealStages"],
   visibleStages?: string[],
 ) {
-  return visibleStages?.find((stage) =>
-    dealStages.some((dealStage) => dealStage.value === stage),
-  ) ?? dealStages[0]?.value;
+  return (
+    visibleStages?.find((stage) =>
+      dealStages.some((dealStage) => dealStage.value === stage),
+    ) ?? dealStages[0]?.value
+  );
+}
+
+export function getCompanyTypeChoices(
+  companyTypes: ConfigurationContextValue["companyTypes"],
+  customViews: ConfigurationContextValue["customViews"],
+) {
+  const choices = customViews.map((view) => ({
+    value: getCustomViewCompanyType(view, customViews),
+    label: view.label || view.companyType,
+  }));
+  const seen = new Set(choices.map((type) => type.value));
+
+  companyTypes.forEach((type) => {
+    if (seen.has(type.value)) return;
+
+    choices.push(type);
+    seen.add(type.value);
+  });
+
+  return choices;
+}
+
+export function getCustomViewCompanyType(
+  view: CustomView,
+  customViews: ConfigurationContextValue["customViews"],
+) {
+  const labelSlug = toSlug(view.label);
+  const duplicateCompanyType =
+    customViews.filter(
+      (candidate) => candidate.companyType === view.companyType,
+    ).length > 1;
+  const needsDedicatedLeadView =
+    /^leads?-/.test(labelSlug) ||
+    labelSlug === "lead" ||
+    labelSlug === "referral" ||
+    labelSlug === "refferal";
+
+  if (labelSlug && (duplicateCompanyType || needsDedicatedLeadView)) {
+    return labelSlug;
+  }
+
+  return view.companyType;
 }
 
 export function getRelativeTimeString(dateString: string): string {

@@ -1,6 +1,11 @@
 import { commands } from "vitest/browser";
 
-import { formatISODateString, getDefaultDealStage } from "./dealUtils";
+import {
+  formatISODateString,
+  getCompanyTypeChoices,
+  getCustomViewCompanyType,
+  getDefaultDealStage,
+} from "./dealUtils";
 
 describe("formatISODateString", () => {
   let originalTimezone: string;
@@ -69,5 +74,79 @@ describe("getDefaultDealStage", () => {
   it("falls back to the first configured stage when visible stages are missing or stale", () => {
     expect(getDefaultDealStage(dealStages, ["opportunity"])).toBe("lead");
     expect(getDefaultDealStage(dealStages)).toBe("lead");
+  });
+});
+
+describe("getCompanyTypeChoices", () => {
+  it("shows custom view labels as destinations and falls back to static choices", () => {
+    expect(
+      getCompanyTypeChoices(
+        [
+          { value: "prospect", label: "Prospect" },
+          { value: "client", label: "Client" },
+        ],
+        [
+          {
+            id: "view-hot",
+            label: "Leads chauds",
+            companyType: "leads-chauds",
+          },
+          {
+            id: "view-prospect",
+            label: "Prospects prioritaires",
+            companyType: "prospect",
+          },
+        ],
+      ),
+    ).toEqual([
+      { value: "leads-chauds", label: "Leads chauds" },
+      { value: "prospect", label: "Prospects prioritaires" },
+      { value: "client", label: "Client" },
+    ]);
+  });
+
+  it("gives old lead views dedicated destinations even when they were created from the same company type", () => {
+    const customViews = [
+      {
+        id: "view-hot",
+        label: "Leads chauds",
+        companyType: "prospect",
+      },
+      {
+        id: "view-cold",
+        label: "Leads froids",
+        companyType: "prospect",
+      },
+      {
+        id: "view-referral",
+        label: "Referral",
+        companyType: "prospect",
+      },
+    ];
+
+    expect(getCustomViewCompanyType(customViews[0], customViews)).toBe(
+      "leads-chauds",
+    );
+    expect(getCustomViewCompanyType(customViews[1], customViews)).toBe(
+      "leads-froids",
+    );
+    expect(getCustomViewCompanyType(customViews[2], customViews)).toBe(
+      "referral",
+    );
+    expect(
+      getCompanyTypeChoices(
+        [
+          { value: "prospect", label: "Prospect" },
+          { value: "client", label: "Client" },
+        ],
+        customViews,
+      ),
+    ).toEqual([
+      { value: "leads-chauds", label: "Leads chauds" },
+      { value: "leads-froids", label: "Leads froids" },
+      { value: "referral", label: "Referral" },
+      { value: "prospect", label: "Prospect" },
+      { value: "client", label: "Client" },
+    ]);
   });
 });

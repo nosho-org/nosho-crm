@@ -11,6 +11,7 @@ import { SelectInput } from "@/components/admin/select-input";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
+import { getCompanyTypeChoices } from "./dealUtils";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
@@ -21,7 +22,9 @@ import { SalesFilterInput } from "./SalesFilterInput";
 
 const DealList = () => {
   const { identity } = useGetIdentity();
-  const { dealCategories, companyTypes } = useConfigurationContext();
+  const { dealCategories, companyTypes, customViews } =
+    useConfigurationContext();
+  const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
 
   if (!identity) return null;
 
@@ -41,7 +44,7 @@ const DealList = () => {
       source="company_type"
       label="Type de société"
       emptyText="Tous les types"
-      choices={companyTypes}
+      choices={companyTypeChoices}
       optionText="label"
       optionValue="value"
     />,
