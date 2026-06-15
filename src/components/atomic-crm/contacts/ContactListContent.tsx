@@ -102,6 +102,7 @@ const ContactItemContent = ({
 }) => {
   const { selectedIds } = useListContext<Contact>();
   const now = Date.now();
+  const contactName = getContactName(contact);
 
   return (
     <div className="flex flex-row items-center pl-2 pr-4 py-2 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl">
@@ -114,17 +115,25 @@ const ContactItemContent = ({
           checked={selectedIds.includes(contact.id)}
         />
       </div>
-      <Link
-        to={`/contacts/${contact.id}/show`}
-        className="flex-1 flex flex-row gap-4 items-center"
-      >
-        <Avatar />
+      <div className="flex-1 flex flex-row gap-4 items-center min-w-0">
+        <Link to={`/contacts/${contact.id}/show`} className="shrink-0">
+          <Avatar />
+        </Link>
         <div className="flex-1 min-w-0">
-          <div className="font-medium">
-            {`${contact.first_name} ${contact.last_name ?? ""}`}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <Link
+              to={`/contacts/${contact.id}/show`}
+              className="font-medium hover:underline"
+            >
+              {contactName}
+            </Link>
+            <ContactPhoneLink contact={contact} />
           </div>
           {contact.title || contact.company_id != null || contact.nb_tasks ? (
-            <div className="text-sm text-muted-foreground">
+            <Link
+              to={`/contacts/${contact.id}/show`}
+              className="block text-sm text-muted-foreground"
+            >
               {contact.title}
               {contact.title && contact.company_id != null && " at "}
               {contact.company_id != null && (
@@ -141,11 +150,11 @@ const ContactItemContent = ({
                 : ""}
               &nbsp;&nbsp;
               <TagsList />
-            </div>
+            </Link>
           ) : null}
         </div>
         {contact.last_seen && (
-          <div className="text-right ml-4">
+          <Link to={`/contacts/${contact.id}/show`} className="text-right ml-4">
             <div
               className="text-sm text-muted-foreground"
               title={contact.last_seen}
@@ -154,9 +163,9 @@ const ContactItemContent = ({
               {formatRelative(contact.last_seen, now, { locale: fr })}{" "}
               <Status status={contact.status} />
             </div>
-          </div>
+          </Link>
         )}
-      </Link>
+      </div>
     </div>
   );
 };
@@ -231,20 +240,28 @@ export const ContactListContentMobile = () => {
 };
 
 const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
-  <Link
-    to={`/contacts/${contact.id}/show`}
-    className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors"
-  >
-    <Avatar />
+  <div className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors">
+    <Link to={`/contacts/${contact.id}/show`} className="shrink-0">
+      <Avatar />
+    </Link>
     <div className="flex flex-col grow justify-between">
       <div className="flex-1 min-w-0">
         <div className="flex justify-between">
-          <div className="font-medium">
-            <RecordRepresentation />
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <Link
+              to={`/contacts/${contact.id}/show`}
+              className="font-medium hover:underline"
+            >
+              <RecordRepresentation />
+            </Link>
+            <ContactPhoneLink contact={contact} />
           </div>
           <Status status={contact.status} />
         </div>
-        <div className="text-sm text-muted-foreground">
+        <Link
+          to={`/contacts/${contact.id}/show`}
+          className="block text-sm text-muted-foreground"
+        >
           <div className="flex flex-col gap-1">
             <span>
               {contact.title}
@@ -265,8 +282,31 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
               </span>
             ) : null}
           </div>
-        </div>
+        </Link>
       </div>
     </div>
-  </Link>
+  </div>
 );
+
+const ContactPhoneLink = ({ contact }: { contact: Contact }) => {
+  const phoneNumber = contact.phone_jsonb?.find((phone) =>
+    phone.number?.trim(),
+  )?.number;
+
+  if (!phoneNumber) {
+    return null;
+  }
+
+  return (
+    <a
+      href={`tel:${phoneNumber}`}
+      className="text-sm text-muted-foreground underline hover:no-underline"
+      title={`Call ${phoneNumber}`}
+    >
+      {phoneNumber}
+    </a>
+  );
+};
+
+const getContactName = (contact: Contact) =>
+  `${contact.first_name} ${contact.last_name ?? ""}`.trim();
