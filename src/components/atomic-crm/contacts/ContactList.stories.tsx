@@ -20,6 +20,7 @@ const successContacts = [
     id: 1,
     last_name: "Lovelace",
     last_seen: "2025-01-05T10:00:00.000Z",
+    phone_jsonb: [{ number: "+33 1 23 45 67 89", type: "Work" }],
     title: "CTO",
   }),
   buildContact({

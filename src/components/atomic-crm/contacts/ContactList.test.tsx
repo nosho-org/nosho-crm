@@ -29,6 +29,9 @@ describe("ContactList", () => {
     await expect.element(screen.getByText("Ada Lovelace")).toBeVisible();
     await expect.element(screen.getByText("Grace Hopper")).toBeVisible();
     await expect
+      .element(screen.getByRole("link", { name: "+33 1 23 45 67 89" }))
+      .toHaveAttribute("href", "tel:+33 1 23 45 67 89");
+    await expect
       .element(screen.getByRole("heading", { name: "No contacts found" }))
       .not.toBeInTheDocument();
   });
