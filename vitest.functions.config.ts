@@ -10,7 +10,15 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["supabase/functions/**/*.test.ts"],
-    exclude: ["**/node_modules/**", ".supabase-e2e/**"],
+    exclude: [
+      "**/node_modules/**",
+      ".supabase-e2e/**",
+      // generate-proposal's tests are written against the Deno runtime itself
+      // (Deno.test + jsr:@std/assert). Aliasing those imports is not enough —
+      // there is no Deno global here — so they are owned by the Deno runner
+      // instead: `make test-edge-functions`.
+      "supabase/functions/generate-proposal/**",
+    ],
   },
   resolve: {
     alias: {

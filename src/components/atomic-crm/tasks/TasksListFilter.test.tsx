@@ -91,12 +91,18 @@ describe("TaskListFilter", () => {
       },
     );
 
-    expect(container.textContent?.match(/Task \d+/g) ?? []).toHaveLength(5);
+    const visibleTasks = () =>
+      container.textContent?.match(/Task \d+/g)?.length ?? 0;
+
+    await expect.poll(visibleTasks).toBe(5);
     const loadMore = getByText("Load more");
 
     await loadMore.click();
 
-    expect(container.textContent?.match(/Task \d+/g) ?? []).toHaveLength(8);
-    expect(container.textContent).not.toContain("Load more");
+    // `click()` only awaits event dispatch — the setPerPage state update that
+    // grows the page renders on a later tick, so these have to retry rather
+    // than read the DOM once.
+    await expect.poll(visibleTasks).toBe(8);
+    await expect.element(getByText("Load more")).not.toBeInTheDocument();
   });
 });
