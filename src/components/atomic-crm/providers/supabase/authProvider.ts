@@ -17,6 +17,11 @@ const getBaseAuthProvider = () =>
         id: sale.id,
         fullName: `${sale.first_name} ${sale.last_name}`,
         avatar: sale.avatar?.src,
+        // Exposed separately so the UI can address the user by their real
+        // first name (issue #98) instead of slicing `fullName` — or worse,
+        // hardcoding one.
+        firstName: sale.first_name,
+        lastName: sale.last_name,
       };
     },
   });

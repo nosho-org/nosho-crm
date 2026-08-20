@@ -3,6 +3,8 @@ import { datatype, lorem, random } from "faker/locale/en_US";
 
 import {
   defaultDealCategories,
+  defaultDealContactRoles,
+  defaultDealOpportunityTypes,
   defaultDealStages,
 } from "../../../root/defaultConfiguration";
 import type { Deal } from "../../../types";
@@ -40,6 +42,18 @@ export const generateDeals = (db: Db): Deal[] => {
       contact_ids,
       contact_names,
       category: random.arrayElement(defaultDealCategories).value,
+      opportunity_type: random.arrayElement(defaultDealOpportunityTypes).value,
+      // Decision-making role per contact, keyed by contact id — mirrors the
+      // `deals.contact_roles` jsonb column.
+      contact_roles: contact_ids.reduce<Record<string, string>>(
+        (roles, contactId) => {
+          roles[String(contactId)] = random.arrayElement(
+            defaultDealContactRoles,
+          ).value;
+          return roles;
+        },
+        {},
+      ),
       stage: random.arrayElement(defaultDealStages).value,
       description: lorem.paragraphs(datatype.number({ min: 1, max: 4 })),
       amount: datatype.number(1000) * 100,

@@ -410,6 +410,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/misc/useUserFirstName.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/misc/usePapaParse.tsx",
           "type": "registry:component"
         },
@@ -598,6 +602,18 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/dealNextMeeting.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/dealExporter.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/dealContactRoles.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/deal.ts",
           "type": "registry:component"
         },
@@ -615,6 +631,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/DealShow.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/DealNextMeeting.tsx",
           "type": "registry:component"
         },
         {
@@ -855,6 +875,10 @@
         },
         {
           "path": "src/components/atomic-crm/companies/getTranslatedCompanySizeLabel.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/companies/companyTypology.tsx",
           "type": "registry:component"
         },
         {

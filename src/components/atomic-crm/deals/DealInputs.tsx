@@ -1,6 +1,13 @@
-import { useContext, useEffect, useState } from "react";
-import { required, useCanAccess, useRecordContext } from "ra-core";
-import { useFormContext } from "react-hook-form";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { isEqual } from "lodash";
+import {
+  required,
+  useCanAccess,
+  useGetMany,
+  useRecordContext,
+  type Identifier,
+} from "ra-core";
+import { useFormContext, useWatch } from "react-hook-form";
 import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
 import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
@@ -22,8 +29,13 @@ import { contactOptionText } from "../misc/ContactOption";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { DealListViewContext } from "./DealListContent";
+import {
+  getContactRole,
+  sanitizeContactRoles,
+  setContactRole,
+} from "./dealContactRoles";
 import { getCompanyTypeChoices, getDefaultDealStage } from "./dealUtils";
-import type { Sale } from "../types";
+import type { Contact, DealContactRoles, Sale } from "../types";
 
 export const DealInputs = () => {
   const isMobile = useIsMobile();
@@ -128,6 +140,105 @@ const DealLinkedToInputs = ({
           helperText={false}
         />
       </ReferenceArrayInput>
+
+      <DealContactRolesInput />
+    </div>
+  );
+};
+
+const NO_ROLE = "__none__";
+
+/**
+ * Per-contact decision-making role (issue #99).
+ *
+ * The role belongs to the deal↔contact relation, so it is edited here — inside
+ * the opportunity form — and never on the contact record. Roles are stored in
+ * `deals.contact_roles` as a `{ "<contact_id>": "<role>" }` map, and pruned as
+ * soon as a contact is unlinked so no orphan role survives.
+ */
+const DealContactRolesInput = () => {
+  const { dealContactRoles } = useConfigurationContext();
+  const { setValue } = useFormContext();
+  const watchedContactIds = useWatch({ name: "contact_ids" });
+  const watchedContactRoles = useWatch({ name: "contact_roles" });
+
+  // Memoised so the `?? []` / `?? {}` fallbacks don't produce a fresh reference
+  // on every render and re-run the pruning effect for nothing.
+  const contactIds = useMemo(
+    () => (watchedContactIds ?? []) as Identifier[],
+    [watchedContactIds],
+  );
+  const contactRoles = useMemo(
+    () => (watchedContactRoles ?? {}) as DealContactRoles,
+    [watchedContactRoles],
+  );
+
+  const { data: contacts } = useGetMany<Contact>(
+    "contacts_summary",
+    { ids: contactIds },
+    { enabled: contactIds.length > 0 },
+  );
+
+  // Unlinking a contact must not leave its role behind.
+  useEffect(() => {
+    const pruned = sanitizeContactRoles(contactRoles, contactIds);
+    if (!isEqual(pruned, contactRoles)) {
+      setValue("contact_roles", pruned, { shouldDirty: true });
+    }
+  }, [contactIds, contactRoles, setValue]);
+
+  if (contactIds.length === 0) return null;
+
+  const handleRoleChange = (contactId: Identifier, value: string) => {
+    setValue(
+      "contact_roles",
+      setContactRole(contactRoles, contactId, value === NO_ROLE ? null : value),
+      { shouldDirty: true },
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Rôle dans la décision</label>
+      <div className="flex flex-col gap-2">
+        {contactIds.map((contactId) => {
+          const contact = contacts?.find((c) => c.id === contactId);
+          const contactName =
+            [contact?.first_name, contact?.last_name]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || `#${contactId}`;
+          return (
+            <div key={String(contactId)} className="flex items-center gap-2">
+              <span
+                className="text-sm flex-1 min-w-0 truncate"
+                title={contactName}
+              >
+                {contactName}
+              </span>
+              <Select
+                value={getContactRole(contactRoles, contactId) ?? NO_ROLE}
+                onValueChange={(value) => handleRoleChange(contactId, value)}
+              >
+                <SelectTrigger
+                  className="w-44"
+                  aria-label={`Rôle de ${contactName} dans la décision`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_ROLE}>Non défini</SelectItem>
+                  {dealContactRoles.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -159,7 +270,8 @@ const DealSalesInput = () => {
 };
 
 const DealMiscInputs = () => {
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const { dealStages, dealCategories, dealOpportunityTypes } =
+    useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
   const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
 
@@ -167,6 +279,16 @@ const DealMiscInputs = () => {
     <div className="flex flex-col gap-4 flex-1">
       <h3 className="text-base font-medium">Divers</h3>
 
+      {/* Issue #95 — growth source of this opportunity. Distinct from the
+          "Vue" select above, which only routes the deal to a pipeline view. */}
+      <SelectInput
+        source="opportunity_type"
+        label="Type d'opportunité"
+        choices={dealOpportunityTypes}
+        optionText="label"
+        optionValue="value"
+        helperText={false}
+      />
       <SelectInput
         source="category"
         label="Catégorie"

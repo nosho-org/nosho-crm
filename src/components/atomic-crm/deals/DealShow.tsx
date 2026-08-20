@@ -28,6 +28,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TaskCreateSheet } from "../tasks/TaskCreateSheet";
 import type { Deal } from "../types";
 import { ContactList } from "./ContactList";
+import { DealNextMeeting } from "./DealNextMeeting";
 import { DealTasks } from "./DealTasks";
 import { findDealLabel } from "./deal";
 import { formatISODateString } from "./dealUtils";
@@ -53,7 +54,8 @@ export const DealShow = ({ open, id }: { open: boolean; id?: string }) => {
 };
 
 const DealShowContent = () => {
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const { dealStages, dealCategories, dealOpportunityTypes } =
+    useConfigurationContext();
   const record = useRecordContext<Deal>();
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   if (!record) return null;
@@ -99,7 +101,9 @@ const DealShowContent = () => {
             </div>
           </div>
 
-          <div className="flex gap-8 m-4">
+          {/* Wraps: the summary row now carries up to six blocks (issues #95
+              and #99) and must not overflow on narrow viewports. */}
+          <div className="flex flex-wrap gap-y-4 gap-8 m-4">
             <div className="flex flex-col mr-10">
               <span className="text-xs text-muted-foreground tracking-wide">
                 Expected closing date
@@ -155,6 +159,26 @@ const DealShowContent = () => {
                 {findDealLabel(dealStages, record.stage)}
               </span>
             </div>
+
+            {/* Issue #95 — growth source, shown on the individual opportunity
+                only (never in the Kanban cards or list views). */}
+            {record.opportunity_type && (
+              <div className="flex flex-col mr-10">
+                <span className="text-xs text-muted-foreground tracking-wide">
+                  Type d'opportunité
+                </span>
+                <span className="text-sm">
+                  {dealOpportunityTypes.find(
+                    (type) => type.value === record.opportunity_type,
+                  )?.label ?? record.opportunity_type}
+                </span>
+              </div>
+            )}
+
+            {/* Issue #99 — read-only, derived from the deal contacts' tasks. */}
+            {!record.archived_at && (
+              <DealNextMeeting contactIds={record.contact_ids as number[]} />
+            )}
           </div>
 
           {!!record.contact_ids?.length && (
@@ -167,7 +191,7 @@ const DealShowContent = () => {
                   source="contact_ids"
                   reference="contacts_summary"
                 >
-                  <ContactList />
+                  <ContactList record={record} />
                 </ReferenceArrayField>
               </div>
             </div>

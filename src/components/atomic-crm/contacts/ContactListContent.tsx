@@ -17,7 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 
+import { CompanyTypologyIcon } from "../companies/companyTypology";
 import { Status } from "../misc/Status";
+import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Contact } from "../types";
 import { Avatar } from "./Avatar";
 import { TagsList } from "./TagsList";
@@ -117,7 +119,7 @@ const ContactItemContent = ({
       </div>
       <div className="flex-1 flex flex-row gap-4 items-center min-w-0">
         <Link to={`/contacts/${contact.id}/show`} className="shrink-0">
-          <Avatar />
+          <ContactAvatarWithTypology contact={contact} />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -242,7 +244,7 @@ export const ContactListContentMobile = () => {
 const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
   <div className="flex flex-row gap-4 items-center py-2 hover:bg-muted transition-colors">
     <Link to={`/contacts/${contact.id}/show`} className="shrink-0">
-      <Avatar />
+      <ContactAvatarWithTypology contact={contact} />
     </Link>
     <div className="flex flex-col grow justify-between">
       <div className="flex-1 min-w-0">
@@ -287,6 +289,37 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
     </div>
   </div>
 );
+
+/**
+ * Contact avatar badged with the typology of the establishment they work for
+ * (issue #97). `company_sector` comes from the `contacts_summary` view, so no
+ * extra request per row.
+ *
+ * The badge is monochrome on purpose: shape carries the typology, colour stays
+ * reserved for the commercial signal (the note-status dot on the same row).
+ */
+const ContactAvatarWithTypology = ({ contact }: { contact: Contact }) => {
+  const { companySectors } = useConfigurationContext();
+
+  if (!contact.company_sector) {
+    return <Avatar />;
+  }
+
+  const sectorLabel = companySectors.find(
+    (sector) => sector.value === contact.company_sector,
+  )?.label;
+
+  return (
+    <div className="relative">
+      <Avatar />
+      <CompanyTypologyIcon
+        sector={contact.company_sector}
+        label={sectorLabel}
+        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-background ring-1 ring-border p-[1px]"
+      />
+    </div>
+  );
+};
 
 const ContactPhoneLink = ({ contact }: { contact: Contact }) => {
   const phoneNumber = contact.phone_jsonb?.find((phone) =>

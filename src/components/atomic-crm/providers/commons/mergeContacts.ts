@@ -1,5 +1,6 @@
 import type { Identifier, DataProvider } from "ra-core";
 
+import { transferContactRole } from "../../deals/dealContactRoles";
 import type { Contact, Task, Deal, ContactNote } from "../../types";
 
 /**
@@ -87,9 +88,17 @@ export const mergeContacts = async (
             self.indexOf(id) === index,
         ); // Remove duplicates
 
+      // The decision-making role is stored per deal↔contact pair, so it has to
+      // follow the contact through the merge or it would be silently dropped.
+      const newContactRoles = transferContactRole(
+        deal.contact_roles,
+        loserId,
+        winnerId,
+      );
+
       return dataProvider.update<Deal>("deals", {
         id: deal.id,
-        data: { contact_ids: newContactIds },
+        data: { contact_ids: newContactIds, contact_roles: newContactRoles },
         previousData: deal,
       });
     }) || [];

@@ -103,6 +103,12 @@ async function handler(req: Request, user?: User): Promise<Response> {
   // Resolve a human-readable author name from the sales table.
   let authorName = user?.email ?? "Unknown";
   let authorEmail = user?.email ?? "";
+  // First / last name are forwarded separately so the n8n agent addresses the
+  // user by their real first name instead of guessing one (issue #98).
+  // `Pending` is the placeholder `sales.first_name` carries until signup
+  // completes; forwarding it would be worse than forwarding nothing.
+  let authorFirstName = "";
+  let authorLastName = "";
   if (user) {
     try {
       const sale = await getUserSale(user);
@@ -111,6 +117,8 @@ async function handler(req: Request, user?: User): Promise<Response> {
         const last = (sale as { last_name?: string }).last_name ?? "";
         const composed = `${first} ${last}`.trim();
         if (composed) authorName = composed;
+        if (first && first !== "Pending") authorFirstName = first;
+        if (last && last !== "Pending") authorLastName = last;
         const saleEmail = (sale as { email?: string }).email;
         if (saleEmail) authorEmail = saleEmail;
       }
@@ -126,6 +134,8 @@ async function handler(req: Request, user?: User): Promise<Response> {
     attachments,
     author: {
       name: authorName,
+      firstName: authorFirstName,
+      lastName: authorLastName,
       email: authorEmail,
       userId: user?.id ?? null,
     },

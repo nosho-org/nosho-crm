@@ -17,6 +17,7 @@ import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealListContent } from "./DealListContent";
+import { dealExporter } from "./dealExporter";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
 
@@ -60,6 +61,7 @@ const DealList = () => {
       filters={dealFilters}
       actions={<DealActions />}
       pagination={null}
+      exporter={dealExporter}
     >
       <DealLayout />
     </List>
@@ -101,7 +103,7 @@ const DealLayout = () => {
 const DealActions = () => (
   <TopToolbar>
     <FilterButton />
-    <ExportButton />
+    <ExportButton exporter={dealExporter} />
     <CreateButton label="Nouvelle opportunité" />
   </TopToolbar>
 );

@@ -81,6 +81,9 @@ export const generateContacts = (db: Db, size = 500): Required<Contact>[] => {
       title: title.charAt(0).toUpperCase() + title.substr(1),
       company_id: company.id,
       company_name: company.name,
+      // Mirrors the `company_sector` column the contacts_summary view exposes,
+      // used to render the establishment typology pictogram in the list.
+      company_sector: company.sector,
       email_jsonb,
       phone_jsonb,
       background: lorem.sentence(),

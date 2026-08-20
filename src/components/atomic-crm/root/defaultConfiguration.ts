@@ -63,6 +63,31 @@ export const defaultDealCategories = [
   { value: "radiologie", label: "Radiologie" },
 ];
 
+/**
+ * Growth source of an opportunity (issue #95).
+ *
+ * This qualifies the *deal*, not the company: the same establishment can be a
+ * new client first, then generate an extension, then a renewal. Do not confuse
+ * it with `companyTypes`, which only selects the pipeline view a deal shows in.
+ */
+export const defaultDealOpportunityTypes = [
+  { value: "nouveau-client", label: "Nouveau client" },
+  { value: "extension", label: "Extension client existant" },
+  { value: "renouvellement", label: "Renouvellement" },
+];
+
+/**
+ * Decision-making role of a contact on a given opportunity (issue #99).
+ *
+ * Stored on the deal↔contact relation (`deals.contact_roles`), never on the
+ * contact itself: a person can decide on one deal and only influence another.
+ */
+export const defaultDealContactRoles = [
+  { value: "decideur", label: "Décideur" },
+  { value: "influenceur", label: "Influenceur" },
+  { value: "operationnel", label: "Opérationnel" },
+];
+
 export const defaultCompanyTypes = [
   { value: "investisseur", label: "Investisseur" },
   { value: "partenaire", label: "Partenaire" },
@@ -95,6 +120,8 @@ export const defaultConfiguration: ConfigurationContextValue = {
   currency: defaultCurrency,
   customViews: [],
   dealCategories: defaultDealCategories,
+  dealContactRoles: defaultDealContactRoles,
+  dealOpportunityTypes: defaultDealOpportunityTypes,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealStages: defaultDealStages,
   noteStatuses: defaultNoteStatuses,
