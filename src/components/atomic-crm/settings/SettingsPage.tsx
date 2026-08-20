@@ -9,9 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
 import { ArrayInput } from "@/components/admin/array-input";
 import { NumberInput } from "@/components/admin/number-input";
+import { SelectInput } from "@/components/admin/select-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 
+import { sanitizeStageProbabilities } from "../deals/cockpit/dealWeighting";
 import ImageEditorField from "../misc/ImageEditorField";
 import {
   useCompanyTypesStore,
@@ -92,6 +94,69 @@ export const validateItemsInUse = (
   return undefined;
 };
 
+/**
+ * Settings backing the Opportunités cockpit: the inactivity delay of issue #94
+ * and the probabilities that make the weighted forecast possible. Both are app
+ * configuration, not deal fields — nothing here touches the schema.
+ */
+const DealCockpitSettings = ({
+  dealStages,
+}: {
+  dealStages: { value: string; label: string }[] | undefined;
+}) => {
+  const { dealPipelineStatuses } = useConfigurationContext();
+  const openStages = (dealStages ?? []).filter(
+    (stage) => !dealPipelineStatuses.includes(stage.value),
+  );
+
+  return (
+    <>
+      <h3 className="text-lg font-medium text-muted-foreground">Pilotage</h3>
+
+      <NumberInput
+        source="dealInactivityAlertDays"
+        label="Alerte d'inactivité (jours)"
+        min={1}
+        helperText="Une opportunité ouverte sans activité depuis ce nombre de jours est signalée comme en sommeil."
+      />
+
+      <SelectInput
+        source="dealNextActionFromStage"
+        label="Prochaine action attendue à partir de l'étape"
+        choices={dealStages ?? []}
+        optionText="label"
+        optionValue="value"
+        helperText="En deçà de cette étape, aucune prochaine action n'est réclamée."
+      />
+
+      <div className="space-y-2">
+        <span className="text-sm font-medium">
+          Probabilité de gain par étape (%)
+        </span>
+        <p className="text-sm text-muted-foreground">
+          Sert au calcul du potentiel pondéré. Laissez vide pour qu&apos;une
+          étape ne soit pas pondérée : le cockpit indiquera alors le montant
+          concerné plutôt que d&apos;appliquer un taux arbitraire. Cette
+          probabilité est une prévision, indépendante de la priorité
+          commerciale.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+          {openStages.map((stage) => (
+            <NumberInput
+              key={stage.value}
+              source={`dealStageProbabilities.${stage.value}`}
+              label={stage.label || stage.value}
+              min={0}
+              max={100}
+              helperText={false}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+};
+
 export const SettingsPage = () => {
   const updateConfiguration = useConfigurationUpdater();
   const notify = useNotify();
@@ -115,6 +180,16 @@ export const SettingsPage = () => {
         establishmentTypes: ensureValues(data.establishmentTypes)?.map(
           (type: any) => ({ ...type, arr: Number(type.arr) || 0 }),
         ),
+        dealInactivityAlertDays:
+          Number(data.dealInactivityAlertDays) > 0
+            ? Number(data.dealInactivityAlertDays)
+            : defaultConfiguration.dealInactivityAlertDays,
+        dealStageProbabilities: sanitizeStageProbabilities(
+          data.dealStageProbabilities,
+        ),
+        dealNextActionFromStage:
+          data.dealNextActionFromStage ??
+          defaultConfiguration.dealNextActionFromStage,
         noteStatuses: ensureValues(data.noteStatuses),
         customViews,
         companyTypes,
@@ -162,6 +237,9 @@ const SettingsForm = () => {
       dealPipelineStatuses: config.dealPipelineStatuses,
       leadSources: config.leadSources,
       establishmentTypes: config.establishmentTypes,
+      dealInactivityAlertDays: config.dealInactivityAlertDays,
+      dealStageProbabilities: config.dealStageProbabilities,
+      dealNextActionFromStage: config.dealNextActionFromStage,
       noteStatuses: config.noteStatuses,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -176,6 +254,9 @@ const SettingsForm = () => {
       config.dealPipelineStatuses,
       config.leadSources,
       config.establishmentTypes,
+      config.dealInactivityAlertDays,
+      config.dealStageProbabilities,
+      config.dealNextActionFromStage,
       config.noteStatuses,
     ],
   );
@@ -434,6 +515,7 @@ const SettingsFormFields = () => {
                 />
               </SimpleFormIterator>
             </ArrayInput>
+            <DealCockpitSettings dealStages={dealStages} />
           </CardContent>
         </Card>
 

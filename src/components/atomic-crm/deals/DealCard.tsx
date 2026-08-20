@@ -9,6 +9,7 @@ import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealPriorityField } from "./DealPriorityField";
+import { DealNextActionCell, DealStaleBadge } from "./cockpit/DealFieldBadges";
 
 export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   if (!deal) return null;
@@ -56,6 +57,12 @@ export const DealCardContent = ({
           }`}
         >
           <CardContent className="px-3 flex flex-col">
+            {/* Priority leads the card (issue #93); it is rendered by the
+                socle's <DealPriorityField> just below, next to the title, so
+                only the staleness signal sits on this row. */}
+            <div className="flex items-center justify-end gap-2 mb-1.5">
+              <DealStaleBadge deal={deal} />
+            </div>
             <div className="flex-1 flex">
               <p className="flex-1 text-sm font-medium mb-2 flex items-start gap-1.5">
                 <DealPriorityField labelled={false} className="mt-1.5" />
@@ -89,6 +96,10 @@ export const DealCardContent = ({
                 optionValue="value"
               />
             </p>
+            {/* Next action, its date and its owner — issue #101. */}
+            <div className="mt-2 pt-2 border-t border-border/60">
+              <DealNextActionCell deal={deal} />
+            </div>
           </CardContent>
         </Card>
       </RecordContextProvider>

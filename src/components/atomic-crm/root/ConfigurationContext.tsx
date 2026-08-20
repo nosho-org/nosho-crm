@@ -37,6 +37,20 @@ export interface ConfigurationContextValue {
   dealStages: DealStage[];
   establishmentTypes: EstablishmentType[];
   leadSources: LabeledValue[];
+  /**
+   * Days without activity before an open deal is flagged as dormant on the
+   * Opportunités screen (issue #94).
+   */
+  dealInactivityAlertDays: number;
+  /**
+   * Win probability per deal stage, in percent, used to weight the revenue
+   * forecast. Empty by default: the cockpit reports weighted revenue as
+   * unavailable rather than inventing a rate. This is a forecast input and has
+   * nothing to do with commercial priority.
+   */
+  dealStageProbabilities: Record<string, number>;
+  /** First stage at which a next action is expected (issue #92). */
+  dealNextActionFromStage: string;
   noteStatuses: NoteStatus[];
   taskTypes: LabeledValue[];
   title: string;
