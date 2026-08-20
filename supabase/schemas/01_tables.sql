@@ -114,6 +114,19 @@ create table public.deals (
     -- {"<contact_id>": "<role>"} map. The role qualifies the deal↔contact
     -- relation, not the contact itself; membership stays in `contact_ids`.
     contact_roles jsonb not null default '{}'::jsonb,
+    -- Next commercial action and the day it is due. Both live in production and
+    -- were declared here late — see 20260820120000_deals_next_action.sql, whose
+    -- file was backfilled after the fact. Production has exactly these two and
+    -- no `next_action_owner_id`; the cockpit falls back to `sales_id` rather
+    -- than one being invented here.
+    --
+    -- Declaring them closes one DROP hazard, but this file is still NOT a
+    -- faithful mirror of the database: none of the ten stored generated
+    -- `*_search` columns on companies/contacts/deals is declared anywhere in
+    -- supabase/schemas/. Until that is fixed deliberately, `supabase db diff`
+    -- against this schema still emits DROP COLUMN for them — do not run it.
+    next_action text,
+    next_action_date date,
     constraint deals_priority_check check (priority in ('normal', 'important', 'urgent'))
 );
 

@@ -14,7 +14,9 @@ import { isLostStage, isWonStage } from "./dealFields";
  * asserts that two deals differing only by priority weigh exactly the same.
  *
  * Probability is resolved from, in order:
- *   1. `deal.probability` — per-deal, once the Socle workspace ships it;
+ *   1. `deal.probability` — per-deal. No such column exists in production, so
+ *      this branch is currently dead by design; it is kept as the documented
+ *      extension point and costs one `??`;
  *   2. the won/lost stage, which is a fact, not an estimate (100% / 0%);
  *   3. the `dealStageProbabilities` setting, an explicit business input;
  *   4. nothing — in which case the deal is reported as *unweighted* rather

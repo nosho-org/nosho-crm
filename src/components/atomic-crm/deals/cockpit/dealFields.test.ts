@@ -210,10 +210,12 @@ describe("getDealActivity", () => {
 });
 
 describe("getDealType", () => {
-  it("reads deal_type first, then falls back to the company_type contract", () => {
+  it("reads opportunity_type first, then falls back to the company_type contract", () => {
     expect(getDealType(makeDeal({ company_type: "client" }))).toBe("client");
     expect(
-      getDealType(makeDeal({ company_type: "client", deal_type: "extension" })),
+      getDealType(
+        makeDeal({ company_type: "client", opportunity_type: "extension" }),
+      ),
     ).toBe("extension");
     expect(getDealType(makeDeal())).toBeNull();
   });

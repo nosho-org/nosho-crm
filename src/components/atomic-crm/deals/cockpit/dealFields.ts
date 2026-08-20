@@ -6,30 +6,39 @@ import { daysSince, daysUntil } from "./dealDates";
 
 /**
  * ---------------------------------------------------------------------------
- * Rebase seam
+ * Columns the cockpit reads that do NOT exist in production
  * ---------------------------------------------------------------------------
- * The `Socle pipeline/données` workspace owns the `deals` schema. The cockpit
- * only *reads* the columns below, and every read goes through this module.
+ * This used to be a "rebase seam" listing everything the cockpit hoped the
+ * Socle workspace would ship. The schema has since settled, so the list is now
+ * the opposite: it is the exhaustive set of fields the cockpit reads that the
+ * database does not have, kept only so the degradation paths below keep
+ * type-checking.
  *
- * They are declared as optional here (rather than added to `types.ts`) so that:
- *   - this branch ships no migration and no new business field;
- *   - the day the columns land, the adapters below start returning real values
- *     with no change to any component;
- *   - rebasing means deleting this interface, not rewriting the UI.
+ * Everything else the cockpit reads is a real column and lives on `Deal`:
+ * `priority`, `opportunity_type`, `next_action` and `next_action_date`.
  *
- * Until then every adapter returns an explicit "missing" marker, and the UI
- * renders an honest empty state instead of a fabricated value.
+ * Production was inspected for this release: none of the three fields below
+ * exist, and no column is being invented for them. Each has a documented
+ * fallback, and every adapter returns an explicit "missing" marker so the UI
+ * renders an honest empty state rather than a fabricated value:
+ *
+ *   - `next_action_owner_id` → falls back to `sales_id` (the deal owner), and
+ *     `DealNextAction.ownerIsDealOwner` tells the UI which one it got;
+ *   - `probability`          → falls back to won/lost stage facts, then to the
+ *     `dealStageProbabilities` setting, then reports the deal as *unweighted*;
+ *   - `last_activity_at`     → falls back to `updated_at`, then `created_at`,
+ *     and `DealActivity.source` tells the UI which one it used.
+ *
+ * None of these is ever sent to PostgREST: the cockpit's server-side filters
+ * are `sales_id`, `category` and the `expected_closing_date` period bounds
+ * only, sorting is computed client-side in `dealSort.ts`, and no query selects
+ * an explicit column list. Selecting or filtering on a missing column would
+ * 400 the whole list.
  */
 export interface DealPipelineFields {
-  /** Commercial priority — never a probability. See `dealWeighting.ts`. */
-  priority: string | null;
-  next_action: string | null;
-  next_action_date: string | null;
   next_action_owner_id: Identifier | null;
   /** Per-deal win probability, in percent. */
   probability: number | null;
-  /** Opportunity type (new business, extension, renewal…). */
-  deal_type: string | null;
   /** Timestamp of the last logged activity (note, call, meeting…). */
   last_activity_at: string | null;
 }
@@ -299,13 +308,17 @@ export const getDealActivity = (
 /* -------------------------------------------------------------------------- */
 
 /**
- * No dedicated `deal_type` column exists yet, so the type facet reads the
- * `company_type` contract that already drives the custom views. When the
- * Socle workspace ships `deal_type`, this adapter picks it up first and the
- * filter, the column and the aggregates follow with no further change.
+ * Growth source of the opportunity, from the real `deals.opportunity_type`
+ * column (nouveau client / extension / renouvellement).
+ *
+ * The speculative `deal_type` this adapter used to prefer never existed; the
+ * column shipped as `opportunity_type`. `company_type` stays as the fallback
+ * but means something different — it routes a deal to a pipeline view — so it
+ * is only used when no growth source has been set, to keep the facet usable on
+ * the rows that predate the column.
  */
 export const getDealType = (deal: DealRecord): string | null => {
-  const value = deal.deal_type ?? deal.company_type ?? null;
+  const value = deal.opportunity_type ?? deal.company_type ?? null;
   return typeof value === "string" && value.trim() !== "" ? value : null;
 };
 

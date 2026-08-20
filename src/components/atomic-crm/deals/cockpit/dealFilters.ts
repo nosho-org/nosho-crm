@@ -11,15 +11,19 @@ import { getDealPriority, getDealType } from "./dealFields";
  *    columns, so they run server-side through the list query. The period is
  *    always expressed on `expected_closing_date` — see `dealPeriods.ts`.
  *
- *  - `priority` and `type` have no column yet (the Socle workspace owns the
- *    schema). Sending them to PostgREST would 400 the whole list, so they are
- *    applied here, on the rows the query returned.
+ *  - `priority` and `type` are applied here instead, on the rows the query
+ *    returned. Both now map to real columns (`deals.priority`,
+ *    `deals.opportunity_type`), but the facets stay client-side on purpose:
+ *    `type` falls back to `company_type` when no growth source is set, and
+ *    `unset` has to match rows where the column is NULL *or* empty. Neither
+ *    survives translation into a single PostgREST predicate, and getting it
+ *    wrong silently drops rows instead of erroring.
  *
  * Both halves converge on a single array, which then feeds the banner, the
  * forecast, the board and the dense list. Nothing recomputes its own subset.
  *
- * Once the columns land, moving a facet server-side means deleting its branch
- * below and adding a `filter` entry — the components do not change.
+ * Moving a facet server-side later means deleting its branch below and adding
+ * a `filter` entry — the components do not change.
  */
 
 /** Facet value meaning "no constraint". */

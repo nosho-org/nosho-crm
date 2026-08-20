@@ -133,6 +133,10 @@ export type Deal = {
   /** Growth source: nouveau client / extension / renouvellement. */
   opportunity_type?: string | null;
   contact_roles?: DealContactRoles;
+  /** Next commercial action, free text. Real column — see 20260820120000. */
+  next_action?: string | null;
+  /** Day the next action is due. Real column — see 20260820120000. */
+  next_action_date?: string | null;
   contact_ids: Identifier[];
   category: string;
   stage: string;

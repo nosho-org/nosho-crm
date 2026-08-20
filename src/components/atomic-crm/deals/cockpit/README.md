@@ -8,25 +8,37 @@ Covers issues #92, #93, #94, #96 and #101 (NOS-802, NOS-814, NOS-818, NOS-823).
 
 ## Contract with the Socle pipeline/données workspace
 
-This branch **ships no migration and adds no business field**. The `deals`
-schema belongs to the Socle workspace. Everything the cockpit reads goes through
-`dealFields.ts`, which declares the columns it is waiting for as an optional
-interface:
+The cockpit **adds no business field and ships no migration of its own**.
+Everything it reads goes through `dealFields.ts`. As of this release the schema
+has settled, so the table below records what is real and what is not.
 
-| Field                  | Used by                                   | Today, without the column          |
-| ---------------------- | ----------------------------------------- | ---------------------------------- |
-| `priority`             | badge, sort, filter (issue #93)           | "Non définie", filterable as unset |
-| `next_action`          | card + list cell (issues #92, #101)       | "À définir" from the Qualifié step |
-| `next_action_date`     | due/overdue status                        | "Sans date"                        |
-| `next_action_owner_id` | owner shown on card and row               | falls back to `sales_id` (real)    |
-| `probability`          | weighted revenue                          | falls back to the stage setting    |
-| `deal_type`            | type column and filter                    | falls back to `company_type`       |
-| `last_activity_at`     | inactivity alert (issue #94)              | falls back to `updated_at`         |
+Real columns, read directly off `Deal`:
 
-**To rebase once the columns land:** delete `DealPipelineFields`, type the
-adapters against `Deal`, and move the `priority` / `deal_type` facets from
-`dealFilters.ts` to the server-side `filter` in `DealList.tsx`. No component
-changes.
+| Field               | Used by                             |
+| ------------------- | ----------------------------------- |
+| `priority`          | badge, sort, facet (issue #93)      |
+| `opportunity_type`  | type column and facet               |
+| `next_action`       | card + list cell (issues #92, #101) |
+| `next_action_date`  | due/overdue status                  |
+
+Fields the cockpit reads that **production does not have**. None is being
+invented; each degrades explicitly and says so in its result:
+
+| Field                  | Used by                     | Degradation                        |
+| ---------------------- | --------------------------- | ---------------------------------- |
+| `next_action_owner_id` | owner on card and row       | falls back to `sales_id` (real)    |
+| `probability`          | weighted revenue            | stage facts → stage setting → *unweighted* |
+| `last_activity_at`     | inactivity alert (issue #94) | falls back to `updated_at` → `created_at` |
+
+**Nothing above is ever sent to PostgREST.** Server-side filtering is limited to
+`sales_id`, `category` and the `expected_closing_date` period bounds; sorting is
+computed client-side in `dealSort.ts`; no query selects an explicit column list.
+Selecting or filtering a missing column would 400 the whole list.
+
+**If those three columns ever land:** delete `DealPipelineFields`, type the
+adapters against `Deal`, and optionally move the `priority` / `type` facets from
+`dealFilters.ts` to a server-side `filter` — see the caveat in that file's
+header. No component changes.
 
 ## Rules the tests enforce
 
