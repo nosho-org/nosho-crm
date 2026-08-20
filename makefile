@@ -130,6 +130,9 @@ publish:
 typecheck:
 	npm run typecheck
 
+typecheck-full: ## typecheck for real — `npm run typecheck` checks 0 files (see AGENTS.md)
+	npm run typecheck:full
+
 doc-install:
 	@(cd doc && npm install)
 

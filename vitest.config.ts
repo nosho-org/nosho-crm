@@ -48,6 +48,13 @@ export default defineConfig({
     preserveSymlinks: true,
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // `vite-plugin-pwa` only runs through vite.config.ts, so its virtual
+      // module does not exist here. Without this alias every test that reaches
+      // <CRM> (via useVersionCheck) fails to load. See the stub for details.
+      "virtual:pwa-register/react": path.resolve(
+        __dirname,
+        "./src/test/stubs/pwa-register-react.ts",
+      ),
     },
   },
 });

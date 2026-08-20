@@ -4,8 +4,8 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import cloneDeep from "lodash/cloneDeep";
 import { Notification } from "@/components/admin/notification";
-import { createDataProvider } from "@/components/atomic-crm/providers/fakerest";
 import { DEFAULT_USER } from "@/components/atomic-crm/providers/fakerest/authProvider";
+import { createTestDataProvider } from "./createTestDataProvider";
 import type { Db } from "@/components/atomic-crm/providers/fakerest/dataGenerator/types";
 import type { Contact, Sale } from "@/components/atomic-crm/types";
 import { CRM } from "@/components/atomic-crm/root/CRM";
@@ -84,14 +84,14 @@ export const StoryWrapper = ({
 }: {
   children: ReactNode;
   data?: Partial<Db>;
-  dataProvider?: Partial<ReturnType<typeof createDataProvider>>;
+  dataProvider?: Partial<ReturnType<typeof createTestDataProvider>>;
   initialEntries?: string[];
   silent?: boolean;
 }) => {
   const authProvider = useMemo(() => createTestAuthProvider(), []);
   const dataProvider = useMemo(
     () => ({
-      ...createDataProvider({ db: createCrmDb(cloneDeep(data)), silent }),
+      ...createTestDataProvider({ db: createCrmDb(cloneDeep(data)), silent }),
       ...dataProviderOverrides,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

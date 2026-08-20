@@ -26,8 +26,16 @@ const successContacts = [
   }),
 ];
 
+// ContactShow takes no props — its inner <ShowBase> reads the resource and the
+// record id from the router. Passing resource/id as props (as this story used
+// to) is dropped by React, leaving ShowBase without a resource and blowing up
+// with "useShowController requires a non-empty resource prop or context".
+// Entering on the real route gives it both.
 export const MobileSuccess = () => (
-  <StoryWrapper data={{ contacts: successContacts }}>
-    <ContactShow resource="contacts" id={1} />
+  <StoryWrapper
+    data={{ contacts: successContacts }}
+    initialEntries={["/contacts/1/show"]}
+  >
+    <ContactShow />
   </StoryWrapper>
 );
