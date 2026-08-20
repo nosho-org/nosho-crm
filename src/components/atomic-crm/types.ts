@@ -100,6 +100,8 @@ export type Contact = {
   phone_jsonb: PhoneNumberAndType[];
   nb_tasks?: number;
   company_name?: string;
+  /** Sector of the linked company, exposed by the `contacts_summary` view. */
+  company_sector?: string;
 } & Pick<RaRecord, "id">;
 
 export type ContactNote = {
@@ -111,10 +113,23 @@ export type ContactNote = {
   attachments?: AttachmentNote[];
 } & Pick<RaRecord, "id">;
 
+/**
+ * Decision-making role of a contact **on a given deal**.
+ *
+ * Keyed by contact id, so the same person can be the decision maker on one
+ * opportunity and a mere influencer on another. Values come from
+ * `dealContactRoles` in the configuration.
+ */
+export type DealContactRoles = Record<string, string>;
+
 export type Deal = {
   name: string;
   company_id: Identifier;
+  /** Pipeline view the deal belongs to — NOT the growth source. */
   company_type?: string;
+  /** Growth source: nouveau client / extension / renouvellement. */
+  opportunity_type?: string | null;
+  contact_roles?: DealContactRoles;
   contact_ids: Identifier[];
   category: string;
   stage: string;

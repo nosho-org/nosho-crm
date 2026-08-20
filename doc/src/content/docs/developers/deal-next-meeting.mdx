@@ -1,0 +1,82 @@
+---
+title: Next Meeting On A Deal
+---
+
+The opportunity summary shows a read-only **Prochain meeting** line
+(`src/components/atomic-crm/deals/DealNextMeeting.tsx`). This page documents
+exactly what that line is derived from, and what the data model would need
+before it could mean anything stronger.
+
+## What is displayed today
+
+`getNextMeetingTask()` (`deals/dealNextMeeting.ts`) picks, among the tasks of
+the contacts linked to the deal:
+
+- tasks that are **not done** (`done_date is null`),
+- whose `type` denotes an actual appointment — `meeting`, `demo` or `lunch`
+  (`MEETING_TASK_TYPES`); `call`, `email`, `follow-up`, `ship`, `thank-you` and
+  `none` are excluded,
+- whose `due_date` falls on or after the **start of the current day**,
+
+and returns the earliest one. Its date and its `text` are rendered. When no such
+task exists, the block renders nothing — no placeholder date is ever shown.
+
+The query is the same one `<DealTasks>` already issues (open tasks filtered by
+`contact_id@in`), so React Query serves both blocks from a single cache entry
+and the summary costs no extra request.
+
+## The limits of this derivation
+
+`tasks.contact_id` links a task to a **contact**, not to a deal. There is no
+`tasks.deal_id`, and no meeting entity of any kind attached to an opportunity.
+
+Two consequences, which the UI does not hide:
+
+1. **A task is not provably about this deal.** A contact who appears on several
+   opportunities contributes the same task to each of them. What is displayed is
+   truthfully "the next appointment with someone on this deal" — not "the next
+   appointment about this deal".
+2. **The object of the meeting is the task text.** There is no separate subject,
+   location, duration or attendee list.
+
+The date-only case is handled explicitly: a task postponed from the task list is
+stored as a bare `YYYY-MM-DD` (see `tasks/Task.tsx`), which carries no time of
+day. `formatDealMeetingDate()` renders those without a time rather than printing
+a fabricated `12:00 AM`, and the cut-off is the start of the day so a meeting
+scheduled for today does not disappear halfway through it.
+
+## What is missing for a deal-owned meeting
+
+Two options, neither of which exists in the schema today.
+
+### Option A — attach tasks to deals
+
+Add a nullable `tasks.deal_id bigint references public.deals(id) on delete set null`,
+set it when a task is created from an opportunity
+(`<TaskCreateSheet>` already knows the deal), and prefer `deal_id` over the
+contact fan-out when it is present. This is the smaller change and makes the
+"about this deal" claim true.
+
+It needs, at minimum:
+
+- the migration and the `deals_summary` / task filters update,
+- a backfill decision for the existing tasks (they cannot be attributed
+  automatically when a contact belongs to several deals — leaving them `null` is
+  the only non-destructive answer),
+- `<TaskCreateSheet>` / `<TaskEdit>` passing and preserving `deal_id`,
+- the FakeRest generators and the task filters kept in sync.
+
+### Option B — resolve calendar events back to a deal
+
+The Google Calendar integration (`dataProvider.getUpcomingCalendarEvents`) reads
+the **signed-in user's** calendar over their own OAuth token. Using it for a deal
+summary would require a contract the integration does not currently provide:
+
+- a stable mapping from event attendees to CRM contacts, and from contacts to a
+  single deal,
+- a defined behaviour for users who have not connected Google (most of the
+  team), and for events on a colleague's calendar,
+- a server-side cache, since a per-user OAuth read cannot answer "the next
+  meeting on this deal" for anybody else.
+
+Until one of these lands, the summary stays on the task model described above.

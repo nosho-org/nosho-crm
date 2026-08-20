@@ -102,3 +102,30 @@ export function formatISODateString(dateString: string | null | undefined) {
 
   return format(date, "PP");
 }
+
+/**
+ * Format a task `due_date` for the read-only "Prochain meeting" line.
+ *
+ * Task due dates come in two shapes: a full `timestamptz` when the task was
+ * created with a time, and a bare `YYYY-MM-DD` when it was postponed from the
+ * task list. Only the first carries a meaningful time of day, so only the first
+ * gets one displayed — showing "12:00 AM" for a date-only value would be a
+ * fabricated detail.
+ */
+export function formatDealMeetingDate(
+  dueDate: string | null | undefined,
+): string {
+  if (!dueDate) {
+    return "–";
+  }
+  if (isoDateStringRegex.test(dueDate)) {
+    return formatISODateString(dueDate);
+  }
+
+  const date = new Date(dueDate);
+  if (Number.isNaN(date.getTime())) {
+    return "–";
+  }
+
+  return format(date, "PP · p");
+}

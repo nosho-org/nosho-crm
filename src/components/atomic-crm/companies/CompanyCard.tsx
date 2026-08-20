@@ -8,6 +8,7 @@ import { Avatar as ContactAvatar } from "../contacts/Avatar";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company } from "../types";
 import { CompanyAvatar } from "./CompanyAvatar";
+import { CompanyTypologyIcon } from "./companyTypology";
 
 export const CompanyCard = (props: { record?: Company }) => {
   const createPath = useCreatePath();
@@ -30,7 +31,17 @@ export const CompanyCard = (props: { record?: Company }) => {
     >
       <Card className="h-[200px] flex flex-col justify-between p-4 hover:bg-muted">
         <div className="flex flex-col items-center gap-1">
-          <CompanyAvatar />
+          <div className="relative">
+            <CompanyAvatar />
+            {/* Establishment typology (issue #97): a neutral, monochrome badge
+                pinned to the avatar so the card can be scanned without reading
+                the sector label. Colour stays reserved for commercial signals. */}
+            <CompanyTypologyIcon
+              sector={record.sector}
+              label={sectorLabel}
+              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-background ring-1 ring-border p-[1px]"
+            />
+          </div>
           <div className="text-center mt-1">
             <h6 className="text-sm font-medium">{record.name}</h6>
             <p className="text-xs text-muted-foreground">{sectorLabel}</p>

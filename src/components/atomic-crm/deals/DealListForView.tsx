@@ -23,6 +23,7 @@ import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealListContent, DealListViewProvider } from "./DealListContent";
+import { dealExporter } from "./dealExporter";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
 import { getCustomViewCompanyType } from "./dealUtils";
@@ -92,6 +93,7 @@ export const DealListForView = () => {
         filters={dealFilters}
         actions={<DealViewActions />}
         pagination={null}
+        exporter={dealExporter}
       >
         <DealViewLayout />
       </List>
@@ -137,7 +139,7 @@ const DealViewActions = () => {
   return (
     <TopToolbar>
       <FilterButton />
-      <ExportButton />
+      <ExportButton exporter={dealExporter} />
       <button
         className={buttonVariants({ variant: "outline" })}
         onClick={() => navigate(`/views/${viewId}/create`)}

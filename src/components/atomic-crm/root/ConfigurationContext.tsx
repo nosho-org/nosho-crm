@@ -21,6 +21,10 @@ export interface ConfigurationContextValue {
   currency: string;
   customViews: CustomView[];
   dealCategories: LabeledValue[];
+  /** Décideur / Influenceur / Opérationnel — set per deal↔contact relation. */
+  dealContactRoles: LabeledValue[];
+  /** Nouveau client / Extension / Renouvellement — set per deal. */
+  dealOpportunityTypes: LabeledValue[];
   dealPipelineStatuses: string[];
   dealStages: DealStage[];
   noteStatuses: NoteStatus[];

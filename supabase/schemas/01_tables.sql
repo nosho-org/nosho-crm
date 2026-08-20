@@ -79,7 +79,15 @@ create table public.deals (
     index smallint,
     won_at date,
     proposal_edit_url text,
-    proposal_public_url text
+    proposal_public_url text,
+    -- Growth source of the deal: nouveau client / extension / renouvellement.
+    -- Deliberately distinct from `company_type`, which only selects the
+    -- pipeline view the deal is displayed in.
+    opportunity_type text,
+    -- Decision-making role of each linked contact, as a
+    -- {"<contact_id>": "<role>"} map. The role qualifies the deal↔contact
+    -- relation, not the contact itself; membership stays in `contact_ids`.
+    contact_roles jsonb not null default '{}'::jsonb
 );
 
 create table public.deal_notes (
