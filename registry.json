@@ -166,6 +166,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/settings/AppearanceSection.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/sales/useGetSalesName.ts",
           "type": "registry:component"
         },
@@ -195,6 +199,10 @@
         },
         {
           "path": "src/components/atomic-crm/root/useConfigurationLoader.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/root/skins.ts",
           "type": "registry:component"
         },
         {
@@ -727,6 +735,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/cockpit/dealFields.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/cockpit/dealDormant.ts",
           "type": "registry:component"
         },
         {
