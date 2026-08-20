@@ -100,6 +100,11 @@ group by co.id, c.name, c.sector;
 create or replace view public.deals_summary with (security_invoker = on) as
 select
     d.*,
+    -- Filterable mirror of company_type with NULL folded to '' (NOS-797).
+    -- PostgREST evaluates `not.in.(...)` as NULL for a NULL column and drops
+    -- the row, which would have hidden every untyped opportunity — exactly the
+    -- ones the commercial pipeline is made of.
+    coalesce(d.company_type, '')                                                                                       as company_type_key,
     comp.name                                                                                                          as company_name,
     replace(lower(immutable_unaccent(coalesce(comp.name, ''))), ' ', '')                                                as company_name_search,
     coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), '')                                                as contact_names,

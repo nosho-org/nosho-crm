@@ -434,6 +434,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/misc/formatCurrency.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/misc/fetchWithTimeout.ts",
           "type": "registry:component"
         },
@@ -634,7 +638,15 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealPriorityField.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealNextMeeting.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/DealListTable.tsx",
           "type": "registry:component"
         },
         {

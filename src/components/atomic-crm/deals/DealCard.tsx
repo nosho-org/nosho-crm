@@ -1,13 +1,14 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useRedirect, RecordContextProvider } from "ra-core";
 import { ReferenceField } from "@/components/admin/reference-field";
-import { NumberField } from "@/components/admin/number-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
+import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { DealPriorityField } from "./DealPriorityField";
 
 export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   if (!deal) return null;
@@ -30,7 +31,7 @@ export const DealCardContent = ({
   snapshot?: any;
   deal: Deal;
 }) => {
-  const { dealCategories } = useConfigurationContext();
+  const { dealCategories, currency } = useConfigurationContext();
   const redirect = useRedirect();
   const handleClick = () => {
     redirect(`/deals/${deal.id}/show`, undefined, undefined, undefined, {
@@ -56,14 +57,17 @@ export const DealCardContent = ({
         >
           <CardContent className="px-3 flex flex-col">
             <div className="flex-1 flex">
-              <p className="flex-1 text-sm font-medium mb-2">
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                />
-                {" - "}
-                {deal.name}
+              <p className="flex-1 text-sm font-medium mb-2 flex items-start gap-1.5">
+                <DealPriorityField labelled={false} className="mt-1.5" />
+                <span>
+                  <ReferenceField
+                    source="company_id"
+                    reference="companies"
+                    link={false}
+                  />
+                  {" - "}
+                  {deal.name}
+                </span>
               </p>
               <ReferenceField
                 source="company_id"
@@ -74,16 +78,9 @@ export const DealCardContent = ({
               </ReferenceField>
             </div>
             <p className="text-xs text-muted-foreground">
-              <NumberField
-                source="amount"
-                options={{
-                  notation: "compact",
-                  style: "currency",
-                  currency: "USD",
-                  currencyDisplay: "narrowSymbol",
-                  minimumSignificantDigits: 3,
-                }}
-              />
+              {/* Formatted here rather than via <NumberField>, which would use
+                  the admin locale and render "€6K" instead of "6 k€". */}
+              {formatCurrencyCompact(deal.amount, currency)}
               {deal.category && ", "}
               <SelectField
                 source="category"

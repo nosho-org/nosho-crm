@@ -1,3 +1,9 @@
+import type {
+  CompanyType,
+  DealPriority,
+  DealPriorityValue,
+  EstablishmentType,
+} from "../types";
 import type { ConfigurationContextValue } from "./ConfigurationContext";
 
 export const defaultDarkModeLogo = "./appIcon/512.png";
@@ -21,23 +27,76 @@ export const defaultCompanySectors = [
   { value: "autre", label: "Autre" },
 ];
 
+/**
+ * The canonical commercial pipeline (8 stages).
+ *
+ * Values are deliberately conservative: `lead`, `qualified`, `closed-won` and
+ * `perdu` keep the slugs they already had in production so that the vast
+ * majority of rows need no data migration at all.
+ */
 export const defaultDealStages = [
-  { value: "lead", label: "Lead" },
-  { value: "qualified", label: "Qualifié" },
-  { value: "follow-up", label: "Suivi" },
-  { value: "rdv-prix", label: "Rendez-vous prix" },
-  { value: "trial", label: "Essai" },
-  { value: "closed-won", label: "Gagné" },
+  { value: "lead", label: "Leads" },
+  { value: "qualified", label: "Qualifiés" },
+  { value: "demo-booked", label: "Démo booked" },
+  { value: "proposal-to-send", label: "Proposition à envoyer" },
+  { value: "proposal-sent", label: "Proposition envoyée" },
+  { value: "closed-won", label: "Contrat signé" },
   { value: "perdu", label: "Perdu" },
-  { value: "trial-failed", label: "Essai échoué" },
-  { value: "declined", label: "Décliné" },
+  { value: "churn", label: "Churn" },
 ];
 
-export const defaultDealPipelineStatuses = [
-  "closed-won",
-  "perdu",
-  "trial-failed",
-  "declined",
+/**
+ * Stages that leave the canonical pipeline, mapped to the canonical stage that
+ * carries the same commercial meaning.
+ *
+ * The original value is kept in `deals.legacy_stage` by the migration, so the
+ * mapping is fully reversible: no historical information is destroyed.
+ */
+export const legacyDealStages: Record<string, string> = {
+  "follow-up": "qualified", // Suivi — still being nurtured after qualification
+  "rdv-prix": "demo-booked", // Rendez-vous prix — a meeting is booked
+  trial: "proposal-to-send", // Essai — demo done, proposal is the next step
+  "trial-failed": "perdu", // Essai échoué — a lost deal
+  declined: "perdu", // Décliné — a lost deal
+};
+
+/** Terminal stages: a deal sitting there is no longer moving through the pipeline. */
+export const defaultDealPipelineStatuses = ["closed-won", "perdu", "churn"];
+
+export const defaultDealPriorities: DealPriority[] = [
+  {
+    value: "normal",
+    label: "Normal",
+    dotClassName: "bg-muted-foreground/40",
+    weight: 0,
+  },
+  {
+    value: "important",
+    label: "Important",
+    dotClassName: "bg-amber-500",
+    weight: 1,
+  },
+  { value: "urgent", label: "Urgent", dotClassName: "bg-red-500", weight: 2 },
+];
+
+export const defaultDealPriority: DealPriorityValue = "normal";
+
+export const defaultLeadSources = [
+  { value: "inbound", label: "Inbound" },
+  { value: "outbound", label: "Outbound" },
+  { value: "recommandation", label: "Recommandation" },
+  { value: "partenaire", label: "Partenaire" },
+  { value: "salon", label: "Salon / Événement" },
+  { value: "site-web", label: "Site web" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "autre", label: "Autre" },
+];
+
+/** ARR grid driving the suggested amount on a deal. Editable in the settings. */
+export const defaultEstablishmentTypes: EstablishmentType[] = [
+  { value: "cabinet", label: "Cabinet", arr: 800 },
+  { value: "clinique", label: "Clinique", arr: 5000 },
+  { value: "hopital", label: "Hôpital", arr: 15000 },
 ];
 
 export const defaultDealCategories = [
@@ -88,11 +147,20 @@ export const defaultDealContactRoles = [
   { value: "operationnel", label: "Opérationnel" },
 ];
 
-export const defaultCompanyTypes = [
-  { value: "investisseur", label: "Investisseur" },
-  { value: "partenaire", label: "Partenaire" },
+/**
+ * Company types. `commercial: false` keeps the type out of the Opportunités
+ * board and out of the ARR aggregates while leaving its own view untouched.
+ * An absent flag means commercial, so older stored configurations keep working.
+ */
+export const defaultCompanyTypes: CompanyType[] = [
   { value: "client", label: "Client" },
   { value: "prospect", label: "Prospect" },
+  { value: "investisseur", label: "Investisseur", commercial: false },
+  { value: "partenaire", label: "Partenariat", commercial: false },
+  { value: "ressource", label: "Ressource", commercial: false },
+  { value: "presse", label: "Presse", commercial: false },
+  { value: "leads-santexpo", label: "Leads Santexpo", commercial: false },
+  { value: "logiciels-brique", label: "Logiciels brique", commercial: false },
 ];
 
 export const defaultNoteStatuses = [
@@ -123,7 +191,10 @@ export const defaultConfiguration: ConfigurationContextValue = {
   dealContactRoles: defaultDealContactRoles,
   dealOpportunityTypes: defaultDealOpportunityTypes,
   dealPipelineStatuses: defaultDealPipelineStatuses,
+  dealPriorities: defaultDealPriorities,
   dealStages: defaultDealStages,
+  establishmentTypes: defaultEstablishmentTypes,
+  leadSources: defaultLeadSources,
   noteStatuses: defaultNoteStatuses,
   taskTypes: defaultTaskTypes,
   title: defaultTitle,

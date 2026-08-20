@@ -10,17 +10,18 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 const DEFAULT_LOCALE = "fr-FR";
 const CURRENCY = "EUR";
 
-const CLOSED_STAGES = ["closed-won", "perdu", "trial-failed", "declined"];
+// Terminal stages of the canonical pipeline, mirroring defaultDealPipelineStatuses.
+const CLOSED_STAGES = ["closed-won", "perdu", "churn"];
 
 const stageBadgeStyles: Record<string, string> = {
   lead: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   qualified:
     "bg-[var(--nosho-green)]/15 text-[var(--nosho-green-dark)] dark:bg-[var(--nosho-green)]/20",
-  "follow-up":
+  "demo-booked":
     "bg-[var(--nosho-orange)]/15 text-[var(--nosho-orange-dark)] dark:bg-[var(--nosho-orange)]/20",
-  "rdv-prix":
+  "proposal-to-send":
     "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-  trial:
+  "proposal-sent":
     "bg-[var(--nosho-teal)]/15 text-[var(--nosho-teal)] dark:bg-[var(--nosho-teal)]/20",
 };
 

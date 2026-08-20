@@ -43,7 +43,9 @@ export const DealNextMeeting = ({ contactIds }: { contactIds?: number[] }) => {
   )?.label;
 
   return (
-    <div className="flex flex-col mr-10">
+    // No horizontal margin: the opportunity summary row spaces its blocks with
+    // `gap-x-8`, so an extra `mr-*` here would double the gutter.
+    <div className="flex flex-col">
       <span className="text-xs text-muted-foreground tracking-wide">
         Prochain meeting
       </span>

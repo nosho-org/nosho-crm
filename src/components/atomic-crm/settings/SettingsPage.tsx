@@ -8,11 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toSlug } from "@/lib/toSlug";
 import { ArrayInput } from "@/components/admin/array-input";
+import { NumberInput } from "@/components/admin/number-input";
 import { SimpleFormIterator } from "@/components/admin/simple-form-iterator";
 import { TextInput } from "@/components/admin/text-input";
 
 import ImageEditorField from "../misc/ImageEditorField";
 import {
+  useCompanyTypesStore,
   useConfigurationContext,
   useConfigurationUpdater,
   useCustomViewsStore,
@@ -20,6 +22,10 @@ import {
   type CustomView,
 } from "../root/ConfigurationContext";
 import { defaultConfiguration } from "../root/defaultConfiguration";
+import {
+  getCustomViewCompanyType,
+  isNonCommercialCompanyType,
+} from "../deals/dealUtils";
 
 const SECTIONS = [
   { id: "branding", label: "Personnalisation" },
@@ -103,6 +109,12 @@ export const SettingsPage = () => {
         taskTypes: ensureValues(data.taskTypes),
         dealStages: ensureValues(data.dealStages),
         dealPipelineStatuses: data.dealPipelineStatuses,
+        leadSources: ensureValues(data.leadSources),
+        // The ARR grid is numeric; coerce so a typed "800" does not reach the
+        // prefill as a string and silently disable the suggestion.
+        establishmentTypes: ensureValues(data.establishmentTypes)?.map(
+          (type: any) => ({ ...type, arr: Number(type.arr) || 0 }),
+        ),
         noteStatuses: ensureValues(data.noteStatuses),
         customViews,
         companyTypes,
@@ -148,6 +160,8 @@ const SettingsForm = () => {
       taskTypes: config.taskTypes,
       dealStages: config.dealStages,
       dealPipelineStatuses: config.dealPipelineStatuses,
+      leadSources: config.leadSources,
+      establishmentTypes: config.establishmentTypes,
       noteStatuses: config.noteStatuses,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,6 +174,8 @@ const SettingsForm = () => {
       config.taskTypes,
       config.dealStages,
       config.dealPipelineStatuses,
+      config.leadSources,
+      config.establishmentTypes,
       config.noteStatuses,
     ],
   );
@@ -323,8 +339,9 @@ const SettingsFormFields = () => {
               Statuts pipeline
             </h3>
             <p className="text-sm text-muted-foreground">
-              Sélectionnez les étapes considérées comme &quot;gagnées&quot; dans
-              le pipeline.
+              Sélectionnez les étapes terminales : une opportunité qui s&apos;y
+              trouve n&apos;avance plus dans le pipeline (Contrat signé, Perdu,
+              Churn).
             </p>
             <div className="flex flex-wrap gap-2">
               {dealStages?.map(
@@ -372,6 +389,49 @@ const SettingsFormFields = () => {
             >
               <SimpleFormIterator disableReordering disableClear>
                 <TextInput source="label" label={false} />
+              </SimpleFormIterator>
+            </ArrayInput>
+
+            <Separator />
+
+            <h3 className="text-lg font-medium text-muted-foreground">
+              Sources de lead
+            </h3>
+            <ArrayInput source="leadSources" label={false} helperText={false}>
+              <SimpleFormIterator disableReordering disableClear>
+                <TextInput source="label" label={false} />
+              </SimpleFormIterator>
+            </ArrayInput>
+
+            <Separator />
+
+            <h3 className="text-lg font-medium text-muted-foreground">
+              Paliers ARR par type d&apos;établissement
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              L&apos;ARR indiqué ici est <strong>proposé</strong> sur les
+              opportunités des sociétés de ce type. Il ne remplace jamais un
+              montant saisi à la main.
+            </p>
+            <ArrayInput
+              source="establishmentTypes"
+              label={false}
+              helperText={false}
+            >
+              <SimpleFormIterator inline disableReordering disableClear>
+                <TextInput
+                  source="label"
+                  label={false}
+                  className="flex-1"
+                  placeholder="Cabinet"
+                />
+                <NumberInput
+                  source="arr"
+                  label={false}
+                  helperText={false}
+                  min={0}
+                  placeholder="800"
+                />
               </SimpleFormIterator>
             </ArrayInput>
           </CardContent>
@@ -458,6 +518,30 @@ const SettingsFormFields = () => {
 const CustomViewsSection = () => {
   const { dealStages, companyTypes } = useConfigurationContext();
   const [customViews, setCustomViews] = useCustomViewsStore();
+  const [, setCompanyTypes] = useCompanyTypesStore();
+
+  /**
+   * Flip a company type between commercial and non-commercial (NOS-797).
+   *
+   * Types the config does not know about yet — slugs derived from a view label
+   * before this flag existed — are appended so the choice can be stored.
+   */
+  const handleToggleCommercial = (companyType: string, label: string) => {
+    const nowCommercial = isNonCommercialCompanyType(companyType, companyTypes);
+    const exists = companyTypes.some((type) => type.value === companyType);
+    setCompanyTypes(
+      exists
+        ? companyTypes.map((type) =>
+            type.value === companyType
+              ? { ...type, commercial: nowCommercial }
+              : type,
+          )
+        : [
+            ...companyTypes,
+            { value: companyType, label, commercial: nowCommercial },
+          ],
+    );
+  };
 
   const { data: allSales } = useGetList("sales", {
     pagination: { page: 1, perPage: 100 },
@@ -535,6 +619,14 @@ const CustomViewsSection = () => {
               );
               const hasCustomStages = view.visibleStages !== undefined;
               const isOpenToAll = !view.allowedUserIds?.length;
+              const viewCompanyType = getCustomViewCompanyType(
+                view,
+                customViews,
+              );
+              const isNonCommercial = isNonCommercialCompanyType(
+                viewCompanyType,
+                companyTypes,
+              );
 
               return (
                 <div key={view.id} className="space-y-4">
@@ -555,6 +647,42 @@ const CustomViewsSection = () => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                  </div>
+
+                  {/* Commercial nature (NOS-797) */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Nature
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={isNonCommercial ? "outline" : "default"}
+                        size="sm"
+                        onClick={() =>
+                          isNonCommercial &&
+                          handleToggleCommercial(viewCompanyType, view.label)
+                        }
+                      >
+                        Commercial
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isNonCommercial ? "default" : "outline"}
+                        size="sm"
+                        onClick={() =>
+                          !isNonCommercial &&
+                          handleToggleCommercial(viewCompanyType, view.label)
+                        }
+                      >
+                        Non commercial
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isNonCommercial
+                        ? "Cette vue reste accessible, mais ses opportunités n'apparaissent pas dans Opportunités ni dans les agrégats ARR."
+                        : "Les opportunités de cette vue comptent dans le pipeline commercial et dans les agrégats ARR."}
+                    </p>
                   </div>
 
                   {/* Access control */}
