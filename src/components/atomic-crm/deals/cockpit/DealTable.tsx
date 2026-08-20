@@ -172,12 +172,19 @@ export const DealTable = () => {
                           <CompanyAvatar width={20} height={20} />
                         </ReferenceField>
                         <div className="flex flex-col min-w-0">
-                          <span
-                            className="text-sm font-medium truncate"
+                          {/* The row is clickable for the mouse; this button
+                              is what makes it reachable by keyboard. */}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openDeal(deal);
+                            }}
+                            className="text-sm font-medium truncate text-left hover:underline focus-visible:underline focus-visible:outline-none"
                             title={deal.name}
                           >
                             {deal.name}
-                          </span>
+                          </button>
                           <span className="text-xs text-muted-foreground truncate">
                             <ReferenceField
                               source="company_id"
