@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/components/admin/use-theme";
+import { useSkin } from "@/components/admin/use-skin";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ import { MobileContent } from "../layout/MobileContent";
 import MobileHeader from "../layout/MobileHeader";
 import ImageEditorField from "../misc/ImageEditorField";
 import type { CrmDataProvider } from "../providers/types";
+import { SKINS } from "../root/skins";
 import type { SalesFormData } from "../types";
 
 const ChangePasswordButton = () => {
@@ -362,6 +364,8 @@ const PreferencesSection = () => {
         <LanguageRow />
         <ItemSeparator />
         <ThemeRow />
+        <ItemSeparator />
+        <SkinRow />
       </ItemGroup>
     </div>
   );
@@ -446,6 +450,45 @@ const ThemeRow = () => {
           {translate("crm.theme.dark")}
         </ToggleGroupItem>
       </ToggleGroup>
+    </Item>
+  );
+};
+
+/**
+ * The skin picker, mirroring `ThemeRow`: a personal display preference stored
+ * in this browser. The catalogue lives in `root/skins.ts`.
+ */
+const SkinRow = () => {
+  const { skin, setSkin } = useSkin();
+
+  return (
+    <Item size="sm" className="flex-col items-stretch gap-2">
+      <ItemTitle className="font-normal text-muted-foreground">
+        Style de l&apos;interface
+      </ItemTitle>
+      <ToggleGroup
+        type="single"
+        value={skin}
+        onValueChange={(value) => value && setSkin(value)}
+        size="lg"
+        variant="outline"
+        /* Stacked: the labels are too long to share one row on a phone. */
+        className="w-full flex-col"
+      >
+        {SKINS.map((option) => (
+          <ToggleGroupItem
+            key={option.value}
+            value={option.value}
+            aria-label={option.label}
+            className="w-full"
+          >
+            {option.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <span className="text-xs text-muted-foreground">
+        Enregistré sur ce navigateur, pour vous seul.
+      </span>
     </Item>
   );
 };

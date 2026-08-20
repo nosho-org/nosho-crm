@@ -11,6 +11,7 @@ import { Layout } from "@/components/admin/layout";
 import { LoginPage } from "@/components/admin/login-page";
 import { Ready } from "@/components/admin/ready";
 import { ThemeProvider } from "@/components/admin/theme-provider";
+import { SkinProvider } from "@/components/admin/skin-provider";
 import { AuthCallback } from "@/components/admin/authentication";
 import { useEffect } from "react";
 
@@ -55,14 +56,16 @@ const AdminUI = (props: CoreAdminUIProps) => {
 
   return (
     <ThemeProvider>
-      <CoreAdminUI
-        layout={Layout}
-        loginPage={LoginPage}
-        ready={Ready}
-        authCallbackPage={AuthCallback}
-        disableTelemetry // Disable telemetry in CoreAdminUI to avoid double logging
-        {...rest}
-      />
+      <SkinProvider>
+        <CoreAdminUI
+          layout={Layout}
+          loginPage={LoginPage}
+          ready={Ready}
+          authCallbackPage={AuthCallback}
+          disableTelemetry // Disable telemetry in CoreAdminUI to avoid double logging
+          {...rest}
+        />
+      </SkinProvider>
     </ThemeProvider>
   );
 };
