@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSkin } from "@/components/admin/use-skin";
 
-import { SKINS, type CrmSkin } from "../root/skins";
+import { DEFAULT_CRM_SKIN, SKINS, type CrmSkin } from "../root/skins";
 
 /**
  * A sketch of what each skin does to the Opportunités screen: the shape of the
@@ -121,6 +121,11 @@ export const AppearanceSection = () => {
                     {skin.label}
                     {selected && (
                       <Check className="w-3.5 h-3.5 text-[var(--nosho-green-dark)]" />
+                    )}
+                    {skin.value === DEFAULT_CRM_SKIN && (
+                      <span className="text-[0.625rem] font-normal uppercase tracking-[0.06em] text-muted-foreground">
+                        Par défaut
+                      </span>
                     )}
                   </span>
                   <span className="block text-xs text-muted-foreground leading-snug">

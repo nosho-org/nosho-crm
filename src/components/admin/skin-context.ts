@@ -8,8 +8,12 @@ import { createContext } from "react";
  */
 export type Skin = string;
 
-/** The skin that ships with the app; it sets no `data-skin` attribute. */
-export const DEFAULT_SKIN: Skin = "default";
+/**
+ * The skin whose tokens are the `:root` block itself — it sets no `data-skin`
+ * attribute. This is the baseline every other skin overrides, NOT necessarily
+ * the one a user gets before choosing: that is the provider's `defaultSkin`.
+ */
+export const BASE_SKIN: Skin = "default";
 
 export type SkinProviderState = {
   skin: Skin;
@@ -17,7 +21,7 @@ export type SkinProviderState = {
 };
 
 const initialState: SkinProviderState = {
-  skin: DEFAULT_SKIN,
+  skin: BASE_SKIN,
   setSkin: () => null,
 };
 

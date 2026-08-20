@@ -12,6 +12,8 @@ import { LoginPage } from "@/components/admin/login-page";
 import { Ready } from "@/components/admin/ready";
 import { ThemeProvider } from "@/components/admin/theme-provider";
 import { SkinProvider } from "@/components/admin/skin-provider";
+// The default skin is an application decision, not a framework one.
+import { DEFAULT_CRM_SKIN } from "@/components/atomic-crm/root/skins";
 import { AuthCallback } from "@/components/admin/authentication";
 import { useEffect } from "react";
 
@@ -56,7 +58,7 @@ const AdminUI = (props: CoreAdminUIProps) => {
 
   return (
     <ThemeProvider>
-      <SkinProvider>
+      <SkinProvider defaultSkin={DEFAULT_CRM_SKIN}>
         <CoreAdminUI
           layout={Layout}
           loginPage={LoginPage}

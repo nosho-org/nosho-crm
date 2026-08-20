@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { useStore } from "ra-core";
 
-import { DEFAULT_SKIN, SkinProviderContext, type Skin } from "./skin-context";
+import { BASE_SKIN, SkinProviderContext, type Skin } from "./skin-context";
 
 type SkinProviderProps = {
   children: React.ReactNode;
+  /** What a user who has never chosen gets. See `DEFAULT_CRM_SKIN`. */
   defaultSkin?: Skin;
   storageKey?: string;
 };
@@ -21,7 +22,7 @@ type SkinProviderProps = {
  */
 export function SkinProvider({
   children,
-  defaultSkin = DEFAULT_SKIN,
+  defaultSkin = BASE_SKIN,
   storageKey = "skin",
   ...props
 }: SkinProviderProps) {
@@ -30,7 +31,7 @@ export function SkinProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    if (!skin || skin === DEFAULT_SKIN) {
+    if (!skin || skin === BASE_SKIN) {
       delete root.dataset.skin;
       return;
     }
@@ -39,7 +40,7 @@ export function SkinProvider({
   }, [skin]);
 
   const value = {
-    skin: skin ?? DEFAULT_SKIN,
+    skin: skin ?? BASE_SKIN,
     setSkin,
   };
 
