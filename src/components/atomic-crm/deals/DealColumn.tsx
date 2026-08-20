@@ -2,6 +2,7 @@ import { Droppable } from "@hello-pangea/dnd";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { formatCompactAmount } from "./cockpit/dealFormat";
 import { findDealLabel } from "./deal";
 import { DealCard } from "./DealCard";
 
@@ -14,7 +15,7 @@ export const DealColumn = ({
 }) => {
   const totalAmount = deals.reduce((sum, deal) => sum + deal.amount, 0);
 
-  const { dealStages } = useConfigurationContext();
+  const { dealStages, currency } = useConfigurationContext();
   return (
     <div className="flex-1 min-w-[220px] pb-8">
       <div className="sticky top-0 z-10 flex flex-col items-center bg-background py-2 shadow-[0_4px_6px_-6px_rgba(0,0,0,0.15)]">
@@ -22,13 +23,7 @@ export const DealColumn = ({
           {findDealLabel(dealStages, stage)} ({deals.length})
         </h3>
         <p className="text-sm text-muted-foreground">
-          {totalAmount.toLocaleString("en-US", {
-            notation: "compact",
-            style: "currency",
-            currency: "USD",
-            currencyDisplay: "narrowSymbol",
-            minimumSignificantDigits: 3,
-          })}
+          {formatCompactAmount(totalAmount, currency)}
         </p>
       </div>
       <Droppable droppableId={stage}>

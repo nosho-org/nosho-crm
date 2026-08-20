@@ -17,6 +17,7 @@ import { useLocation } from "react-router";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { useOptionalDealCockpit } from "./cockpit/DealCockpitContext";
 import { DealColumn } from "./DealColumn";
 import { getCustomViewCompanyType } from "./dealUtils";
 import type { DealsByStage } from "./stages";
@@ -35,7 +36,11 @@ export const DealListViewProvider = DealListViewContext.Provider;
 export const DealListContent = () => {
   const { customViews, dealStages } = useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
-  const { data: unorderedDeals, isPending } = useListContext<Deal>();
+  const { data: listDeals, isPending } = useListContext<Deal>();
+  const cockpit = useOptionalDealCockpit();
+  // Inside the cockpit the board shows the same selection as the banner above
+  // it, facets included; outside it, the raw list query.
+  const unorderedDeals = (cockpit?.deals as Deal[] | undefined) ?? listDeals;
   const dataProvider = useDataProvider();
   const queryClient = useQueryClient();
   const location = useLocation();

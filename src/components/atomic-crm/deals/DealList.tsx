@@ -11,6 +11,7 @@ import { SelectInput } from "@/components/admin/select-input";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
+import { DealCockpit } from "./cockpit/DealCockpit";
 import { getCompanyTypeChoices } from "./dealUtils";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
@@ -89,7 +90,7 @@ const DealLayout = () => {
 
   return (
     <div className="w-full">
-      <DealListContent />
+      <DealCockpit board={<DealListContent />} />
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />

@@ -55,6 +55,18 @@
   --nosho-teal: #4AA696;
   --nosho-red: #ED7C3E;
 
+  /*
+   * Opportunités cockpit — data-viz roles.
+   * Series steps are the validated categorical slots 1 and 3, re-stepped for
+   * the dark surface below. Status steps are fixed in both modes and always
+   * ship with a label, never as colour alone.
+   */
+  --deal-series-potential: #2a78d6;
+  --deal-series-weighted: #1baf7a;
+  --deal-status-critical: #d03b3b;
+  --deal-status-serious: #ec835a;
+  --deal-status-warning: #fab219;
+
   --background: oklch(0.985 0.002 90);
   --foreground: oklch(0.205 0.015 260);
   --card: oklch(1 0 0);
@@ -100,6 +112,10 @@
 }
 
 .dark {
+  /* Same two hues, stepped for the dark chart surface. */
+  --deal-series-potential: #3987e5;
+  --deal-series-weighted: #199e70;
+
   --background: oklch(0.16 0.01 260);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.22 0.01 260);

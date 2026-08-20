@@ -40,6 +40,19 @@ export const defaultDealPipelineStatuses = [
   "declined",
 ];
 
+/** Issue #94 asks for an inactivity alert after "X jours"; X defaults to 14. */
+export const defaultDealInactivityAlertDays = 14;
+
+/**
+ * Intentionally empty: no stage carries a win probability until the team sets
+ * one. The revenue cockpit then shows the weighted figures as "à configurer"
+ * instead of presenting a made-up forecast as if it came from the data.
+ */
+export const defaultDealStageProbabilities: Record<string, number> = {};
+
+/** Issue #92: next action becomes mandatory from the "Qualifié" stage. */
+export const defaultDealNextActionFromStage = "qualified";
+
 export const defaultDealCategories = [
   { value: "angiologue", label: "Angiologue" },
   { value: "api", label: "API" },
@@ -97,6 +110,9 @@ export const defaultConfiguration: ConfigurationContextValue = {
   dealCategories: defaultDealCategories,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealStages: defaultDealStages,
+  dealInactivityAlertDays: defaultDealInactivityAlertDays,
+  dealStageProbabilities: defaultDealStageProbabilities,
+  dealNextActionFromStage: defaultDealNextActionFromStage,
   noteStatuses: defaultNoteStatuses,
   taskTypes: defaultTaskTypes,
   title: defaultTitle,

@@ -1,13 +1,18 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useRedirect, RecordContextProvider } from "ra-core";
 import { ReferenceField } from "@/components/admin/reference-field";
-import { NumberField } from "@/components/admin/number-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { formatCompactAmount } from "./cockpit/dealFormat";
+import {
+  DealNextActionCell,
+  DealPriorityBadge,
+  DealStaleBadge,
+} from "./cockpit/DealFieldBadges";
 
 export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   if (!deal) return null;
@@ -30,7 +35,7 @@ export const DealCardContent = ({
   snapshot?: any;
   deal: Deal;
 }) => {
-  const { dealCategories } = useConfigurationContext();
+  const { dealCategories, currency } = useConfigurationContext();
   const redirect = useRedirect();
   const handleClick = () => {
     redirect(`/deals/${deal.id}/show`, undefined, undefined, undefined, {
@@ -55,6 +60,11 @@ export const DealCardContent = ({
           }`}
         >
           <CardContent className="px-3 flex flex-col">
+            {/* Priority leads the card, as asked in issue #93. */}
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <DealPriorityBadge deal={deal} />
+              <DealStaleBadge deal={deal} />
+            </div>
             <div className="flex-1 flex">
               <p className="flex-1 text-sm font-medium mb-2">
                 <ReferenceField
@@ -74,16 +84,7 @@ export const DealCardContent = ({
               </ReferenceField>
             </div>
             <p className="text-xs text-muted-foreground">
-              <NumberField
-                source="amount"
-                options={{
-                  notation: "compact",
-                  style: "currency",
-                  currency: "USD",
-                  currencyDisplay: "narrowSymbol",
-                  minimumSignificantDigits: 3,
-                }}
-              />
+              {formatCompactAmount(deal.amount, currency)}
               {deal.category && ", "}
               <SelectField
                 source="category"
@@ -92,6 +93,10 @@ export const DealCardContent = ({
                 optionValue="value"
               />
             </p>
+            {/* Next action, its date and its owner — issue #101. */}
+            <div className="mt-2 pt-2 border-t border-border/60">
+              <DealNextActionCell deal={deal} />
+            </div>
           </CardContent>
         </Card>
       </RecordContextProvider>

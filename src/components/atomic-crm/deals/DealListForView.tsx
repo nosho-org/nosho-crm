@@ -22,6 +22,7 @@ import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
+import { DealCockpit } from "./cockpit/DealCockpit";
 import { DealListContent, DealListViewProvider } from "./DealListContent";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
@@ -122,7 +123,7 @@ const DealViewLayout = () => {
 
   return (
     <div className="w-full">
-      <DealListContent />
+      <DealCockpit board={<DealListContent />} />
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
