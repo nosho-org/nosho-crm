@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { useUserFirstName } from "../misc/useUserFirstName";
 import { useAssist } from "./assistStore";
 import {
   useAssistChat,
@@ -33,6 +34,7 @@ const CRM_MODE_ENABLED = Boolean(
 
 export function NoshoAssistChat() {
   const { isOpen, initialMessage, close } = useAssist();
+  const firstName = useUserFirstName();
   const [mode, setMode] = useState<AssistMode>("feedback");
   const {
     messages,
@@ -235,7 +237,11 @@ export function NoshoAssistChat() {
                 </>
               ) : (
                 <>
-                  Comment puis-je vous aider ?
+                  {/* Issue #98 — greet with the first name from the user's own
+                      profile, or with no name at all. Never a fixed one. */}
+                  {firstName
+                    ? `Bonjour ${firstName}, comment puis-je vous aider ?`
+                    : "Comment puis-je vous aider ?"}
                   <br />
                   <span className="text-xs">
                     Tapez votre message ci-dessous, je vous poserai quelques

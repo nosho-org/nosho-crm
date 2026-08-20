@@ -33,6 +33,16 @@ export function transformFilter(filter: Record<string, any>) {
       continue;
     }
 
+    // Checked before `@in` because both end in "in".
+    // FakeRest's `_neq_any` requires the value to differ from every listed
+    // one, and treats a missing field as differing — the same way PostgREST
+    // treats `company_type_key` once NULL has been coalesced to ''.
+    if (key.endsWith("@not.in")) {
+      transformedFilters[`${key.slice(0, -7)}_neq_any`] =
+        transformInFilter(value);
+      continue;
+    }
+
     if (key.endsWith("@in")) {
       transformedFilters[`${key.slice(0, -3)}_eq_any`] =
         transformInFilter(value);

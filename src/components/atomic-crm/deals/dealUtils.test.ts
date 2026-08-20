@@ -1,6 +1,7 @@
 import { commands } from "vitest/browser";
 
 import {
+  formatDealMeetingDate,
   formatISODateString,
   getCompanyTypeChoices,
   getCustomViewCompanyType,
@@ -148,5 +149,44 @@ describe("getCompanyTypeChoices", () => {
       { value: "prospect", label: "Prospect" },
       { value: "client", label: "Client" },
     ]);
+  });
+});
+
+describe("formatDealMeetingDate", () => {
+  let originalTimezone: string;
+
+  beforeEach(() => {
+    originalTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  });
+
+  afterEach(async () => {
+    await commands.setTimezone(originalTimezone);
+  });
+
+  it("shows the local time for a task that carries one", () => {
+    // Built in local time and read back in local time, so the assertion holds
+    // in any timezone the suite happens to run in.
+    const localMeeting = new Date(2026, 7, 25, 11, 0);
+    expect(formatDealMeetingDate(localMeeting.toISOString())).toBe(
+      "Aug 25, 2026 \u00b7 11:00 AM",
+    );
+  });
+
+  it("shows no time for a date-only due date, and does not shift the day", async () => {
+    // Postponing a task from the list stores a bare YYYY-MM-DD. Rendering
+    // "12:00 AM" for it would be a fabricated detail, and parsing it as UTC
+    // would move it to the previous day in negative-offset timezones.
+    await commands.setTimezone("America/New_York");
+    expect(formatDealMeetingDate("2026-08-25")).toBe("Aug 25, 2026");
+
+    await commands.setTimezone("Asia/Tokyo");
+    expect(formatDealMeetingDate("2026-08-25")).toBe("Aug 25, 2026");
+  });
+
+  it("renders a dash rather than a bogus date when there is nothing to show", () => {
+    expect(formatDealMeetingDate(null)).toBe("\u2013");
+    expect(formatDealMeetingDate(undefined)).toBe("\u2013");
+    expect(formatDealMeetingDate("")).toBe("\u2013");
+    expect(formatDealMeetingDate("not-a-date")).toBe("\u2013");
   });
 });

@@ -65,10 +65,11 @@ describe("validateItemsInUse", () => {
     );
   });
 
-  it("returns 'Validating…' when deals have not loaded yet", () => {
+  // The string is French on purpose: 15a8041 translated the whole settings UI.
+  it("returns 'Validation…' when deals have not loaded yet", () => {
     const items = [{ value: "won", label: "Won" }];
     expect(validateItemsInUse(items, undefined, "stage", "stages")).toBe(
-      "Validating…",
+      "Validation…",
     );
   });
 

@@ -109,6 +109,11 @@ async function handler(req: Request, user?: User): Promise<Response> {
   // Look up the sale row to get the human-readable author name.
   let authorName = user?.email ?? "Unknown";
   let authorEmail = user?.email ?? "";
+  // Forwarded separately, mirroring assist-chat, so downstream consumers never
+  // have to guess a first name (issue #98). `Pending` is the placeholder
+  // `sales.first_name` carries until signup completes.
+  let authorFirstName = "";
+  let authorLastName = "";
   if (user) {
     try {
       const sale = await getUserSale(user);
@@ -117,6 +122,8 @@ async function handler(req: Request, user?: User): Promise<Response> {
         const last = (sale as { last_name?: string }).last_name ?? "";
         const composed = `${first} ${last}`.trim();
         if (composed) authorName = composed;
+        if (first && first !== "Pending") authorFirstName = first;
+        if (last && last !== "Pending") authorLastName = last;
         const saleEmail = (sale as { email?: string }).email;
         if (saleEmail) authorEmail = saleEmail;
       }
@@ -142,6 +149,8 @@ async function handler(req: Request, user?: User): Promise<Response> {
     submittedAt: new Date().toISOString(),
     author: {
       name: authorName,
+      firstName: authorFirstName,
+      lastName: authorLastName,
       email: authorEmail,
       userId: user?.id ?? null,
     },

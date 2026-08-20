@@ -1,0 +1,358 @@
+import {
+  compareDealPriority,
+  getCommercialDealsFilter,
+  getCompanyTypeChoices,
+  getDealPriority,
+  getNonCommercialCompanyTypes,
+  getSuggestedArr,
+  isNonCommercialCompanyType,
+  resolvePrefilledArr,
+  withDealCreateDates,
+  withDealUpdateDates,
+} from "./dealUtils";
+import { arrToMrr, formatCurrency } from "../misc/formatCurrency";
+import {
+  defaultCompanyTypes,
+  defaultDealPipelineStatuses,
+  defaultDealStages,
+  defaultEstablishmentTypes,
+  legacyDealStages,
+} from "../root/defaultConfiguration";
+import type { CustomView } from "../root/ConfigurationContext";
+
+const view = (id: string, label: string, companyType: string): CustomView => ({
+  id,
+  label,
+  companyType,
+});
+
+// NOS-796
+describe("canonical pipeline", () => {
+  it("has exactly the 8 canonical stages, in order", () => {
+    expect(defaultDealStages.map((s) => s.value)).toEqual([
+      "lead",
+      "qualified",
+      "demo-booked",
+      "proposal-to-send",
+      "proposal-sent",
+      "closed-won",
+      "perdu",
+      "churn",
+    ]);
+  });
+
+  it("maps every retired stage onto a canonical one", () => {
+    const canonical = new Set(defaultDealStages.map((s) => s.value));
+    expect(Object.keys(legacyDealStages).sort()).toEqual([
+      "declined",
+      "follow-up",
+      "rdv-prix",
+      "trial",
+      "trial-failed",
+    ]);
+    for (const target of Object.values(legacyDealStages)) {
+      expect(canonical.has(target)).toBe(true);
+    }
+  });
+
+  it("never maps a retired stage onto another retired stage", () => {
+    for (const target of Object.values(legacyDealStages)) {
+      expect(legacyDealStages[target]).toBeUndefined();
+    }
+  });
+
+  it("treats only the terminal stages as pipeline statuses", () => {
+    expect(defaultDealPipelineStatuses).toEqual([
+      "closed-won",
+      "perdu",
+      "churn",
+    ]);
+    for (const status of defaultDealPipelineStatuses) {
+      expect(defaultDealStages.some((s) => s.value === status)).toBe(true);
+    }
+  });
+});
+
+// NOS-797
+describe("non-commercial classification", () => {
+  it("flags the six non-commercial types", () => {
+    for (const type of [
+      "investisseur",
+      "partenaire",
+      "ressource",
+      "presse",
+      "leads-santexpo",
+      "logiciels-brique",
+    ]) {
+      expect(isNonCommercialCompanyType(type, defaultCompanyTypes)).toBe(true);
+    }
+  });
+
+  it("keeps clients, prospects and untyped deals in the pipeline", () => {
+    expect(isNonCommercialCompanyType("client", defaultCompanyTypes)).toBe(
+      false,
+    );
+    expect(isNonCommercialCompanyType("prospect", defaultCompanyTypes)).toBe(
+      false,
+    );
+    expect(isNonCommercialCompanyType(null, defaultCompanyTypes)).toBe(false);
+    expect(isNonCommercialCompanyType(undefined, defaultCompanyTypes)).toBe(
+      false,
+    );
+  });
+
+  it("recognises slug variants coming from older custom views", () => {
+    expect(isNonCommercialCompanyType("partenariats", [])).toBe(true);
+    expect(isNonCommercialCompanyType("investisseurs", [])).toBe(true);
+    expect(isNonCommercialCompanyType("ressources", [])).toBe(true);
+  });
+
+  it("lets an explicit commercial flag override the built-in list", () => {
+    const types = [
+      { value: "partenaire", label: "Partenariat", commercial: true },
+    ];
+    expect(isNonCommercialCompanyType("partenaire", types)).toBe(false);
+  });
+
+  it("collects non-commercial slugs from both the config and the views", () => {
+    const views = [
+      view("v1", "Presse", "presse"),
+      view("v2", "Clients", "client"),
+    ];
+    const excluded = getNonCommercialCompanyTypes(defaultCompanyTypes, views);
+    expect(excluded).toContain("presse");
+    expect(excluded).not.toContain("client");
+  });
+
+  it("filters on the coalesced key so untyped deals are never dropped", () => {
+    // PostgREST evaluates `not.in` as NULL for a NULL column, which would hide
+    // every plain opportunity. The view exposes coalesce(company_type, '').
+    const filter = getCommercialDealsFilter(defaultCompanyTypes, []);
+    const key = Object.keys(filter)[0];
+    expect(key).toBe("company_type_key@not.in");
+    expect(filter[key]).toContain("investisseur");
+    expect(filter[key]).toMatch(/^\(.*\)$/);
+  });
+
+  it("produces no filter when nothing is flagged non-commercial", () => {
+    expect(
+      getCommercialDealsFilter([{ value: "client", label: "Client" }], []),
+    ).toEqual({});
+  });
+});
+
+// NOS-801
+describe("Vue menu deduplication", () => {
+  it("keeps a single entry when two views resolve to the same type", () => {
+    const views = [
+      view("v1", "Investisseurs", "investisseur"),
+      view("v2", "Investisseurs", "investisseur"),
+    ];
+    const labels = getCompanyTypeChoices(defaultCompanyTypes, views).map(
+      (c) => c.label,
+    );
+    expect(labels.filter((l) => l === "Investisseurs")).toHaveLength(1);
+  });
+
+  it("does not repeat a company type already covered by a view label", () => {
+    const views = [view("v1", "Client", "client")];
+    const choices = getCompanyTypeChoices(defaultCompanyTypes, views);
+    expect(choices.filter((c) => c.value === "client")).toHaveLength(1);
+  });
+
+  it("never returns duplicate values or labels", () => {
+    const views = [
+      view("v1", "Presse", "presse"),
+      view("v2", "presse", "presse"),
+      view("v3", "Partenariats", "partenaire"),
+    ];
+    const choices = getCompanyTypeChoices(defaultCompanyTypes, views);
+    expect(new Set(choices.map((c) => c.value)).size).toBe(choices.length);
+    expect(new Set(choices.map((c) => c.label.toLowerCase())).size).toBe(
+      choices.length,
+    );
+  });
+});
+
+// NOS-805
+describe("pipeline dates", () => {
+  it("stamps the entry date on creation", () => {
+    expect(
+      withDealCreateDates({ stage: "lead" }, "2026-08-20").entered_at,
+    ).toBe("2026-08-20");
+  });
+
+  it("respects an entry date supplied by the form", () => {
+    const data = withDealCreateDates(
+      { stage: "lead", entered_at: "2026-01-05" },
+      "2026-08-20",
+    );
+    expect(data.entered_at).toBe("2026-01-05");
+  });
+
+  it("stamps the signature date when a deal is created already signed", () => {
+    expect(
+      withDealCreateDates({ stage: "closed-won" }, "2026-08-20").won_at,
+    ).toBe("2026-08-20");
+  });
+
+  it("stamps the signature date when the deal reaches the signed stage", () => {
+    const data = withDealUpdateDates(
+      { stage: "closed-won" },
+      { stage: "proposal-sent" },
+      "2026-08-20",
+    );
+    expect(data.won_at).toBe("2026-08-20");
+  });
+
+  it("does not overwrite an existing signature date", () => {
+    const data = withDealUpdateDates(
+      { stage: "closed-won" },
+      { stage: "proposal-sent", won_at: "2026-02-02" },
+      "2026-08-20",
+    );
+    expect(data.won_at).toBeUndefined();
+  });
+
+  it("leaves the signature date alone when a signed deal is edited", () => {
+    const data = withDealUpdateDates(
+      { amount: 900 },
+      { stage: "closed-won", won_at: "2026-02-02" },
+      "2026-08-20",
+    );
+    expect(data.won_at).toBeUndefined();
+  });
+
+  it("never clears the signature date when the deal leaves the signed stage", () => {
+    const data = withDealUpdateDates(
+      { stage: "perdu" },
+      { stage: "closed-won", won_at: "2026-02-02" },
+      "2026-08-20",
+    );
+    expect(data).not.toHaveProperty("won_at");
+  });
+});
+
+// NOS-806
+describe("priority", () => {
+  it("falls back to Normal for an unknown or missing value", () => {
+    expect(getDealPriority(undefined).value).toBe("normal");
+    expect(getDealPriority("critique").value).toBe("normal");
+  });
+
+  it("orders urgent before important before normal", () => {
+    const sorted = ["normal", "urgent", "important"].sort((a, b) =>
+      compareDealPriority(a, b),
+    );
+    expect(sorted).toEqual(["urgent", "important", "normal"]);
+  });
+});
+
+// NOS-807/808
+describe("ARR and MRR", () => {
+  it("derives the MRR from the ARR", () => {
+    expect(arrToMrr(12000)).toBe(1000);
+    expect(arrToMrr(800)).toBe(66.67);
+    expect(arrToMrr(null)).toBeNull();
+  });
+
+  it("formats amounts in euros without converting them", () => {
+    const formatted = formatCurrency(12000, "EUR");
+    expect(formatted).toContain("€");
+    expect(formatted).not.toContain("$");
+    expect(formatted.replace(/\D/g, "")).toBe("12000");
+  });
+
+  it("renders a missing amount as a dash rather than 0 €", () => {
+    expect(formatCurrency(null)).toBe("–");
+    expect(formatCurrency(undefined)).toBe("–");
+  });
+});
+
+// NOS-810/811/812
+describe("ARR tiers and prefill", () => {
+  it("suggests the configured tier for an establishment type", () => {
+    expect(getSuggestedArr("cabinet", defaultEstablishmentTypes)).toBe(800);
+    expect(getSuggestedArr("clinique", defaultEstablishmentTypes)).toBe(5000);
+    expect(getSuggestedArr("hopital", defaultEstablishmentTypes)).toBe(15000);
+    expect(getSuggestedArr("inconnu", defaultEstablishmentTypes)).toBeNull();
+    expect(getSuggestedArr(null, defaultEstablishmentTypes)).toBeNull();
+  });
+
+  it("fills an empty ARR from the tier", () => {
+    expect(
+      resolvePrefilledArr({
+        currentArr: 0,
+        isManual: false,
+        suggestedArr: 5000,
+      }),
+    ).toEqual({
+      arr: 5000,
+      changed: true,
+    });
+    expect(
+      resolvePrefilledArr({
+        currentArr: null,
+        isManual: false,
+        suggestedArr: 800,
+      }),
+    ).toEqual({
+      arr: 800,
+      changed: true,
+    });
+  });
+
+  it("never overwrites a manually entered ARR", () => {
+    expect(
+      resolvePrefilledArr({
+        currentArr: 2500,
+        isManual: true,
+        suggestedArr: 15000,
+      }),
+    ).toEqual({
+      arr: 2500,
+      changed: false,
+    });
+  });
+
+  it("never overwrites a manual ARR even when it is zero", () => {
+    // A deliberate 0 € is a decision, not an empty field.
+    expect(
+      resolvePrefilledArr({
+        currentArr: 0,
+        isManual: true,
+        suggestedArr: 15000,
+      }),
+    ).toEqual({
+      arr: 0,
+      changed: false,
+    });
+  });
+
+  it("leaves an existing non-zero ARR alone even without the manual flag", () => {
+    // Deals created before the flag existed must not be rewritten either.
+    expect(
+      resolvePrefilledArr({
+        currentArr: 3000,
+        isManual: false,
+        suggestedArr: 800,
+      }),
+    ).toEqual({
+      arr: 3000,
+      changed: false,
+    });
+  });
+
+  it("does nothing when the establishment type has no tier", () => {
+    expect(
+      resolvePrefilledArr({
+        currentArr: 0,
+        isManual: false,
+        suggestedArr: null,
+      }),
+    ).toEqual({
+      arr: 0,
+      changed: false,
+    });
+  });
+});

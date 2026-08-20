@@ -24,6 +24,10 @@ import type {
   GooglePreferences,
 } from "../../google/types";
 import { defaultGooglePreferences } from "../../google/types";
+import {
+  withDealCreateDates,
+  withDealUpdateDates,
+} from "../../deals/dealUtils";
 import { getActivityLog } from "../commons/activity";
 import { ATTACHMENTS_BUCKET } from "../commons/attachments";
 import { getIsInitialized } from "./authProvider";
@@ -637,6 +641,20 @@ const lifeCycleCallbacks: ResourceCallbacks[] = [
       await resolveRecordAttachments(record);
       return record;
     },
+  },
+  {
+    // Pipeline dates are maintained here rather than in the form so that they
+    // also apply to Kanban drag-and-drop, which issues a bare stage update
+    // (NOS-805).
+    resource: "deals",
+    beforeCreate: async (params) => ({
+      ...params,
+      data: withDealCreateDates(params.data),
+    }),
+    beforeUpdate: async (params) => ({
+      ...params,
+      data: withDealUpdateDates(params.data, params.previousData),
+    }),
   },
   {
     resource: "companies",

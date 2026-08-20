@@ -8,7 +8,13 @@ Atomic CRM is a full-featured CRM built with React, shadcn-admin-kit, and Supaba
 
 **After every fix or feature, always run these steps before considering the task complete:**
 
-1. **TypeScript** — `make typecheck` must pass with zero errors
+1. **TypeScript** — `make typecheck` must pass with zero errors.
+   ⚠️ Be aware that `make typecheck` (`tsc --noEmit`) currently checks **zero
+   files**: the root `tsconfig.json` is a solution file (`"files": []` +
+   `references`), and without `-b` TypeScript never follows those references.
+   Verify with `npx tsc --noEmit --listFiles | wc -l` → `0`. Use
+   `make typecheck-full` (`tsc -b`) for a real check; it reports ~40 pre-existing
+   errors, so it is deliberately **not** wired into CI yet.
 2. **Migrations** — if any `.sql` file was added to `supabase/migrations/`, run `make supabase-push` and confirm "No pending migrations" on the next run
 3. **Behavioral verification** — confirm the fix actually works:
    - For DB changes: query the remote via `scripts/supabase-push.sh`-style API call to verify column/table exists
@@ -39,7 +45,11 @@ make start-demo       # Start full-stack with FakeRest data provider
 
 ```bash
 make test             # Run unit tests (vitest)
-make typecheck        # Run TypeScript type checking
+make typecheck        # Run TypeScript type checking (no-op today — see above)
+make typecheck-full   # Real type check (tsc -b); ~40 pre-existing errors
+make test-app         # Run app unit tests (Vitest browser mode, Chromium)
+make test-functions   # Run edge-function unit tests (Vitest, Node)
+make test-edge-functions # Run generate-proposal's Deno-native tests
 make lint             # Run ESLint and Prettier checks
 ```
 

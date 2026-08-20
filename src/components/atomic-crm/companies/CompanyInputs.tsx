@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import ImageEditorField from "../misc/ImageEditorField";
+import { formatCurrency } from "../misc/formatCurrency";
 import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Sale } from "../types";
@@ -120,7 +121,8 @@ const WebsiteInputWithLogo = () => {
 };
 
 const CompanyContextInputs = () => {
-  const { companySectors, companyTypes } = useConfigurationContext();
+  const { companySectors, companyTypes, establishmentTypes, currency } =
+    useConfigurationContext();
   return (
     <div className="flex flex-col gap-4">
       <h6 className="text-lg font-semibold">Contexte</h6>
@@ -131,6 +133,17 @@ const CompanyContextInputs = () => {
         optionText="label"
         optionValue="value"
         helperText={false}
+      />
+      <SelectInput
+        source="establishment_type"
+        label="Type d'établissement"
+        choices={establishmentTypes.map((type) => ({
+          ...type,
+          label: `${type.label} — ${formatCurrency(type.arr, currency)} ARR`,
+        }))}
+        optionText="label"
+        optionValue="value"
+        helperText="Détermine l'ARR proposé sur les opportunités de cette société"
       />
       <SelectInput
         source="sector"

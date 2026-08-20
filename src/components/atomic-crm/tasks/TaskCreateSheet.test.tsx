@@ -58,7 +58,8 @@ describe("TaskCreateSheet", () => {
 
     await typeInput.click();
     const typeOptions = screen.getByRole("listbox");
-    await typeOptions.getByText("Call").click();
+    // Task type labels are French (defaultTaskTypes); the stored value stays "call".
+    await typeOptions.getByText("Appel").click();
 
     const dueDateInput = screen.getByLabelText(/due date/i);
     await dueDateInput.clear();

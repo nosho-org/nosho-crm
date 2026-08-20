@@ -86,17 +86,25 @@ select
     co.*,
     c.name                                                                    as company_name,
     replace(lower(immutable_unaccent(coalesce(c.name, ''))), ' ', '')         as company_name_search,
+    -- Establishment typology, used to render the sector pictogram in the
+    -- Contacts list without one extra request per row.
+    c.sector                                                                  as company_sector,
     jsonb_path_query_array(co.email_jsonb, '$[*].email')::text                as email_fts,
     jsonb_path_query_array(co.phone_jsonb, '$[*].number')::text               as phone_fts,
     count(distinct t.id) filter (where t.done_date is null)                   as nb_tasks
 from public.contacts co
     left join public.tasks t    on co.id = t.contact_id
     left join public.companies c on co.company_id = c.id
-group by co.id, c.name;
+group by co.id, c.name, c.sector;
 
 create or replace view public.deals_summary with (security_invoker = on) as
 select
     d.*,
+    -- Filterable mirror of company_type with NULL folded to '' (NOS-797).
+    -- PostgREST evaluates `not.in.(...)` as NULL for a NULL column and drops
+    -- the row, which would have hidden every untyped opportunity — exactly the
+    -- ones the commercial pipeline is made of.
+    coalesce(d.company_type, '')                                                                                       as company_type_key,
     comp.name                                                                                                          as company_name,
     replace(lower(immutable_unaccent(coalesce(comp.name, ''))), ' ', '')                                                as company_name_search,
     coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), '')                                                as contact_names,

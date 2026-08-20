@@ -10,7 +10,7 @@ import {
   useRefresh,
   useUpdate,
 } from "ra-core";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { EditButton } from "@/components/admin/edit-button";
 import { ReferenceArrayField } from "@/components/admin/reference-array-field";
@@ -22,13 +22,17 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
 import { CompanyAvatar } from "../companies/CompanyAvatar";
+import { arrToMrr, formatCurrency } from "../misc/formatCurrency";
 import { NoteCreate } from "../notes/NoteCreate";
 import { NotesIterator } from "../notes/NotesIterator";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TaskCreateSheet } from "../tasks/TaskCreateSheet";
 import type { Deal } from "../types";
 import { ContactList } from "./ContactList";
+import { DealNextMeeting } from "./DealNextMeeting";
 import { DealTasks } from "./DealTasks";
+import { DealPriorityField } from "./DealPriorityField";
+import { ManualArrIndicator } from "./DealListTable";
 import { findDealLabel } from "./deal";
 import { formatISODateString } from "./dealUtils";
 import { GenerateProposalAction } from "./GenerateProposalAction";
@@ -52,8 +56,31 @@ export const DealShow = ({ open, id }: { open: boolean; id?: string }) => {
   );
 };
 
+/** One labelled read-only value in the deal header. */
+const Detail = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) => (
+  <div className="flex flex-col">
+    <span className="text-xs text-muted-foreground tracking-wide">{label}</span>
+    <span className="text-sm">{children}</span>
+  </div>
+);
+
+const formatDateOrDash = (value: string | null | undefined) =>
+  value && isValid(new Date(value)) ? formatISODateString(value) : "–";
+
 const DealShowContent = () => {
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const {
+    dealStages,
+    dealCategories,
+    dealOpportunityTypes,
+    leadSources,
+    currency,
+  } = useConfigurationContext();
   const record = useRecordContext<Deal>();
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   if (!record) return null;
@@ -99,62 +126,96 @@ const DealShowContent = () => {
             </div>
           </div>
 
-          <div className="flex gap-8 m-4">
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                Expected closing date
+          <div className="flex flex-wrap gap-x-8 gap-y-4 m-4">
+            <Detail label="Étape">
+              {findDealLabel(dealStages, record.stage) ?? record.stage}
+            </Detail>
+
+            <Detail label="Priorité">
+              <DealPriorityField />
+            </Detail>
+
+            <Detail label="ARR annuel">
+              <span className="inline-flex items-center gap-1.5">
+                {formatCurrency(record.amount, currency)}
+                <ManualArrIndicator />
               </span>
+            </Detail>
+
+            <Detail label="MRR calculé">
+              {formatCurrency(record.mrr ?? arrToMrr(record.amount), currency, {
+                maximumFractionDigits: 2,
+              })}
+            </Detail>
+
+            <Detail label="Date d'entrée">
+              {formatDateOrDash(record.entered_at)}
+            </Detail>
+
+            <Detail label="Date de clôture prévue">
               <div className="flex items-center gap-2">
-                <span className="text-sm">
-                  {record.expected_closing_date &&
-                  isValid(new Date(record.expected_closing_date))
-                    ? formatISODateString(record.expected_closing_date)
-                    : "–"}
-                </span>
+                <span>{formatDateOrDash(record.expected_closing_date)}</span>
                 {record.expected_closing_date &&
                 new Date(record.expected_closing_date) < new Date() ? (
-                  <Badge variant="destructive">Past</Badge>
+                  <Badge variant="destructive">Dépassée</Badge>
                 ) : null}
               </div>
-            </div>
+            </Detail>
 
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                Budget
-              </span>
-              <span className="text-sm">
-                {record.amount != null
-                  ? record.amount.toLocaleString("en-US", {
-                      notation: "compact",
-                      style: "currency",
-                      currency: "USD",
-                      currencyDisplay: "narrowSymbol",
-                      minimumSignificantDigits: 3,
-                    })
-                  : "–"}
-              </span>
-            </div>
+            <Detail label="Date de signature">
+              {formatDateOrDash(record.won_at)}
+            </Detail>
 
             {record.category && (
-              <div className="flex flex-col mr-10">
-                <span className="text-xs text-muted-foreground tracking-wide">
-                  Category
-                </span>
-                <span className="text-sm">
-                  {dealCategories.find((c) => c.value === record.category)
-                    ?.label ?? record.category}
-                </span>
-              </div>
+              <Detail label="Catégorie">
+                {dealCategories.find((c) => c.value === record.category)
+                  ?.label ?? record.category}
+              </Detail>
             )}
 
-            <div className="flex flex-col mr-10">
-              <span className="text-xs text-muted-foreground tracking-wide">
-                Stage
-              </span>
-              <span className="text-sm">
-                {findDealLabel(dealStages, record.stage)}
-              </span>
-            </div>
+            {record.lead_source && (
+              <Detail label="Source du lead">
+                {leadSources.find((s) => s.value === record.lead_source)
+                  ?.label ?? record.lead_source}
+              </Detail>
+            )}
+
+            <Detail label="Responsable">
+              <ReferenceField
+                source="sales_id"
+                reference="sales"
+                link={false}
+                empty="–"
+              />
+            </Detail>
+
+            {record.referrer_id != null && (
+              <Detail label="Apporteur">
+                <ReferenceField
+                  source="referrer_id"
+                  reference="sales"
+                  link={false}
+                  empty="–"
+                />
+              </Detail>
+            )}
+
+            {/* Issue #95 — growth source, shown on the individual opportunity
+                only (never in the Kanban cards or list views). */}
+            {record.opportunity_type && (
+              <Detail label="Type d'opportunité">
+                {dealOpportunityTypes.find(
+                  (type) => type.value === record.opportunity_type,
+                )?.label ?? record.opportunity_type}
+              </Detail>
+            )}
+
+            {/* Issue #99 — read-only, derived from the deal contacts' tasks.
+                Rendered as its own block rather than through <Detail>: it is a
+                multi-line card, and <Detail> puts its children in a <span>. */}
+            {!record.archived_at && (
+              <DealNextMeeting contactIds={record.contact_ids as number[]} />
+            )}
           </div>
 
           {!!record.contact_ids?.length && (
@@ -167,7 +228,7 @@ const DealShowContent = () => {
                   source="contact_ids"
                   reference="contacts_summary"
                 >
-                  <ContactList />
+                  <ContactList record={record} />
                 </ReferenceArrayField>
               </div>
             </div>

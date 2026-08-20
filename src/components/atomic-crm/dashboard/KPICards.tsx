@@ -115,6 +115,14 @@ function HotContactsCard({ contacts }: { contacts: Contact[] | undefined }) {
   );
 }
 
+/**
+ * Open stage weighted into the forecast alongside signed contracts.
+ *
+ * Was "trial" before the canonical pipeline (NOS-796) retired that stage; a
+ * sent proposal awaiting a decision is its closest equivalent.
+ */
+const PENDING_STAGE = "proposal-sent";
+
 function RevenuePrevisionnelCard({ deals }: { deals: Deal[] | undefined }) {
   const [trialPct, setTrialPct] = useState(70);
 
@@ -126,7 +134,7 @@ function RevenuePrevisionnelCard({ deals }: { deals: Deal[] | undefined }) {
     const currentMonth = now.getMonth();
 
     const md = deals.filter((d) => {
-      if (d.stage !== "trial" && d.stage !== "closed-won") return false;
+      if (d.stage !== PENDING_STAGE && d.stage !== "closed-won") return false;
       if (!d.expected_closing_date) return false;
       const closing = new Date(d.expected_closing_date);
       return (
@@ -138,13 +146,13 @@ function RevenuePrevisionnelCard({ deals }: { deals: Deal[] | undefined }) {
     const won = md
       .filter((d) => d.stage === "closed-won")
       .reduce((acc, d) => acc + (d.amount ?? 0), 0);
-    const trial = md
-      .filter((d) => d.stage === "trial")
+    const pending = md
+      .filter((d) => d.stage === PENDING_STAGE)
       .reduce((acc, d) => acc + (d.amount ?? 0), 0);
 
     return {
       monthDeals: md,
-      revenue: won + trial * (trialPct / 100),
+      revenue: won + pending * (trialPct / 100),
     };
   }, [deals, trialPct]);
 
@@ -181,11 +189,11 @@ function RevenuePrevisionnelCard({ deals }: { deals: Deal[] | undefined }) {
           value={trialPct}
           onChange={(e) => setTrialPct(Number(e.target.value))}
           className="text-xs font-bold px-2 py-0.5 rounded-full border border-[var(--nosho-orange)]/40 bg-[var(--nosho-orange)]/10 text-[var(--nosho-orange-dark)] cursor-pointer focus:outline-none"
-          title="Pondération des deals en Essai"
+          title="Pondération des opportunités en Proposition envoyée"
         >
           {TRIAL_PERCENTAGES.map((p) => (
             <option key={p} value={p}>
-              Essai {p}%
+              Proposition envoyée {p}%
             </option>
           ))}
         </select>
@@ -196,7 +204,7 @@ function RevenuePrevisionnelCard({ deals }: { deals: Deal[] | undefined }) {
             {formattedRevenue}
           </span>
           <span className="text-xs text-muted-foreground">
-            Gagné 100% · Essai {trialPct}% · mois en cours
+            Signé 100% · Proposition envoyée {trialPct}% · mois en cours
           </span>
           {monthDeals.length > 0 && (
             <ul className="mt-2 flex flex-col gap-1.5">

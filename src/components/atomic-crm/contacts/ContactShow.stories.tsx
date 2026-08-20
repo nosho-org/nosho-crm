@@ -23,8 +23,13 @@ const successContacts = [
   }),
 ];
 
+// See the note in ContactShow.mobile.stories.tsx — ContactShow needs the route,
+// not resource/id props.
 export const DesktopSuccess = () => (
-  <StoryWrapper data={{ contacts: successContacts }}>
-    <ContactShow resource="contacts" id={1} />
+  <StoryWrapper
+    data={{ contacts: successContacts }}
+    initialEntries={["/contacts/1/show"]}
+  >
+    <ContactShow />
   </StoryWrapper>
 );

@@ -79,6 +79,9 @@ export const authProvider: AuthProvider = {
       id: user?.id ?? 0,
       fullName: user ? `${user.first_name} ${user.last_name}` : "Jane Doe",
       avatar: user?.avatar?.src,
+      // Kept in sync with the Supabase authProvider (issue #98).
+      firstName: user?.first_name ?? "Jane",
+      lastName: user?.last_name ?? "Doe",
     });
   },
   async getAuthorizationDetails() {

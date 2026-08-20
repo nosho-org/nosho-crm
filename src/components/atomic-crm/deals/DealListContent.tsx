@@ -5,6 +5,7 @@ import {
   type OnDragEndResponder,
 } from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
+import { Columns3, Rows3 } from "lucide-react";
 import {
   useCanAccess,
   useDataProvider,
@@ -17,7 +18,9 @@ import { useLocation } from "react-router";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { useOptionalDealCockpit } from "./cockpit/DealCockpitContext";
 import { DealColumn } from "./DealColumn";
+import { DealListTable } from "./DealListTable";
 import { getCustomViewCompanyType } from "./dealUtils";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
@@ -35,7 +38,11 @@ export const DealListViewProvider = DealListViewContext.Provider;
 export const DealListContent = () => {
   const { customViews, dealStages } = useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
-  const { data: unorderedDeals, isPending } = useListContext<Deal>();
+  const { data: listDeals, isPending } = useListContext<Deal>();
+  const cockpit = useOptionalDealCockpit();
+  // Inside the cockpit the board shows the same selection as the banner above
+  // it, facets included; outside it, the raw list query.
+  const unorderedDeals = (cockpit?.deals as Deal[] | undefined) ?? listDeals;
   const dataProvider = useDataProvider();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -45,6 +52,7 @@ export const DealListContent = () => {
     action: "edit",
   });
   const storageKey = `dealListVisibleStages:${location.pathname}`;
+  const [viewMode, setViewMode] = useDealViewMode(location.pathname);
   const currentSaleId = identity?.id as number | undefined;
   const visibleCustomViews = customViews.filter(
     (view) =>
@@ -180,8 +188,21 @@ export const DealListContent = () => {
     visibleStages.has(s.value),
   );
 
+  // The row-by-row view is the default (NOS-798). Stage visibility is a Kanban
+  // column affordance, so in list mode filtering happens through the regular
+  // filter bar instead.
+  if (viewMode === "list") {
+    return (
+      <div className="flex flex-col gap-4">
+        <DealViewModeToggle value={viewMode} onChange={setViewMode} />
+        <DealListTable />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      <DealViewModeToggle value={viewMode} onChange={setViewMode} />
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex flex-col gap-3">
           {visibleCustomViews.length > 0 && (
@@ -266,6 +287,72 @@ export const DealListContent = () => {
     </div>
   );
 };
+
+export type DealViewMode = "list" | "kanban";
+
+/**
+ * Remembers the list/Kanban choice per route, so a user who prefers the board
+ * on Opportunités can still get the list on another view.
+ *
+ * Defaults to the row-by-row list (NOS-798).
+ */
+const useDealViewMode = (
+  pathname: string,
+): [DealViewMode, (mode: DealViewMode) => void] => {
+  const storageKey = `dealListViewMode:${pathname}`;
+  const [mode, setMode] = useState<DealViewMode>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved === "list" || saved === "kanban") return saved;
+    } catch {
+      // Ignore malformed or unavailable localStorage preferences.
+    }
+    return "list";
+  });
+
+  const persist = (next: DealViewMode) => {
+    setMode(next);
+    try {
+      localStorage.setItem(storageKey, next);
+    } catch {
+      // Ignore unavailable localStorage.
+    }
+  };
+
+  return [mode, persist];
+};
+
+const DealViewModeToggle = ({
+  value,
+  onChange,
+}: {
+  value: DealViewMode;
+  onChange: (mode: DealViewMode) => void;
+}) => (
+  <div className="flex items-center gap-1 self-start rounded-md border p-0.5">
+    {(
+      [
+        { mode: "list", label: "Liste", Icon: Rows3 },
+        { mode: "kanban", label: "Kanban", Icon: Columns3 },
+      ] as const
+    ).map(({ mode, label, Icon }) => (
+      <button
+        key={mode}
+        type="button"
+        aria-pressed={value === mode}
+        onClick={() => onChange(mode)}
+        className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+          value === mode
+            ? "bg-[var(--nosho-orange)]/10 text-[var(--nosho-orange-dark)]"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </button>
+    ))}
+  </div>
+);
 
 const ViewDropTarget = ({
   droppableId,
