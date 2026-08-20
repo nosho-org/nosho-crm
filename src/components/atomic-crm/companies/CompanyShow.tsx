@@ -30,6 +30,7 @@ import { MobileContent } from "../layout/MobileContent";
 import MobileHeader from "../layout/MobileHeader";
 import { MobileBackButton } from "../misc/MobileBackButton";
 import { Status } from "../misc/Status";
+import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Contact, Deal } from "../types";
 import {
@@ -218,7 +219,8 @@ const ContactsIterator = () => {
               {contact.last_seen && (
                 <div className="text-right">
                   <div className="text-sm text-muted-foreground">
-                    il y a {formatDistance(contact.last_seen, now, { locale: fr })}{" "}
+                    il y a{" "}
+                    {formatDistance(contact.last_seen, now, { locale: fr })}{" "}
                     <Status status={contact.status} />
                   </div>
                 </div>
@@ -249,7 +251,7 @@ const CreateRelatedContactButton = () => {
 
 const DealsIterator = () => {
   const { data: deals, error, isPending } = useListContext<Deal>();
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const { dealStages, dealCategories, currency } = useConfigurationContext();
   if (isPending || error) return null;
 
   const now = Date.now();
@@ -266,13 +268,7 @@ const DealsIterator = () => {
                 <div className="font-medium">{deal.name}</div>
                 <div className="text-sm text-muted-foreground">
                   {findDealLabel(dealStages, deal.stage)},{" "}
-                  {deal.amount.toLocaleString("en-US", {
-                    notation: "compact",
-                    style: "currency",
-                    currency: "USD",
-                    currencyDisplay: "narrowSymbol",
-                    minimumSignificantDigits: 3,
-                  })}
+                  {formatCurrencyCompact(deal.amount, currency)} ARR
                   {deal.category
                     ? `, ${dealCategories.find((c) => c.value === deal.category)?.label ?? deal.category}`
                     : ""}
@@ -280,7 +276,8 @@ const DealsIterator = () => {
               </div>
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">
-                  il y a {formatDistance(deal.updated_at, now, { locale: fr })}{" "}
+                  il y a{" "}
+                  {formatDistance(deal.updated_at, now, { locale: fr })}{" "}
                 </div>
               </div>
             </RouterLink>

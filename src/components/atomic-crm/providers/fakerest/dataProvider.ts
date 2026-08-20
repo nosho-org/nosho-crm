@@ -562,6 +562,8 @@ export const dataProvider = withLifecycleCallbacks(
             updated_at: new Date().toISOString(),
             contact_names,
             company_name,
+            // Emulates deals_summary.company_type_key: coalesce(company_type, '').
+            company_type_key: params.data.company_type ?? "",
           },
         };
       },
@@ -584,6 +586,8 @@ export const dataProvider = withLifecycleCallbacks(
             updated_at: new Date().toISOString(),
             contact_names,
             company_name,
+            // Emulates deals_summary.company_type_key: coalesce(company_type, '').
+            company_type_key: params.data.company_type ?? "",
           },
         };
       },

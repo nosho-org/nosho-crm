@@ -1,7 +1,14 @@
 import { useCallback, useMemo } from "react";
 import { useStore } from "ra-core";
 
-import type { DealStage, LabeledValue, NoteStatus } from "../types";
+import type {
+  CompanyType,
+  DealPriority,
+  DealStage,
+  EstablishmentType,
+  LabeledValue,
+  NoteStatus,
+} from "../types";
 import { defaultConfiguration } from "./defaultConfiguration";
 
 export const CONFIGURATION_STORE_KEY = "app.configuration";
@@ -17,12 +24,15 @@ export interface CustomView {
 
 export interface ConfigurationContextValue {
   companySectors: LabeledValue[];
-  companyTypes: LabeledValue[];
+  companyTypes: CompanyType[];
   currency: string;
   customViews: CustomView[];
   dealCategories: LabeledValue[];
   dealPipelineStatuses: string[];
+  dealPriorities: DealPriority[];
   dealStages: DealStage[];
+  establishmentTypes: EstablishmentType[];
+  leadSources: LabeledValue[];
   noteStatuses: NoteStatus[];
   taskTypes: LabeledValue[];
   title: string;
@@ -74,5 +84,30 @@ export const useCustomViewsStore = (): [
   return [
     storedConfig.customViews ?? defaultConfiguration.customViews,
     setCustomViews,
+  ];
+};
+
+/**
+ * Same narrow-write trick as {@link useCustomViewsStore}, for `companyTypes`.
+ * Used by the commercial/non-commercial toggle, which lives outside the
+ * settings form and must not reset it.
+ */
+export const useCompanyTypesStore = (): [
+  CompanyType[],
+  (types: CompanyType[]) => void,
+] => {
+  const [storedConfig, setStoredConfig] = useStore<
+    Partial<ConfigurationContextValue>
+  >(CONFIGURATION_STORE_KEY, {});
+  const setCompanyTypes = useCallback(
+    (types: CompanyType[]) => {
+      setStoredConfig({ ...storedConfig, companyTypes: types });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [storedConfig],
+  );
+  return [
+    storedConfig.companyTypes ?? defaultConfiguration.companyTypes,
+    setCompanyTypes,
   ];
 };

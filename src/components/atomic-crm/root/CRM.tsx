@@ -43,11 +43,15 @@ import {
 import type { CrmDataProvider } from "../providers/types";
 import {
   defaultCompanySectors,
+  defaultCompanyTypes,
   defaultCurrency,
   defaultDarkModeLogo,
   defaultDealCategories,
   defaultDealPipelineStatuses,
+  defaultDealPriorities,
   defaultDealStages,
+  defaultEstablishmentTypes,
+  defaultLeadSources,
   defaultLightModeLogo,
   defaultNoteStatuses,
   defaultTaskTypes,
@@ -116,10 +120,15 @@ export type CRMProps = {
  */
 export const CRM = ({
   companySectors = defaultCompanySectors,
+  companyTypes = defaultCompanyTypes,
   currency = defaultCurrency,
+  customViews = [],
   dealCategories = defaultDealCategories,
   dealPipelineStatuses = defaultDealPipelineStatuses,
+  dealPriorities = defaultDealPriorities,
   dealStages = defaultDealStages,
+  establishmentTypes = defaultEstablishmentTypes,
+  leadSources = defaultLeadSources,
   darkModeLogo = defaultDarkModeLogo,
   lightModeLogo = defaultLightModeLogo,
   noteStatuses = defaultNoteStatuses,
@@ -155,10 +164,15 @@ export const CRM = ({
     if (!store.getItem(CONFIGURATION_STORE_KEY)) {
       store.setItem(CONFIGURATION_STORE_KEY, {
         companySectors,
+        companyTypes,
         currency,
+        customViews,
         dealCategories,
         dealPipelineStatuses,
+        dealPriorities,
         dealStages,
+        establishmentTypes,
+        leadSources,
         noteStatuses,
         taskTypes,
         title,

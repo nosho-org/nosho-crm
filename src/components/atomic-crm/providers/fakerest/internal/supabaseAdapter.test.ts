@@ -264,6 +264,50 @@ describe("getList", () => {
     });
   });
 
+  // Used by the Opportunités board to keep non-commercial objects out of the
+  // commercial pipeline (NOS-797).
+  it("should transform '@not.in' into FakeRest's '_neq_any'", async () => {
+    const getList = vi.fn();
+    const mockDataProvider = {
+      getList,
+    } as unknown as DataProvider;
+
+    getList.mockResolvedValueOnce([{ id: 1 }]);
+
+    const { getList: getListAdapter } =
+      withSupabaseFilterAdapter(mockDataProvider);
+
+    await expect(
+      getListAdapter("resource", {
+        filter: { "company_type_key@not.in": "(investisseur,presse)" },
+      }),
+    ).resolves.toEqual([{ id: 1 }]);
+
+    expect(getList).toHaveBeenCalledWith("resource", {
+      filter: { company_type_key_neq_any: ["investisseur", "presse"] },
+    });
+  });
+
+  it("should not confuse '@not.in' with '@in'", async () => {
+    const getList = vi.fn();
+    const mockDataProvider = {
+      getList,
+    } as unknown as DataProvider;
+
+    getList.mockResolvedValueOnce([{ id: 1 }]);
+
+    const { getList: getListAdapter } =
+      withSupabaseFilterAdapter(mockDataProvider);
+
+    await getListAdapter("resource", {
+      filter: { "stage@in": "(lead,qualified)" },
+    });
+
+    expect(getList).toHaveBeenCalledWith("resource", {
+      filter: { stage_eq_any: ["lead", "qualified"] },
+    });
+  });
+
   it("should not transform a filter without operator", async () => {
     const getList = vi.fn();
     const mockDataProvider = {

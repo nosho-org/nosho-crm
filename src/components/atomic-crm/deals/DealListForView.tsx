@@ -25,11 +25,18 @@ import { DealEmpty } from "./DealEmpty";
 import { DealListContent, DealListViewProvider } from "./DealListContent";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
+import { createDealExporter } from "./dealExporter";
 import { getCustomViewCompanyType } from "./dealUtils";
 
 export const DealListForView = () => {
   const { viewId } = useParams<{ viewId: string }>();
-  const { customViews, dealCategories } = useConfigurationContext();
+  const {
+    customViews,
+    dealCategories,
+    dealPriorities,
+    dealStages,
+    leadSources,
+  } = useConfigurationContext();
   const { identity } = useGetIdentity();
   const { canAccess: isAdmin } = useCanAccess({
     resource: "configuration",
@@ -60,13 +67,43 @@ export const DealListForView = () => {
       <AutocompleteInput label={false} placeholder="Société" />
     </ReferenceInput>,
     <SelectInput
+      source="priority"
+      label="Priorité"
+      emptyText="Toutes les priorités"
+      choices={dealPriorities}
+      optionText="label"
+      optionValue="value"
+    />,
+    <SelectInput
+      source="stage"
+      label="Étape"
+      emptyText="Toutes les étapes"
+      choices={dealStages}
+      optionText="label"
+      optionValue="value"
+    />,
+    <SelectInput
       source="category"
       emptyText="Catégorie"
       choices={dealCategories}
       optionText="label"
       optionValue="value"
     />,
+    <SelectInput
+      source="lead_source"
+      label="Source du lead"
+      emptyText="Toutes les sources"
+      choices={leadSources}
+      optionText="label"
+      optionValue="value"
+    />,
     <SalesFilterInput source="sales_id" alwaysOn />,
+    <SalesFilterInput
+      source="referrer_id"
+      label="Apporteur"
+      emptyText="Tous les apporteurs"
+      mineText="Mes apports"
+    />,
   ];
 
   return (
@@ -134,10 +171,19 @@ const DealViewLayout = () => {
 const DealViewActions = () => {
   const { viewId } = useParams<{ viewId: string }>();
   const navigate = useNavigate();
+  const { dealStages, dealCategories, leadSources, dealPriorities } =
+    useConfigurationContext();
   return (
     <TopToolbar>
       <FilterButton />
-      <ExportButton />
+      <ExportButton
+        exporter={createDealExporter(
+          dealStages,
+          dealCategories,
+          leadSources,
+          dealPriorities,
+        )}
+      />
       <button
         className={buttonVariants({ variant: "outline" })}
         onClick={() => navigate(`/views/${viewId}/create`)}

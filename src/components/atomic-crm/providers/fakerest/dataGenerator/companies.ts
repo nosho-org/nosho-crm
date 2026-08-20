@@ -9,7 +9,10 @@ import {
 } from "faker/locale/en_US";
 
 import { randomDate } from "./utils";
-import { defaultCompanySectors } from "../../../root/defaultConfiguration";
+import {
+  defaultCompanySectors,
+  defaultEstablishmentTypes,
+} from "../../../root/defaultConfiguration";
 import type { Company, RAFile } from "../../../types";
 import type { Db } from "./types";
 
@@ -28,6 +31,7 @@ export const generateCompanies = (db: Db, size = 55): Required<Company>[] => {
         src: `https://marmelab.com/react-admin-crm/logos/${id}.png`,
       } as RAFile,
       sector: random.arrayElement(defaultCompanySectors).value,
+      establishment_type: random.arrayElement(defaultEstablishmentTypes).value,
       size: random.arrayElement(sizes) as 1 | 10 | 50 | 250 | 500,
       linkedin_url: `https://www.linkedin.com/company/${name
         .toLowerCase()

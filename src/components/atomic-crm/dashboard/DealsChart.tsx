@@ -7,12 +7,19 @@ import { Card } from "@/components/ui/card";
 
 import type { Deal } from "../types";
 
-const multiplier = {
+// Weight applied to an open deal's ARR when forecasting. Every open stage of
+// the canonical pipeline must appear here: a missing entry would multiply the
+// amount by `undefined` and turn the whole month into NaN.
+const multiplier: Record<string, number> = {
   lead: 0.1,
   qualified: 0.3,
-  "follow-up": 0.5,
-  trial: 0.8,
+  "demo-booked": 0.5,
+  "proposal-to-send": 0.7,
+  "proposal-sent": 0.8,
 };
+
+const OPEN_STAGES = Object.keys(multiplier);
+const LOST_STAGES = ["perdu", "churn"];
 
 const DEFAULT_LOCALE = "fr-FR";
 const CURRENCY = "EUR";
@@ -74,18 +81,11 @@ export const DealsChart = memo(() => {
           .filter((d) => d.stage === "closed-won")
           .reduce((acc, d) => acc + d.amount, 0),
         pending: deals
-          .filter((d) =>
-            ["lead", "qualified", "follow-up", "trial"].includes(d.stage),
-          )
-          .reduce((acc, d) => {
-            // @ts-expect-error - multiplier type issue
-            return acc + d.amount * multiplier[d.stage];
-          }, 0),
+          .filter((d) => OPEN_STAGES.includes(d.stage))
+          .reduce((acc, d) => acc + (d.amount ?? 0) * multiplier[d.stage], 0),
         lost: deals
-          .filter((d) =>
-            ["perdu", "trial-failed", "declined"].includes(d.stage),
-          )
-          .reduce((acc, d) => acc - d.amount, 0),
+          .filter((d) => LOST_STAGES.includes(d.stage))
+          .reduce((acc, d) => acc - (d.amount ?? 0), 0),
       };
     });
   }, [data]);

@@ -11,7 +11,8 @@ import { SelectInput } from "@/components/admin/select-input";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
-import { getCompanyTypeChoices } from "./dealUtils";
+import { createDealExporter } from "./dealExporter";
+import { getCommercialDealsFilter, getCompanyTypeChoices } from "./dealUtils";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
@@ -22,8 +23,14 @@ import { SalesFilterInput } from "./SalesFilterInput";
 
 const DealList = () => {
   const { identity } = useGetIdentity();
-  const { dealCategories, companyTypes, customViews } =
-    useConfigurationContext();
+  const {
+    dealCategories,
+    dealPriorities,
+    dealStages,
+    leadSources,
+    companyTypes,
+    customViews,
+  } = useConfigurationContext();
   const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
 
   if (!identity) return null;
@@ -34,9 +41,33 @@ const DealList = () => {
       <AutocompleteInput label={false} placeholder="Société" />
     </ReferenceInput>,
     <SelectInput
+      source="priority"
+      label="Priorité"
+      emptyText="Toutes les priorités"
+      choices={dealPriorities}
+      optionText="label"
+      optionValue="value"
+    />,
+    <SelectInput
+      source="stage"
+      label="Étape"
+      emptyText="Toutes les étapes"
+      choices={dealStages}
+      optionText="label"
+      optionValue="value"
+    />,
+    <SelectInput
       source="category"
       emptyText="Catégorie"
       choices={dealCategories}
+      optionText="label"
+      optionValue="value"
+    />,
+    <SelectInput
+      source="lead_source"
+      label="Source du lead"
+      emptyText="Toutes les sources"
+      choices={leadSources}
       optionText="label"
       optionValue="value"
     />,
@@ -49,12 +80,24 @@ const DealList = () => {
       optionValue="value"
     />,
     <SalesFilterInput source="sales_id" alwaysOn />,
+    <SalesFilterInput
+      source="referrer_id"
+      label="Apporteur"
+      emptyText="Tous les apporteurs"
+      mineText="Mes apports"
+    />,
   ];
 
   return (
     <List
       perPage={1000}
-      filter={{ "archived_at@is": null, "company_type@is": null }}
+      filter={{
+        "archived_at@is": null,
+        // Investors, partnerships, resources, press, Santexpo leads and
+        // software bricks keep their own views but stay out of the commercial
+        // pipeline (NOS-797).
+        ...getCommercialDealsFilter(companyTypes, customViews),
+      }}
       title={false}
       sort={{ field: "index", order: "DESC" }}
       filters={dealFilters}
@@ -98,12 +141,23 @@ const DealLayout = () => {
   );
 };
 
-const DealActions = () => (
-  <TopToolbar>
-    <FilterButton />
-    <ExportButton />
-    <CreateButton label="Nouvelle opportunité" />
-  </TopToolbar>
-);
+const DealActions = () => {
+  const { dealStages, dealCategories, leadSources, dealPriorities } =
+    useConfigurationContext();
+  return (
+    <TopToolbar>
+      <FilterButton />
+      <ExportButton
+        exporter={createDealExporter(
+          dealStages,
+          dealCategories,
+          leadSources,
+          dealPriorities,
+        )}
+      />
+      <CreateButton label="Nouvelle opportunité" />
+    </TopToolbar>
+  );
+};
 
 export default DealList;

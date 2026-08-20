@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
-import { required, useCanAccess, useRecordContext } from "ra-core";
-import { useFormContext } from "react-hook-form";
+import { required, useCanAccess, useGetOne, useRecordContext } from "ra-core";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
 import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
@@ -19,11 +19,22 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { contactOptionText } from "../misc/ContactOption";
+import {
+  arrToMrr,
+  currencySymbol,
+  formatCurrency,
+} from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import { defaultDealPriority } from "../root/defaultConfiguration";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 import { DealListViewContext } from "./DealListContent";
-import { getCompanyTypeChoices, getDefaultDealStage } from "./dealUtils";
-import type { Sale } from "../types";
+import {
+  getCompanyTypeChoices,
+  getDefaultDealStage,
+  getSuggestedArr,
+  resolvePrefilledArr,
+} from "./dealUtils";
+import type { Company, Sale } from "../types";
 
 export const DealInputs = () => {
   const isMobile = useIsMobile();
@@ -159,7 +170,8 @@ const DealSalesInput = () => {
 };
 
 const DealMiscInputs = () => {
-  const { dealStages, dealCategories } = useConfigurationContext();
+  const { dealStages, dealCategories, dealPriorities, leadSources } =
+    useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
   const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
 
@@ -175,18 +187,38 @@ const DealMiscInputs = () => {
         optionValue="value"
         helperText={false}
       />
-      <NumberInput
-        source="amount"
-        defaultValue={0}
+      <SelectInput
+        source="priority"
+        label="Priorité"
+        choices={dealPriorities}
+        optionText="label"
+        optionValue="value"
+        defaultValue={defaultDealPriority}
         helperText={false}
-        validate={required()}
+      />
+      <DealArrInput />
+      <SelectInput
+        source="lead_source"
+        label="Source du lead"
+        choices={leadSources}
+        optionText="label"
+        optionValue="value"
+        helperText={false}
       />
       <DateInput
         validate={required()}
         source="expected_closing_date"
+        label="Date de clôture prévue"
         helperText={false}
         defaultValue={new Date().toISOString().split("T")[0]}
       />
+      <DateInput
+        source="entered_at"
+        label="Date d'entrée"
+        helperText={false}
+        defaultValue={new Date().toISOString().split("T")[0]}
+      />
+      <DateInput source="won_at" label="Date de signature" helperText={false} />
       <DateInput
         source="trial_start_date"
         label="Début du trial"
@@ -194,6 +226,7 @@ const DealMiscInputs = () => {
       />
       <SelectInput
         source="stage"
+        label="Étape"
         choices={dealStages}
         optionText="label"
         optionValue="value"
@@ -202,6 +235,112 @@ const DealMiscInputs = () => {
         validate={required()}
       />
       <DealSalesInput />
+      <DealReferrerInput />
     </div>
   );
 };
+
+/**
+ * ARR input with the establishment-type prefill (NOS-810/811/812).
+ *
+ * The suggestion only ever fills a blank amount. Editing the field by hand
+ * marks the value as manual, which permanently locks it against later
+ * suggestions — including those triggered by changing company or category.
+ *
+ * Manual entry is detected through react-hook-form's dirty tracking rather
+ * than an `onChange` prop: <NumberInput> omits `onChange` from its props and
+ * overrides it with its own handler, so a handler passed in is silently
+ * dropped. The prefill below writes with `shouldDirty: false` precisely so
+ * that "dirty" keeps meaning "a human touched this".
+ */
+const DealArrInput = () => {
+  const { currency, establishmentTypes } = useConfigurationContext();
+  const { setValue, getValues } = useFormContext();
+  const { dirtyFields } = useFormState({ name: "amount" });
+  const companyId = useWatch({ name: "company_id" });
+  const isManual = useWatch({ name: "arr_is_manual" });
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: companyId },
+    { enabled: companyId != null },
+  );
+
+  const suggestedArr = getSuggestedArr(
+    company?.establishment_type,
+    establishmentTypes,
+  );
+
+  useEffect(() => {
+    const { arr, changed } = resolvePrefilledArr({
+      currentArr: getValues("amount"),
+      isManual: getValues("arr_is_manual"),
+      suggestedArr,
+    });
+    if (changed) {
+      // Not dirty and not manual: this is a suggestion, so a better one may
+      // still replace it until someone types a value.
+      setValue("amount", arr, { shouldDirty: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedArr]);
+
+  const amountIsDirty = !!dirtyFields.amount;
+  useEffect(() => {
+    if (amountIsDirty && !getValues("arr_is_manual")) {
+      setValue("arr_is_manual", true, { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountIsDirty]);
+
+  const suggestionLabel =
+    suggestedArr != null && !isManual
+      ? `Proposé d'après le type d'établissement : ${formatCurrency(suggestedArr, currency)}`
+      : false;
+
+  return (
+    <div className="space-y-1">
+      <NumberInput
+        source="amount"
+        label={`ARR annuel (${currencySymbol(currency)})`}
+        defaultValue={0}
+        validate={required()}
+        helperText={suggestionLabel}
+      />
+      {isManual ? (
+        <p className="text-xs text-muted-foreground">
+          Valeur saisie manuellement — elle ne sera jamais écrasée par le
+          préremplissage.
+        </p>
+      ) : null}
+      <MrrPreview currency={currency} />
+    </div>
+  );
+};
+
+/** Read-only echo of the MRR the database will store for this ARR. */
+const MrrPreview = ({ currency }: { currency: string }) => {
+  const amount = useWatch({ name: "amount" });
+  const mrr = arrToMrr(typeof amount === "number" ? amount : Number(amount));
+  if (mrr == null) return null;
+  return (
+    <p className="text-xs text-muted-foreground">
+      MRR calculé :{" "}
+      {formatCurrency(mrr, currency, { maximumFractionDigits: 2 })}
+    </p>
+  );
+};
+
+/** Who brought the lead in — distinct from the owner (NOS-804). */
+const DealReferrerInput = () => (
+  <ReferenceInput
+    source="referrer_id"
+    reference="sales"
+    filter={{ "disabled@neq": true }}
+  >
+    <SelectInput
+      label="Apporteur"
+      helperText="Qui a amené le lead, si différent du responsable"
+      optionText={saleOptionRenderer}
+    />
+  </ReferenceInput>
+);
