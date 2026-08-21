@@ -34,8 +34,15 @@ const MagnitudeBar = ({
   const width = Math.max((value / max) * 100, value > 0 ? 2 : 0);
   return (
     <span
-      className="block h-1.5 rounded-full mt-1"
-      style={{ width: `${width}%`, backgroundColor: color }}
+      /* Height and radius are skin tokens: the dense skin draws a hairline
+         rule where the calm one draws a pill. See `src/index.css`. */
+      className="block mt-1"
+      style={{
+        width: `${width}%`,
+        backgroundColor: color,
+        height: "var(--skin-bar-height)",
+        borderRadius: "var(--skin-bar-radius)",
+      }}
       aria-hidden
     />
   );

@@ -15,6 +15,7 @@ import { TextInput } from "@/components/admin/text-input";
 
 import { sanitizeStageProbabilities } from "../deals/cockpit/dealWeighting";
 import ImageEditorField from "../misc/ImageEditorField";
+import { AppearanceSection } from "./AppearanceSection";
 import {
   useCompanyTypesStore,
   useConfigurationContext,
@@ -31,6 +32,7 @@ import {
 
 const SECTIONS = [
   { id: "branding", label: "Personnalisation" },
+  { id: "appearance", label: "Apparence" },
   { id: "companies", label: "Sociétés" },
   { id: "deals", label: "Opportunités" },
   { id: "views", label: "Vues" },
@@ -372,6 +374,9 @@ const SettingsFormFields = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Appearance — a per-user preference, outside the configuration form */}
+        <AppearanceSection />
 
         {/* Companies */}
         <Card id="companies">
