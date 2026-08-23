@@ -55,6 +55,18 @@ export function transformFilter(filter: Record<string, any>) {
       continue;
     }
 
+    // `@ov` (overlaps) — the multi-select product filter. A deal matches when
+    // it carries *any* of the selected products, not all of them.
+    //
+    // FakeRest's `_eq_any` has exactly that semantics on an array field: it
+    // tests whether the stored array includes any of the listed values. `@cs`
+    // above is the stricter "contains all" and would silently return fewer rows.
+    if (key.endsWith("@ov")) {
+      transformedFilters[`${key.slice(0, -3)}_eq_any`] =
+        transformContainsFilter(value);
+      continue;
+    }
+
     // Search query
     if (key.endsWith("@or")) {
       transformedFilters["q"] = transformOrFilter(value);

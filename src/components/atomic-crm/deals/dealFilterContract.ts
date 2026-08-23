@@ -1,3 +1,10 @@
+// Reads the local calendar fields. `toISOString().slice(0, 10)` would read UTC
+// and shift the day for anyone east of Greenwich — a dormancy threshold
+// computed at midnight in Paris landed a full day early. `expected_closing_date`
+// and `next_action_date` are `date` columns with no timezone of their own, so
+// local is the only correct reading.
+import { toISODateString as isoDay } from "./cockpit/dealDates";
+
 /**
  * The filter vocabulary shared by the dashboard and the Opportunités list.
  *
@@ -37,9 +44,6 @@ export interface DealFilterState {
   /** No next action, or no date on it. */
   missingNextAction?: boolean | null;
 }
-
-/** Today, as an ISO date. Injectable so tests can pin it. */
-const isoDay = (date: Date): string => date.toISOString().slice(0, 10);
 
 /**
  * Translate a selection into `ra-data-postgrest` filter values.

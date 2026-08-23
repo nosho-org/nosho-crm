@@ -6,6 +6,7 @@ import {
   defaultDealContactRoles,
   defaultDealOpportunityTypes,
   defaultDealPriorities,
+  defaultDealProducts,
   defaultDealStages,
   defaultLeadSources,
 } from "../../../root/defaultConfiguration";
@@ -39,6 +40,7 @@ export const generateDeals = (db: Db): Deal[] => {
       .join(" ");
 
     const stage = random.arrayElement(defaultDealStages).value;
+    const updated_at = randomDate(new Date(created_at)).toISOString();
     // The ARR grid works in whole euros, so keep the generated amounts in the
     // same order of magnitude as the real tiers (800 → 15 000 €).
     const amount = datatype.number({ min: 1, max: 40 }) * 500;
@@ -77,12 +79,24 @@ export const generateDeals = (db: Db): Deal[] => {
       mrr: arrToMrr(amount),
       arr_is_manual: datatype.boolean(),
       created_at,
-      updated_at: randomDate(new Date(created_at)).toISOString(),
+      updated_at,
+      // Emulates deals_summary.last_activity_at, which the database derives as
+      // greatest(updated_at, latest note, latest call). Without it the dormancy
+      // filter behind the dashboard's "en sommeil" alert matches nothing here,
+      // and the demo silently shows an empty list where production shows deals.
+      last_activity_at: updated_at,
       entered_at: created_at.split("T")[0],
       expected_closing_date,
       won_at: stage === SIGNED_DEAL_STAGE ? expected_closing_date : undefined,
       sales_id: company.sales_id,
       referrer_id: random.arrayElement(db.sales).id,
+      // Multi-product deals exist, so generate a set rather than a single value.
+      products: random
+        .arrayElements(
+          defaultDealProducts,
+          datatype.number({ min: 0, max: defaultDealProducts.length }),
+        )
+        .map((product) => product.value),
       index: 0,
     };
   });

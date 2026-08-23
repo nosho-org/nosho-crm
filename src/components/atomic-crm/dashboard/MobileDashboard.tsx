@@ -2,7 +2,9 @@ import { useGetList, useTimeout } from "ra-core";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import type { Contact, ContactNote } from "../types";
-import { DashboardActivityLog } from "./DashboardActivityLog";
+import { DashboardProvider } from "./DashboardContext";
+import { DashboardKpiBanner } from "./DashboardKpiBanner";
+import { PipelineHealthBanner } from "./PipelineHealthBanner";
 import { DashboardStepper } from "./DashboardStepper";
 import { Welcome } from "./Welcome";
 import MobileHeader from "../layout/MobileHeader";
@@ -81,9 +83,19 @@ export const MobileDashboard = () => {
 
   return (
     <Wrapper>
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-1">
+      {/*
+        Used to render the activity log and nothing else, which the redesign
+        removes. Mobile now gets the two blocks that answer a question at a
+        glance — the figures and what needs attention. The forecast chart and
+        the funnel are deliberately left out: both need width to be readable,
+        and the spec's own note says the cards simply stack on mobile.
+      */}
+      <div className="flex flex-col gap-5 mt-1">
         {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
-        <DashboardActivityLog />
+        <DashboardProvider>
+          <DashboardKpiBanner />
+          <PipelineHealthBanner />
+        </DashboardProvider>
       </div>
     </Wrapper>
   );

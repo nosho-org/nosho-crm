@@ -13,9 +13,7 @@ export const UpcomingCalendarEvents = () => {
     queryFn: () =>
       dataProvider.getUpcomingCalendarEvents({
         timeMin: new Date().toISOString(),
-        timeMax: new Date(
-          Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
+        timeMax: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         maxResults: 8,
       }),
     staleTime: 5 * 60 * 1000,
@@ -77,13 +75,11 @@ const CalendarEventItem = ({ event }: { event: GoogleCalendarEvent }) => {
     });
 
   const isToday =
-    startDate &&
-    startDate.toDateString() === new Date().toDateString();
+    startDate && startDate.toDateString() === new Date().toDateString();
 
   const isTomorrow =
     startDate &&
-    startDate.toDateString() ===
-      new Date(Date.now() + 86400000).toDateString();
+    startDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
 
   const dayLabel = isToday
     ? "Aujourd'hui"
@@ -148,8 +144,7 @@ const CalendarEventItem = ({ event }: { event: GoogleCalendarEvent }) => {
               .slice(0, 3)
               .map((a) => a.displayName || a.email)
               .join(", ")}
-            {event.attendees.length > 3 &&
-              ` +${event.attendees.length - 3}`}
+            {event.attendees.length > 3 && ` +${event.attendees.length - 3}`}
           </div>
         )}
       </div>

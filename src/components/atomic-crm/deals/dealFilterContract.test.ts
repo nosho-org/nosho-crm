@@ -72,6 +72,21 @@ describe("toListFilter", () => {
     });
   });
 
+  it("reads dates on the local calendar, not UTC", () => {
+    // Midnight local in a positive-offset zone is still the previous day in
+    // UTC, so `toISOString().slice(0, 10)` moved every relative filter one day
+    // early. The columns are `date`, with no timezone of their own.
+    const localMidnight = new Date(2026, 7, 23); // 23 août, 00:00 local
+
+    expect(
+      toListFilter({ staleForDays: 30 }, { today: localMidnight }),
+    ).toEqual({ "last_activity_at@lt": "2026-07-24" });
+
+    expect(
+      toListFilter({ overdueAction: true }, { today: localMidnight }),
+    ).toMatchObject({ "next_action_date@lt": "2026-08-23" });
+  });
+
   it("requires an action to exist for it to be overdue", () => {
     expect(toListFilter({ overdueAction: true }, { today: TODAY })).toEqual({
       "next_action_date@lt": "2026-08-23",
