@@ -129,7 +129,10 @@ export const DashboardFilters = () => {
     <div className="flex flex-wrap items-end gap-3">
       <FilterSelect
         label="Période"
-        value={selection.periodId}
+        // `null` rather than "all": FilterSelect maps null onto its own ALL
+        // sentinel, and passing the raw "all" matched no item — the trigger
+        // rendered blank instead of "Toutes périodes".
+        value={selection.periodId === "all" ? null : selection.periodId}
         onChange={(value) => setPeriodId((value ?? "all") as PeriodId)}
         allLabel="Toutes périodes"
         choices={getPeriodChoices(today).filter((c) => c.value !== "all")}
