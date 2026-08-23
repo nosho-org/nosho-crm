@@ -606,6 +606,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/nextMeetingTask.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/index.ts",
           "type": "registry:component"
         },
@@ -614,7 +618,7 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/dealNextMeeting.ts",
+          "path": "src/components/atomic-crm/deals/dealFilterContract.ts",
           "type": "registry:component"
         },
         {
@@ -706,11 +710,19 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/shared/DealBadges.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/cockpit/testFixtures.ts",
           "type": "registry:component"
         },
         {
           "path": "src/components/atomic-crm/deals/cockpit/dealWeighting.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/cockpit/dealStageBreakdown.ts",
           "type": "registry:component"
         },
         {

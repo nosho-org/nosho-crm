@@ -150,6 +150,17 @@ where m.old_stage = d.stage
   and m.new_stage is distinct from d.stage;
 
 -- Pass 2 — no certain target. Park it, unless it is a custom-view column.
+--
+-- ⚠️ BUG, corrigé par 20260823113000_deals_pipeline_v2_repair.sql. Do not fix
+-- it here: this migration has been applied to production and its version is
+-- recorded, so editing it would only make a fresh database diverge from the
+-- one this file actually ran against.
+--
+-- The `not exists` below tests `d.stage` against the KEYS of the mapping table,
+-- but pass 1 has just rewritten those stages to their targets — and `lost`,
+-- `demo-poc` and `proposal` are never keys. Every deal pass 1 touched therefore
+-- matched, and 71 of them were parked by mistake. The repair migration sends
+-- them back using `legacy_stage`, which recorded the origin all along.
 update public.deals d
 set legacy_stage = coalesce(d.legacy_stage, d.stage),
     stage        = 'a-reclasser'
