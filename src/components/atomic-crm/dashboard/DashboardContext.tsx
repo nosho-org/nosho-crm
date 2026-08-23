@@ -15,7 +15,6 @@ import type { DealRecord } from "../deals/cockpit/dealFields";
 import type { NextActionOptions } from "../deals/cockpit/dealFields";
 import type { WeightingConfig } from "../deals/cockpit/dealWeighting";
 import {
-  DEFAULT_PERIOD_ID,
   PERIOD_IDS,
   getPeriodFilter,
   resolvePeriod,
@@ -90,6 +89,20 @@ const DashboardContext = createContext<DashboardContextValue | null>(null);
 /** Matches the ceiling the Opportunités list already uses. */
 const MAX_DEALS = 1000;
 
+/**
+ * The dashboard opens on every period, not on the current quarter.
+ *
+ * `DEFAULT_PERIOD_ID` is "current-quarter", inherited from the cockpit where a
+ * short horizon made sense next to a board. On a business dashboard it hides
+ * data: the period filters `expected_closing_date`, and in production none of
+ * the 17 won deals has a closing date inside the current quarter — so the
+ * headline read "ARR signé : 0 €" while 56 160 € were signed.
+ *
+ * "Toutes" is the only default that cannot mislead. The forecast still falls
+ * back to the current year for its columns, and states the range it covers.
+ */
+const DASHBOARD_DEFAULT_PERIOD: PeriodId = "all";
+
 const PARAM = {
   period: "periode",
   sales: "responsable",
@@ -123,7 +136,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     return {
       periodId: PERIOD_IDS.includes(rawPeriod as PeriodId)
         ? (rawPeriod as PeriodId)
-        : DEFAULT_PERIOD_ID,
+        : DASHBOARD_DEFAULT_PERIOD,
       salesId: searchParams.get(PARAM.sales),
       category: searchParams.get(PARAM.category),
       products: products ? products.split(",").filter(Boolean) : [],
@@ -213,7 +226,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       reset: () => setSearchParams(new URLSearchParams(), { replace: true }),
       selectionFilter,
       hasActiveFilters:
-        selection.periodId !== DEFAULT_PERIOD_ID ||
+        selection.periodId !== DASHBOARD_DEFAULT_PERIOD ||
         selection.salesId !== null ||
         selection.category !== null ||
         selection.products.length > 0,
