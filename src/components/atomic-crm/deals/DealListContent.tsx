@@ -13,7 +13,7 @@ import {
   useListContext,
   type DataProvider,
 } from "ra-core";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Button } from "@/components/ui/button";
@@ -44,8 +44,32 @@ export const DealListViewContext = createContext<DealListViewContextValue>({});
 export const DealListViewProvider = DealListViewContext.Provider;
 
 export const DealListContent = () => {
-  const { customViews, dealStages } = useConfigurationContext();
+  const { customViews, dealStages, archivedDealStages } =
+    useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
+
+  /**
+   * Columns this board can render.
+   *
+   * The commercial pipeline is `dealStages`. The investisseur and partenaire
+   * custom views keep their own columns — `invest`, `partenariats`,
+   * `ressources`, `communication-presse` — which the v2 migration deliberately
+   * left on their deals and moved to `archivedDealStages`. Resolving columns
+   * from `dealStages` alone would make those 27 opportunities vanish from the
+   * only screens that show them.
+   *
+   * Only the archived stages a view actually asks for are added, so the
+   * commercial board keeps exactly its nine columns.
+   */
+  const boardStages = useMemo(() => {
+    if (!initialVisibleStages?.length) return dealStages;
+    const known = new Set(dealStages.map((stage) => stage.value));
+    const extra = (archivedDealStages ?? []).filter(
+      (stage) =>
+        initialVisibleStages.includes(stage.value) && !known.has(stage.value),
+    );
+    return extra.length ? [...dealStages, ...extra] : dealStages;
+  }, [dealStages, archivedDealStages, initialVisibleStages]);
   const { data: listDeals, isPending } = useListContext<Deal>();
   const cockpit = useOptionalDealCockpit();
   // Inside the cockpit the board shows the same selection as the banner above
@@ -74,7 +98,7 @@ export const DealListContent = () => {
   );
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
-    () => getDealsByStage([], dealStages).byStage,
+    () => getDealsByStage([], boardStages).byStage,
   );
   // Deals whose stage matches no column. Normally empty — surfaced rather than
   // folded into the first column, which is now "À reclasser".
@@ -87,7 +111,7 @@ export const DealListContent = () => {
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
         const valid = parsed.filter((s) =>
-          dealStages.some((ds) => ds.value === s),
+          boardStages.some((ds) => ds.value === s),
         );
         if (valid.length > 0) return new Set(valid);
       }
@@ -96,7 +120,7 @@ export const DealListContent = () => {
     }
     return initialVisibleStages
       ? new Set(initialVisibleStages)
-      : new Set(dealStages.map((s) => s.value));
+      : new Set(boardStages.map((s) => s.value));
   });
 
   const toggleStage = (stageValue: string) => {
@@ -119,7 +143,7 @@ export const DealListContent = () => {
 
   useEffect(() => {
     if (unorderedDeals) {
-      const next = getDealsByStage(unorderedDeals, dealStages);
+      const next = getDealsByStage(unorderedDeals, boardStages);
       if (!isEqual(next.byStage, dealsByStage)) {
         setDealsByStage(next.byStage);
       }
@@ -202,7 +226,7 @@ export const DealListContent = () => {
     });
   };
 
-  const visibleDealStages = dealStages.filter((s) =>
+  const visibleDealStages = boardStages.filter((s) =>
     visibleStages.has(s.value),
   );
 
@@ -246,7 +270,7 @@ export const DealListContent = () => {
 
           {/* Stage filter toggles */}
           <div className="flex flex-wrap gap-2 pb-1">
-            {dealStages.map((stage) => {
+            {boardStages.map((stage) => {
               const isVisible = visibleStages.has(stage.value);
               const count = dealsByStage[stage.value]?.length ?? 0;
               return (
