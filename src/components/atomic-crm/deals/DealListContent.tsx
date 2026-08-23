@@ -5,7 +5,7 @@ import {
   type OnDragEndResponder,
 } from "@hello-pangea/dnd";
 import isEqual from "lodash/isEqual";
-import { Columns3, Rows3 } from "lucide-react";
+import { AlertTriangle, Columns3, Rows3 } from "lucide-react";
 import {
   useCanAccess,
   useDataProvider,
@@ -14,16 +14,24 @@ import {
   type DataProvider,
 } from "ra-core";
 import { createContext, useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
+
+import { Button } from "@/components/ui/button";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { useOptionalDealCockpit } from "./cockpit/DealCockpitContext";
 import { DealColumn } from "./DealColumn";
 import { DealListTable } from "./DealListTable";
+import { toDealsLink } from "./dealFilterContract";
+import { pluralize } from "./cockpit/dealFormat";
+import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { getCustomViewCompanyType } from "./dealUtils";
 import type { DealsByStage } from "./stages";
 import { getDealsByStage } from "./stages";
+
+/** Stage holding the deals the v2 migration could not map with certainty. */
+const RECLASSIFY_STAGE = "a-reclasser";
 
 const CUSTOM_VIEW_DROPPABLE_PREFIX = "custom-view:";
 const DEFAULT_VIEW_DROPPABLE_ID = `${CUSTOM_VIEW_DROPPABLE_PREFIX}__default__`;
@@ -204,6 +212,7 @@ export const DealListContent = () => {
   if (viewMode === "list") {
     return (
       <div className="flex flex-col gap-4">
+        <ReclassifyNotice deals={unorderedDeals ?? []} />
         <DealViewModeToggle value={viewMode} onChange={setViewMode} />
         <DealListTable />
       </div>
@@ -212,6 +221,7 @@ export const DealListContent = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      <ReclassifyNotice deals={unorderedDeals ?? []} />
       <DealViewModeToggle value={viewMode} onChange={setViewMode} />
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex flex-col gap-3">
@@ -588,4 +598,44 @@ const updateDealCompanyType = async (
     data: { company_type: companyType },
     previousData: source,
   });
+};
+
+/**
+ * Reminder that the migration left opportunities waiting for a human (NOS-956 §6).
+ *
+ * The spec asks for manual reclassification "idéalement en masse". That is the
+ * list view plus the bulk stage change, not a screen of its own — so this only
+ * has to point there. Production left exactly two deals in the queue, which is
+ * not worth a dedicated workflow.
+ *
+ * Disappears on its own once the queue is empty, at which point the stage can be
+ * removed from the configuration.
+ */
+const ReclassifyNotice = ({ deals }: { deals: Deal[] }) => {
+  const pending = deals.filter((deal) => deal.stage === RECLASSIFY_STAGE);
+  if (pending.length === 0) return null;
+
+  const amount = pending.reduce((total, deal) => total + (deal.amount ?? 0), 0);
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap rounded-md border border-[color-mix(in_oklch,var(--deal-status-warning)_40%,transparent)] bg-[color-mix(in_oklch,var(--deal-status-warning)_8%,transparent)] px-3 py-2">
+      <AlertTriangle
+        className="w-4 h-4 shrink-0"
+        style={{ color: "var(--deal-status-warning)" }}
+        aria-hidden
+      />
+      <span className="text-sm flex-1 min-w-0">
+        {pluralize(
+          pending.length,
+          "opportunité à reclasser",
+          "opportunités à reclasser",
+        )}{" "}
+        ({formatCurrencyCompact(amount)}) — la migration n'a pas trouvé d'étape
+        certaine pour {pending.length > 1 ? "elles" : "elle"}.
+      </span>
+      <Button asChild size="sm" variant="outline" className="shrink-0">
+        <Link to={toDealsLink({ stage: RECLASSIFY_STAGE })}>Les reclasser</Link>
+      </Button>
+    </div>
+  );
 };

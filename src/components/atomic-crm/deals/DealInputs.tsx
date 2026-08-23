@@ -287,6 +287,7 @@ const DealMiscInputs = () => {
     dealCategories,
     dealOpportunityTypes,
     dealPriorities,
+    dealProducts,
     leadSources,
   } = useConfigurationContext();
   const { initialVisibleStages } = useContext(DealListViewContext);
@@ -302,6 +303,16 @@ const DealMiscInputs = () => {
         source="opportunity_type"
         label="Type d'opportunité"
         choices={dealOpportunityTypes}
+        optionText="label"
+        optionValue="value"
+        helperText={false}
+      />
+      {/* Products (NOS-956). Multi-select: a deal can cover No-show, Entrant
+          and Data at once. Stored in `deals.products` as a text[]. */}
+      <AutocompleteArrayInput
+        source="products"
+        label="Produit(s)"
+        choices={dealProducts}
         optionText="label"
         optionValue="value"
         helperText={false}

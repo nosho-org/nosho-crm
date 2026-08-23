@@ -678,6 +678,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealFilterBar.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealEmpty.tsx",
           "type": "registry:component"
         },

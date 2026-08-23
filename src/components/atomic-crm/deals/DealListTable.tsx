@@ -5,6 +5,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
+import { DealBulkEditStage } from "./DealBulkEditStage";
 import { DealPriorityField } from "./DealPriorityField";
 import { DealNextActionDate, DealProductBadges } from "./shared/DealBadges";
 import { getDealActivity } from "./cockpit/dealFields";
@@ -34,7 +35,12 @@ export const DealListTable = () => {
   if (!data?.length) return null;
 
   return (
-    <DataTable rowClick="show">
+    <DataTable
+      rowClick="show"
+      // Row selection is what makes the bulk stage change possible — the tool
+      // the spec asks for to empty the "À reclasser" queue.
+      bulkActionButtons={<DealBulkEditStage />}
+    >
       <DataTable.Col
         source="priority_rank"
         label="Priorité"
