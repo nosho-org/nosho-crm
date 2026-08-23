@@ -24,7 +24,6 @@ import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealCockpit } from "./cockpit/DealCockpit";
 import { DealListContent, DealListViewProvider } from "./DealListContent";
-import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
 import { createDealExporter } from "./dealExporter";
 import { getCustomViewCompanyType } from "./dealUtils";
@@ -146,7 +145,6 @@ export const DealListForView = () => {
 const DealViewLayout = () => {
   const location = useLocation();
   const matchCreate = matchPath("/views/:viewId/create", location.pathname);
-  const matchShow = matchPath("/views/:viewId/:id/show", location.pathname);
   const matchEdit = matchPath("/views/:viewId/:id", location.pathname);
 
   const { data, isPending, filterValues } = useListContext();
@@ -158,7 +156,6 @@ const DealViewLayout = () => {
       <>
         <DealEmpty>
           <DealCreate open={!!matchCreate} />
-          <DealShow open={!!matchShow} id={matchShow?.params.id} />
           <DealArchivedList />
         </DealEmpty>
       </>
@@ -170,7 +167,6 @@ const DealViewLayout = () => {
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
-      <DealShow open={!!matchShow} id={matchShow?.params.id} />
     </div>
   );
 };

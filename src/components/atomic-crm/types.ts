@@ -49,6 +49,12 @@ export type Sale = {
 } & Pick<RaRecord, "id">;
 
 export type Company = {
+  /**
+   * Optional parent company (NOS-957 §4). A self-reference: a parent company
+   * is a company. Never inferred from the name — the relation must come from
+   * explicit CRM data.
+   */
+  parent_company_id?: Identifier | null;
   name: string;
   logo: RAFile;
   sector: string;

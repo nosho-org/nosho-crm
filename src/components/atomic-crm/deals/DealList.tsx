@@ -19,7 +19,6 @@ import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealFilterBar } from "./DealFilterBar";
 import { DealListContent } from "./DealListContent";
-import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
 
 const DealList = () => {
@@ -119,7 +118,6 @@ const DealList = () => {
 const DealLayout = () => {
   const location = useLocation();
   const matchCreate = matchPath("/deals/create", location.pathname);
-  const matchShow = matchPath("/deals/:id/show", location.pathname);
   const matchEdit = matchPath("/deals/:id", location.pathname);
 
   const { data, isPending, filterValues } = useListContext();
@@ -131,7 +129,6 @@ const DealLayout = () => {
       <>
         <DealEmpty>
           <DealCreate open={!!matchCreate} />
-          <DealShow open={!!matchShow} id={matchShow?.params.id} />
           <DealArchivedList />
         </DealEmpty>
       </>
@@ -152,7 +149,6 @@ const DealLayout = () => {
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />
-      <DealShow open={!!matchShow} id={matchShow?.params.id} />
     </div>
   );
 };
