@@ -11,13 +11,13 @@ import { SelectInput } from "@/components/admin/select-input";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
-import { DealCockpit } from "./cockpit/DealCockpit";
 import { createDealExporter } from "./dealExporter";
 import { getCommercialDealsFilter, getCompanyTypeChoices } from "./dealUtils";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
+import { DealFilterBar } from "./DealFilterBar";
 import { DealListContent } from "./DealListContent";
 import { DealShow } from "./DealShow";
 import { SalesFilterInput } from "./SalesFilterInput";
@@ -139,7 +139,16 @@ const DealLayout = () => {
 
   return (
     <div className="w-full">
-      <DealCockpit board={<DealListContent />} />
+      {/*
+        The revenue banner, the forecast table and the inactivity alert used to
+        sit here. They moved to the dashboard with NOS-955 — the spec separates
+        "pilotage business" from "pilotage opérationnel", and this screen is the
+        operational one. What remains of the aggregates are the column headers.
+      */}
+      <div className="flex flex-col gap-4 w-full">
+        <DealFilterBar />
+        <DealListContent />
+      </div>
       <DealArchivedList />
       <DealCreate open={!!matchCreate} />
       <DealEdit open={!!matchEdit && !matchCreate} id={matchEdit?.params.id} />

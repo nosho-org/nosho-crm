@@ -10,6 +10,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { DealPriorityField } from "./DealPriorityField";
 import { DealNextActionCell, DealStaleBadge } from "./cockpit/DealFieldBadges";
+import { DealProductBadges } from "./shared/DealBadges";
 
 export const DealCard = ({ deal, index }: { deal: Deal; index: number }) => {
   if (!deal) return null;
@@ -84,6 +85,9 @@ export const DealCardContent = ({
                 <CompanyAvatar width={20} height={20} />
               </ReferenceField>
             </div>
+            {/* Products (NOS-956): a deal can carry several, so they get their
+                own row rather than being crammed next to the amount. */}
+            <DealProductBadges products={deal.products} className="mb-1.5" />
             <p className="text-xs text-muted-foreground">
               {/* Formatted here rather than via <NumberField>, which would use
                   the admin locale and render "€6K" instead of "6 k€". */}

@@ -66,8 +66,11 @@ export const DealListContent = () => {
   );
 
   const [dealsByStage, setDealsByStage] = useState<DealsByStage>(
-    getDealsByStage([], dealStages),
+    () => getDealsByStage([], dealStages).byStage,
   );
+  // Deals whose stage matches no column. Normally empty — surfaced rather than
+  // folded into the first column, which is now "À reclasser".
+  const [unclassified, setUnclassified] = useState<Deal[]>([]);
 
   // Use saved preference from localStorage, then initialVisibleStages, then all stages
   const [visibleStages, setVisibleStages] = useState<Set<string>>(() => {
@@ -108,10 +111,13 @@ export const DealListContent = () => {
 
   useEffect(() => {
     if (unorderedDeals) {
-      const newDealsByStage = getDealsByStage(unorderedDeals, dealStages);
-      if (!isEqual(newDealsByStage, dealsByStage)) {
-        setDealsByStage(newDealsByStage);
+      const next = getDealsByStage(unorderedDeals, dealStages);
+      if (!isEqual(next.byStage, dealsByStage)) {
+        setDealsByStage(next.byStage);
       }
+      setUnclassified((previous) =>
+        isEqual(previous, next.unclassified) ? previous : next.unclassified,
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unorderedDeals]);
@@ -276,6 +282,22 @@ export const DealListContent = () => {
             )}
           </div>
         </div>
+
+        {/*
+          Deals whose stage matches no column. They used to be folded silently
+          into the first one; saying so is the honest behaviour now that the
+          first column is "À reclasser" and a bulk edit from there would write
+          the misplacement back to the database.
+        */}
+        {unclassified.length > 0 && (
+          <p className="text-xs text-[var(--deal-status-warning)]">
+            {unclassified.length} opportunité
+            {unclassified.length > 1 ? "s" : ""} portent une étape absente du
+            référentiel (
+            {[...new Set(unclassified.map((d) => d.stage))].join(", ")}) et
+            n'apparaissent dans aucune colonne.
+          </p>
+        )}
 
         {/* Kanban columns */}
         <div className="flex gap-4 overflow-auto pb-4 h-[calc(100dvh-14rem)] min-h-[420px]">

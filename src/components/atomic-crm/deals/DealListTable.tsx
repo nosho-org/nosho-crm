@@ -6,14 +6,26 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
 import { DealPriorityField } from "./DealPriorityField";
+import { DealNextActionDate, DealProductBadges } from "./shared/DealBadges";
+import { getDealActivity } from "./cockpit/dealFields";
+import { startOfToday } from "./cockpit/dealDates";
 import { findDealLabel } from "./deal";
 import { formatISODateString } from "./dealUtils";
 
 /**
- * Row-by-row view of the opportunities (NOS-798).
+ * Row-by-row view of the opportunities (NOS-798, columns revised by NOS-956).
  *
  * Complements the Kanban board rather than replacing it: the toggle in
  * <DealListContent> switches between the two and remembers the choice.
+ *
+ * Column order is the one the spec prescribes:
+ *   Priorité | Opportunité | Société | Étape | Produit(s) | ARR |
+ *   Prochaine action | Date prochaine action | Responsable | Clôture prévue |
+ *   Dernière activité
+ *
+ * MRR is deliberately gone — "ARR suffit et l'espace est plus utile pour
+ * l'action commerciale". Dernière activité is not in the spec text but is in
+ * the mockup, and it is what makes the dormancy alert legible from here.
  */
 export const DealListTable = () => {
   const { dealStages, dealCategories, currency } = useConfigurationContext();
@@ -41,6 +53,9 @@ export const DealListTable = () => {
       <DataTable.Col source="stage" label="Étape">
         <StageField stages={dealStages} />
       </DataTable.Col>
+      <DataTable.Col label="Produit(s)">
+        <ProductsField />
+      </DataTable.Col>
       <DataTable.Col
         source="amount"
         label="ARR"
@@ -49,13 +64,11 @@ export const DealListTable = () => {
       >
         <ArrField currency={currency} />
       </DataTable.Col>
-      <DataTable.Col
-        source="mrr"
-        label="MRR"
-        headerClassName="text-right"
-        cellClassName="text-right tabular-nums"
-      >
-        <MrrField currency={currency} />
+      <DataTable.Col source="next_action" label="Prochaine action">
+        <NextActionField />
+      </DataTable.Col>
+      <DataTable.Col source="next_action_date" label="Date prochaine action">
+        <NextActionDateField />
       </DataTable.Col>
       <DataTable.Col source="category" label="Catégorie">
         <ChoiceField choices={dealCategories} source="category" />
@@ -66,7 +79,67 @@ export const DealListTable = () => {
       <DataTable.Col source="expected_closing_date" label="Clôture prévue">
         <DateField source="expected_closing_date" />
       </DataTable.Col>
+      <DataTable.Col
+        source="last_activity_at"
+        label="Dernière activité"
+        cellClassName="text-right"
+      >
+        <LastActivityField />
+      </DataTable.Col>
     </DataTable>
+  );
+};
+
+/** Products carried by the deal, in the shared badge style. */
+const ProductsField = () => {
+  const record = useRecordContext<Deal>();
+  if (!record) return null;
+  return <DealProductBadges products={record.products} />;
+};
+
+/** The action itself. Its date lives in its own column, per the spec. */
+const NextActionField = () => {
+  const record = useRecordContext<Deal>();
+  const action = record?.next_action?.trim();
+  if (!action) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="truncate block max-w-56" title={action}>
+      {action}
+    </span>
+  );
+};
+
+/**
+ * Colour-coded date: red overdue, orange today, neutral upcoming, warning when
+ * undefined. The colour goes on this cell and nowhere else — "ne pas colorer
+ * toute la ligne ou toute la carte […] sans transformer le CRM en arc en ciel".
+ */
+const NextActionDateField = () => {
+  const record = useRecordContext<Deal>();
+  if (!record) return null;
+  return <DealNextActionDate deal={record} />;
+};
+
+/** How long since anything happened — the dormancy signal, read at a glance. */
+const LastActivityField = () => {
+  const record = useRecordContext<Deal>();
+  const { dealPipelineStatuses, dealInactivityAlertDays } =
+    useConfigurationContext();
+  if (!record) return null;
+  const { daysSinceActivity, isStale } = getDealActivity(record, {
+    pipelineStatuses: dealPipelineStatuses,
+    thresholdDays: dealInactivityAlertDays,
+    today: startOfToday(),
+  });
+  if (daysSinceActivity === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <span
+      className={`text-xs tabular-nums ${isStale ? "text-[var(--deal-status-serious)] font-medium" : "text-muted-foreground"}`}
+    >
+      {daysSinceActivity} j
+    </span>
   );
 };
 
@@ -100,19 +173,6 @@ const ArrField = ({ currency }: { currency: string }) => {
     <span className="inline-flex items-center gap-1">
       {formatCurrency(record.amount, currency)}
       <ManualArrIndicator />
-    </span>
-  );
-};
-
-const MrrField = ({ currency }: { currency: string }) => {
-  const record = useRecordContext<Deal>();
-  if (!record) return null;
-  // `mrr` is a generated column; fall back to the ARR for records that predate
-  // it (FakeRest fixtures, optimistic updates).
-  const mrr = record.mrr ?? (record.amount != null ? record.amount / 12 : null);
-  return (
-    <span className="text-muted-foreground">
-      {formatCurrency(mrr, currency)}
     </span>
   );
 };

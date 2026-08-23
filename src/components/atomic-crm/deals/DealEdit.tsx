@@ -42,10 +42,18 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
             mutationOptions={{
               onSuccess: () => {
                 notify("Opportunité mise à jour");
-                queryClient.invalidateQueries({ queryKey: ['deals', 'getList'] });
-                redirect(`${basePath}/${id}/show`, undefined, undefined, undefined, {
-                  _scrollToTop: false,
+                queryClient.invalidateQueries({
+                  queryKey: ["deals", "getList"],
                 });
+                redirect(
+                  `${basePath}/${id}/show`,
+                  undefined,
+                  undefined,
+                  undefined,
+                  {
+                    _scrollToTop: false,
+                  },
+                );
               },
             }}
           >
