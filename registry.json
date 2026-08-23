@@ -702,6 +702,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealBulkEditStage.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealArchivedList.tsx",
           "type": "registry:component"
         },

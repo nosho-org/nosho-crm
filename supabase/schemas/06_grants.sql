@@ -47,6 +47,12 @@ grant all on function public.handle_new_user() to service_role;
 grant all on function public.handle_update_user() to authenticated;
 grant all on function public.handle_update_user() to service_role;
 
+grant all on function public.check_company_parent_cycle() to authenticated;
+grant all on function public.check_company_parent_cycle() to service_role;
+
+grant all on function public.log_deal_stage_change() to authenticated;
+grant all on function public.log_deal_stage_change() to service_role;
+
 grant all on function public.is_admin() to authenticated;
 grant all on function public.is_admin() to service_role;
 
@@ -101,6 +107,9 @@ grant all on table public.favicons_excluded_domains to service_role;
 
 grant all on table public.deal_migration_map to authenticated;
 grant all on table public.deal_migration_map to service_role;
+
+grant select on table public.deal_stage_history to authenticated;
+grant all on table public.deal_stage_history to service_role;
 
 grant all on table public.allo_line_owners to authenticated;
 grant all on table public.allo_line_owners to service_role;

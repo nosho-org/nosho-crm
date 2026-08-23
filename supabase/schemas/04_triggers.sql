@@ -36,6 +36,27 @@ create or replace trigger deals_set_updated_at
     before update on public.deals
     for each row execute function public.set_updated_at();
 
+-- Stage history (NOS-819). Written by trigger because the board moves deals by
+-- drag & drop straight through the data provider: an application-side write
+-- would miss every one of them.
+create or replace trigger deal_stage_history_on_insert
+    after insert on public.deals
+    for each row execute function public.log_deal_stage_change();
+
+create or replace trigger deal_stage_history_on_update
+    after update on public.deals
+    for each row
+    when (old.stage is distinct from new.stage)
+    execute function public.log_deal_stage_change();
+
+-- A company cannot be its own ancestor: a cycle makes every recursive read of
+-- the hierarchy hang, and the deal page walks it to render the breadcrumb.
+create or replace trigger company_parent_cycle_guard
+    before insert or update on public.companies
+    for each row
+    when (new.parent_company_id is not null)
+    execute function public.check_company_parent_cycle();
+
 create or replace trigger set_deal_notes_sales_id_trigger
     before insert on public.deal_notes
     for each row execute function public.set_sales_id_default();

@@ -75,7 +75,11 @@ create or replace view public.companies_summary with (security_invoker = on) as
 select
     c.*,
     count(distinct d.id) as nb_deals,
-    count(distinct co.id) as nb_contacts
+    count(distinct co.id) as nb_contacts,
+    -- Scalar subqueries, not joins: a join here would multiply the rows feeding
+    -- the two count(distinct) above.
+    (select p.name from public.companies p where p.id = c.parent_company_id)   as parent_company_name,
+    (select count(*) from public.companies s where s.parent_company_id = c.id) as nb_subsidiaries
 from public.companies c
     left join public.deals d on c.id = d.company_id
     left join public.contacts co on c.id = co.company_id

@@ -670,3 +670,49 @@ begin
   );
 end;
 $$;
+
+
+CREATE OR REPLACE FUNCTION "public"."check_company_parent_cycle"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_parent bigint := NEW.parent_company_id;
+  v_depth  integer := 0;
+BEGIN
+  WHILE v_parent IS NOT NULL LOOP
+    IF v_parent = NEW.id THEN
+      RAISE EXCEPTION 'Cycle detecte dans la hierarchie de societes (societe %)', NEW.id;
+    END IF;
+    v_depth := v_depth + 1;
+    IF v_depth > 20 THEN
+      RAISE EXCEPTION 'Hierarchie de societes trop profonde (societe %)', NEW.id;
+    END IF;
+    SELECT parent_company_id INTO v_parent FROM companies WHERE id = v_parent;
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION "public"."log_deal_stage_change"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_sales_id bigint;
+BEGIN
+  -- auth.uid() is NULL under service_role and under the Management API, so the
+  -- row is left unattributed rather than the write failing.
+  SELECT id INTO v_sales_id FROM sales WHERE user_id = auth.uid();
+
+  INSERT INTO deal_stage_history (deal_id, from_stage, to_stage, changed_by, source)
+  VALUES (
+    NEW.id,
+    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.stage END,
+    NEW.stage,
+    v_sales_id,
+    coalesce(nullif(current_setting('app.change_source', true), ''), 'user')
+  );
+  RETURN NULL;
+END;
+$$;
