@@ -163,22 +163,37 @@ export function getCommercialDealsFilter(
   };
 }
 
+/**
+ * Resolve a stored priority slug to its configured choice.
+ *
+ * Returns `null` when the value is missing or unknown — the "Priorité à
+ * définir" case the spec asks for. It used to fall back to `list[0]`, which was
+ * survivable while the list started at "Normal" but became actively wrong once
+ * P0/P1/P2 reordered it most-urgent-first: every unset deal would have been
+ * displayed as P0 Critique.
+ */
 export function getDealPriority(
   value: string | null | undefined,
   priorities: DealPriority[] = defaultDealPriorities,
-): DealPriority {
+): DealPriority | null {
+  if (!value) return null;
   const list = priorities.length ? priorities : defaultDealPriorities;
-  return list.find((priority) => priority.value === value) ?? list[0];
+  return list.find((priority) => priority.value === value) ?? null;
 }
 
+/**
+ * Sort comparator, most urgent first. An unset priority weighs less than any
+ * configured one, so undefined deals sink to the bottom rather than posing as
+ * the highest priority.
+ */
 export function compareDealPriority(
   a: string | null | undefined,
   b: string | null | undefined,
   priorities: DealPriority[] = defaultDealPriorities,
 ): number {
   return (
-    getDealPriority(b, priorities).weight -
-    getDealPriority(a, priorities).weight
+    (getDealPriority(b, priorities)?.weight ?? -1) -
+    (getDealPriority(a, priorities)?.weight ?? -1)
   );
 }
 

@@ -6,44 +6,37 @@ import { daysSince, daysUntil } from "./dealDates";
 
 /**
  * ---------------------------------------------------------------------------
- * Columns the cockpit reads that do NOT exist in production
+ * Fields the cockpit reads
  * ---------------------------------------------------------------------------
- * This used to be a "rebase seam" listing everything the cockpit hoped the
- * Socle workspace would ship. The schema has since settled, so the list is now
- * the opposite: it is the exhaustive set of fields the cockpit reads that the
- * database does not have, kept only so the degradation paths below keep
- * type-checking.
+ * This used to list three fields the cockpit read that production did not have
+ * — `next_action_owner_id`, `probability` and `last_activity_at` — each with a
+ * documented degradation path.
  *
- * Everything else the cockpit reads is a real column and lives on `Deal`:
- * `priority`, `opportunity_type`, `next_action` and `next_action_date`.
+ * All three now exist (20260823090000 for the first two, 20260823110000 for
+ * `last_activity_at`, computed by `deals_summary`), so they live on `Deal` like
+ * everything else and `DealRecord` is just `Deal`.
  *
- * Production was inspected for this release: none of the three fields below
- * exist, and no column is being invented for them. Each has a documented
- * fallback, and every adapter returns an explicit "missing" marker so the UI
- * renders an honest empty state rather than a fabricated value:
+ * The fallbacks below are deliberately kept rather than deleted:
  *
- *   - `next_action_owner_id` → falls back to `sales_id` (the deal owner), and
- *     `DealNextAction.ownerIsDealOwner` tells the UI which one it got;
- *   - `probability`          → falls back to won/lost stage facts, then to the
- *     `dealStageProbabilities` setting, then reports the deal as *unweighted*;
- *   - `last_activity_at`     → falls back to `updated_at`, then `created_at`,
- *     and `DealActivity.source` tells the UI which one it used.
+ *   - `next_action_owner_id` is NULL when the action owner is the deal owner,
+ *     so falling back to `sales_id` is the intended reading, not a degradation;
+ *   - `probability` is NULL unless someone recorded an exception, and the
+ *     weighting cascade still resolves stage facts then `dealStageProbabilities`;
+ *   - `last_activity_at` comes from the view, so it is absent from any record
+ *     read straight off the `deals` table (FakeRest, fixtures, optimistic
+ *     updates) — `DealActivity.source` still tells the UI which value it used.
  *
- * None of these is ever sent to PostgREST: the cockpit's server-side filters
- * are `sales_id`, `category` and the `expected_closing_date` period bounds
- * only, sorting is computed client-side in `dealSort.ts`, and no query selects
- * an explicit column list. Selecting or filtering on a missing column would
- * 400 the whole list.
+ * None of these is ever sent to PostgREST as a select list: no query selects an
+ * explicit column list, and sorting is computed client-side in `dealSort.ts`.
  */
+export type DealRecord = Deal;
+
+/** @deprecated The three fields are real columns now; kept for import compatibility. */
 export interface DealPipelineFields {
   next_action_owner_id: Identifier | null;
-  /** Per-deal win probability, in percent. */
   probability: number | null;
-  /** Timestamp of the last logged activity (note, call, meeting…). */
   last_activity_at: string | null;
 }
-
-export type DealRecord = Deal & Partial<DealPipelineFields>;
 
 /* -------------------------------------------------------------------------- */
 /* Stage classification                                                        */

@@ -12,8 +12,10 @@ import {
 } from "./dealUtils";
 import { arrToMrr, formatCurrency } from "../misc/formatCurrency";
 import {
+  archivedDealStages,
   defaultCompanyTypes,
   defaultDealPipelineStatuses,
+  defaultDealStageProbabilities,
   defaultDealStages,
   defaultEstablishmentTypes,
   legacyDealStages,
@@ -26,32 +28,42 @@ const view = (id: string, label: string, companyType: string): CustomView => ({
   companyType,
 });
 
-// NOS-796
+// NOS-796, revised by NOS-956 (seven-stage pipeline)
 describe("canonical pipeline", () => {
-  it("has exactly the 8 canonical stages, in order", () => {
+  it("has the 7 commercial stages, in order, framed by the queue and churn", () => {
     expect(defaultDealStages.map((s) => s.value)).toEqual([
+      // Deals the v2 migration could not map with certainty wait here rather
+      // than being guessed into a column.
+      "a-reclasser",
       "lead",
       "qualified",
-      "demo-booked",
-      "proposal-to-send",
-      "proposal-sent",
+      "demo-poc",
+      "proposal",
+      "negociation",
       "closed-won",
-      "perdu",
+      "lost",
+      // Terminal, still counted in lost ARR, only hidden from the board.
       "churn",
     ]);
   });
 
-  it("maps every retired stage onto a canonical one", () => {
-    const canonical = new Set(defaultDealStages.map((s) => s.value));
+  it("maps every retired stage onto a live one", () => {
+    const live = new Set(defaultDealStages.map((s) => s.value));
     expect(Object.keys(legacyDealStages).sort()).toEqual([
+      "d-mo-rdv",
       "declined",
       "follow-up",
+      "perdu",
+      "poc-lanc",
+      "proposal-to-send",
+      "proposition-a-envoyer",
+      "proposition-envoy-e",
       "rdv-prix",
       "trial",
       "trial-failed",
     ]);
     for (const target of Object.values(legacyDealStages)) {
-      expect(canonical.has(target)).toBe(true);
+      expect(live.has(target)).toBe(true);
     }
   });
 
@@ -61,14 +73,53 @@ describe("canonical pipeline", () => {
     }
   });
 
+  it("leaves genuinely ambiguous slugs unmapped, to be reclassified by hand", () => {
+    // The spec forbids guessing. These two have no certain equivalent, so they
+    // must NOT appear in the map — the migration parks them in `a-reclasser`.
+    expect(legacyDealStages["logiciels-brique"]).toBeUndefined();
+    expect(legacyDealStages["opportunity"]).toBeUndefined();
+  });
+
+  it("keeps every retired stage label resolvable", () => {
+    // `legacy_stage` on migrated deals, and the `visibleStages` of the
+    // investisseur / partenaire custom views, both still point at these slugs.
+    const archived = new Set(archivedDealStages.map((s) => s.value));
+    for (const retired of Object.keys(legacyDealStages)) {
+      // `rdv-prix` was already gone before the configuration was snapshotted.
+      if (retired === "rdv-prix") continue;
+      expect(archived.has(retired)).toBe(true);
+    }
+    for (const nonCommercial of [
+      "partenariats",
+      "ressources",
+      "invest",
+      "invests-actifs",
+      "communication-presse",
+    ]) {
+      expect(archived.has(nonCommercial)).toBe(true);
+    }
+  });
+
   it("treats only the terminal stages as pipeline statuses", () => {
+    // Production stored ["closed-won"] until 20260823093000, which counted 59
+    // lost deals (415 770 €) and 3 churned ones as open pipeline.
     expect(defaultDealPipelineStatuses).toEqual([
       "closed-won",
-      "perdu",
+      "lost",
       "churn",
     ]);
     for (const status of defaultDealPipelineStatuses) {
       expect(defaultDealStages.some((s) => s.value === status)).toBe(true);
+    }
+  });
+
+  it("assigns a probability to every open stage and to no terminal one", () => {
+    const terminal = new Set(defaultDealPipelineStatuses);
+    for (const stage of defaultDealStages) {
+      if (stage.value === "a-reclasser") continue;
+      const hasProbability = stage.value in defaultDealStageProbabilities;
+      // Won and lost are facts, not forecasts.
+      expect(hasProbability).toBe(!terminal.has(stage.value));
     }
   });
 });
@@ -233,11 +284,21 @@ describe("pipeline dates", () => {
   });
 });
 
-// NOS-806
+// NOS-806, revised by NOS-956 (P0/P1/P2)
 describe("priority", () => {
-  it("falls back to Normal for an unknown or missing value", () => {
-    expect(getDealPriority(undefined).value).toBe("normal");
-    expect(getDealPriority("critique").value).toBe("normal");
+  it("returns null for an unknown or missing value", () => {
+    // Not a fallback to the first choice: the list is now ordered most-urgent
+    // first, so falling back would label every unset deal "P0 Critique".
+    expect(getDealPriority(undefined)).toBeNull();
+    expect(getDealPriority(null)).toBeNull();
+    expect(getDealPriority("")).toBeNull();
+    expect(getDealPriority("critique")).toBeNull();
+  });
+
+  it("resolves the configured P0/P1/P2 labels", () => {
+    expect(getDealPriority("urgent")?.label).toBe("P0 Critique");
+    expect(getDealPriority("important")?.label).toBe("P1 Élevée");
+    expect(getDealPriority("normal")?.label).toBe("P2 Normale");
   });
 
   it("orders urgent before important before normal", () => {
@@ -245,6 +306,13 @@ describe("priority", () => {
       compareDealPriority(a, b),
     );
     expect(sorted).toEqual(["urgent", "important", "normal"]);
+  });
+
+  it("sinks an unset priority below every configured one", () => {
+    const sorted = ["normal", undefined, "urgent"].sort((a, b) =>
+      compareDealPriority(a, b),
+    );
+    expect(sorted).toEqual(["urgent", "normal", undefined]);
   });
 });
 

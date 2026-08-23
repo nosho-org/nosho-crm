@@ -27,6 +27,15 @@ create or replace trigger deal_stage_won_at
     when (old.stage is distinct from new.stage)
     execute function public.set_deal_won_at();
 
+-- Until 20260823110000 this trigger did not exist and nothing else wrote
+-- deals.updated_at, so every production row had updated_at = created_at. The
+-- cockpit read it as a last-activity proxy, which made the "dormant deal" alert
+-- measure age since creation. deals_summary.last_activity_at now derives the
+-- real value; this keeps updated_at honest going forward.
+create or replace trigger deals_set_updated_at
+    before update on public.deals
+    for each row execute function public.set_updated_at();
+
 create or replace trigger set_deal_notes_sales_id_trigger
     before insert on public.deal_notes
     for each row execute function public.set_sales_id_default();

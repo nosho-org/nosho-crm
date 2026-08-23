@@ -163,11 +163,25 @@ export const SettingsPage = () => {
   const updateConfiguration = useConfigurationUpdater();
   const notify = useNotify();
   const [customViews] = useCustomViewsStore();
-  const { companyTypes } = useConfigurationContext();
+  const currentConfig = useConfigurationContext();
+  const { companyTypes } = currentConfig;
 
   const transform = useCallback(
     (data: Record<string, any>) => ({
+      // Merge onto the current configuration, never rebuild from the form.
+      //
+      // This used to return only the settings the form knows about, which
+      // silently dropped every other key from the stored document: production
+      // lost `dealPriorities`, `dealContactRoles` and `dealOpportunityTypes`
+      // that way, and the app fell back to defaultConfiguration without anyone
+      // noticing. Any setting added later and not yet surfaced here would have
+      // met the same fate.
+      //
+      // The base is the resolved configuration rather than `...data`, because
+      // the form values arrive mixed with the raw record (`id`, `config`) and
+      // spreading those would nest the previous document inside the new one.
       config: {
+        ...currentConfig,
         title: data.title,
         lightModeLogo: data.lightModeLogo,
         darkModeLogo: data.darkModeLogo,
@@ -197,7 +211,7 @@ export const SettingsPage = () => {
         companyTypes,
       } as ConfigurationContextValue,
     }),
-    [customViews, companyTypes],
+    [currentConfig, customViews, companyTypes],
   );
 
   return (

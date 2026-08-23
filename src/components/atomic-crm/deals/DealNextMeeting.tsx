@@ -3,7 +3,7 @@ import { useGetList } from "ra-core";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Task } from "../types";
-import { getNextMeetingTask } from "./dealNextMeeting";
+import { getNextMeetingTask } from "./nextMeetingTask";
 import { formatDealMeetingDate } from "./dealUtils";
 
 /**

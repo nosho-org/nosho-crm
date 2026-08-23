@@ -51,7 +51,11 @@ export const DealListContent = () => {
     resource: "configuration",
     action: "edit",
   });
-  const storageKey = `dealListVisibleStages:${location.pathname}`;
+  // `:v2:` since the seven-stage pipeline migration. The stored preference only
+  // keeps stages that still exist, and uses that filtered list as-is when it is
+  // non-empty — so anyone who had already picked their columns would never have
+  // seen "À reclasser", "Proposition" or "Négociation" appear.
+  const storageKey = `dealListVisibleStages:v2:${location.pathname}`;
   const [viewMode, setViewMode] = useDealViewMode(location.pathname);
   const currentSaleId = identity?.id as number | undefined;
   const visibleCustomViews = customViews.filter(

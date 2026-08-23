@@ -62,7 +62,15 @@
    * ship with a label, never as colour alone.
    */
   --deal-series-potential: #2a78d6;
-  --deal-series-weighted: #1baf7a;
+  /*
+   * Violet, not the green it used to be. NOS-955 fixes one meaning per colour
+   * across the whole interface — green = won, blue = potential, violet =
+   * weighted/forecast, red = lost, orange = attention — and a green weighted
+   * pipeline read as "already signed".
+   */
+  --deal-series-weighted: #7c5cd6;
+  --deal-status-won: #1baf7a;
+  --deal-status-lost: #d03b3b;
   --deal-status-critical: #d03b3b;
   --deal-status-serious: #ec835a;
   --deal-status-warning: #fab219;
@@ -119,9 +127,11 @@
 }
 
 .dark {
-  /* Same two hues, stepped for the dark chart surface. */
+  /* Same hues, stepped for the dark chart surface. */
   --deal-series-potential: #3987e5;
-  --deal-series-weighted: #199e70;
+  --deal-series-weighted: #9478e0;
+  --deal-status-won: #22c48a;
+  --deal-status-lost: #e05a5a;
 
   --background: oklch(0.16 0.01 260);
   --foreground: oklch(0.985 0 0);

@@ -99,6 +99,9 @@ grant all on table public.configuration to service_role;
 grant all on table public.favicons_excluded_domains to authenticated;
 grant all on table public.favicons_excluded_domains to service_role;
 
+grant all on table public.deal_migration_map to authenticated;
+grant all on table public.deal_migration_map to service_role;
+
 grant all on table public.allo_line_owners to authenticated;
 grant all on table public.allo_line_owners to service_role;
 

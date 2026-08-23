@@ -24,13 +24,18 @@ export const DealPriorityField = ({
 
   const priority = getDealPriority(record.priority, dealPriorities);
 
+  // An unset or unrecognised priority is a real state the spec names, not an
+  // excuse to show the first choice in the list.
+  const dotClassName = priority?.dotClassName ?? "bg-muted-foreground/25";
+  const label = priority?.label ?? "Priorité à définir";
+
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
       <span
         aria-hidden="true"
-        className={`h-2 w-2 shrink-0 rounded-full ${priority.dotClassName}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${dotClassName}`}
       />
-      <span className={labelled ? "text-xs" : "sr-only"}>{priority.label}</span>
+      <span className={labelled ? "text-xs" : "sr-only"}>{label}</span>
     </span>
   );
 };

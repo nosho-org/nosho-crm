@@ -28,13 +28,31 @@ export interface ConfigurationContextValue {
   currency: string;
   customViews: CustomView[];
   dealCategories: LabeledValue[];
-  /** Décideur / Influenceur / Opérationnel — set per deal↔contact relation. */
+  /**
+   * Categories retired by the 20 -> 7 migration. Kept so a deal still carrying
+   * an old value renders its real label instead of a raw slug.
+   */
+  archivedDealCategories?: LabeledValue[];
+  /** Décideur / Influenceur / Prescripteur / Utilisateur — per deal↔contact. */
   dealContactRoles: LabeledValue[];
-  /** Nouveau client / Extension / Renouvellement — set per deal. */
+  /** Roles retired by the v2 redesign, kept resolvable. */
+  archivedDealContactRoles?: LabeledValue[];
+  /** Nouveau client / Upsell / Renouvellement — set per deal. */
   dealOpportunityTypes: LabeledValue[];
+  /** No-show / Entrant / Data. A deal can carry several at once. */
+  dealProducts: LabeledValue[];
   dealPipelineStatuses: string[];
   dealPriorities: DealPriority[];
   dealStages: DealStage[];
+  /**
+   * Stages retired by the v2 pipeline migration.
+   *
+   * Two consumers, both mandatory: `legacy_stage` on a migrated deal, and the
+   * `visibleStages` of the investisseur / partenaire custom views, which still
+   * point at these slugs. A board that resolves its columns from `dealStages`
+   * alone makes those views render empty.
+   */
+  archivedDealStages?: DealStage[];
   establishmentTypes: EstablishmentType[];
   leadSources: LabeledValue[];
   /**
@@ -51,6 +69,11 @@ export interface ConfigurationContextValue {
   dealStageProbabilities: Record<string, number>;
   /** First stage at which a next action is expected (issue #92). */
   dealNextActionFromStage: string;
+  /**
+   * Monthly recurring revenue target, in euros, for the dashboard KPI
+   * (NOS-955). Compared against the cumulated MRR of signed deals.
+   */
+  mrrTarget: number;
   noteStatuses: NoteStatus[];
   taskTypes: LabeledValue[];
   title: string;

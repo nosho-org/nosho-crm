@@ -1,5 +1,5 @@
 import type { Task } from "../types";
-import { getNextMeetingTask, isMeetingTask } from "./dealNextMeeting";
+import { getNextMeetingTask, isMeetingTask } from "./nextMeetingTask";
 
 const NOW = new Date("2026-08-20T10:00:00.000Z");
 

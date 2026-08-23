@@ -108,7 +108,20 @@ select
     comp.name                                                                                                          as company_name,
     replace(lower(immutable_unaccent(coalesce(comp.name, ''))), ' ', '')                                                as company_name_search,
     coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), '')                                                as contact_names,
-    replace(lower(immutable_unaccent(coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), ''))), ' ', '')    as contact_names_search
+    replace(lower(immutable_unaccent(coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), ''))), ' ', '')    as contact_names_search,
+    -- Real last activity, replacing the `updated_at` proxy the cockpit used to
+    -- read. Computed rather than materialised: a denormalised column kept in
+    -- sync by four triggers is exactly the kind of value that drifts unnoticed.
+    --
+    -- Scalar subqueries, NOT joins — a 1-N join would multiply the rows feeding
+    -- the string_agg above and repeat every contact name once per note.
+    -- GREATEST ignores NULLs, so a deal with no note and no call falls back to
+    -- updated_at on its own.
+    greatest(
+        d.updated_at,
+        (select max(dn.date)       from public.deal_notes dn where dn.deal_id = d.id),
+        (select max(cl.started_at) from public.call_logs cl  where cl.deal_id = d.id)
+    )                                                                                                                  as last_activity_at
 from public.deals d
     left join public.contacts c on c.id = any(d.contact_ids)
     left join public.companies comp on comp.id = d.company_id

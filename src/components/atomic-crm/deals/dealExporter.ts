@@ -72,7 +72,7 @@ export const createDealExporter =
       societe: deal.company_id != null ? companies[deal.company_id]?.name : "",
       etape: labelOf(dealStages, deal.stage),
       etape_historique: deal.legacy_stage ?? "",
-      priorite: getDealPriority(deal.priority, dealPriorities).label,
+      priorite: getDealPriority(deal.priority, dealPriorities)?.label ?? "",
       categorie: labelOf(dealCategories, deal.category),
       arr_eur: deal.amount ?? "",
       mrr_eur: deal.mrr ?? arrToMrr(deal.amount) ?? "",

@@ -137,11 +137,26 @@ export type Deal = {
   next_action?: string | null;
   /** Day the next action is due. Real column — see 20260820120000. */
   next_action_date?: string | null;
+  /**
+   * Who owns the next action. `null` means "same as the deal owner", so
+   * reassigning a deal does not silently reassign its pending action.
+   * See 20260823090000.
+   */
+  next_action_owner_id?: Identifier | null;
   contact_ids: Identifier[];
   category: string;
+  /**
+   * Products the deal covers (`no-show` / `entrant` / `data`). A set: a deal can
+   * carry several at once. Never null in the database — `'{}'` is the default,
+   * because PostgREST's `ov.`/`cs.` operators evaluate to NULL against a NULL
+   * array and drop the row.
+   */
+  products?: string[];
   stage: string;
   /** Original stage value before the migration to the canonical 8-stage pipeline. */
   legacy_stage?: string | null;
+  /** Original category value before the 20 -> 7 category migration. */
+  legacy_category?: string | null;
   description: string;
   /** Annual Recurring Revenue, in euros. Stored as-is, never converted. */
   amount: number;
@@ -153,6 +168,12 @@ export type Deal = {
    */
   arr_is_manual?: boolean;
   priority?: DealPriorityValue;
+  /**
+   * Per-deal win probability override, 0-100 (NOS-817). `null`/undefined means
+   * no exception was recorded and the weighting cascade falls back to the stage
+   * probability — which is a different claim from "0 % chance".
+   */
+  probability?: number | null;
   lead_source?: string | null;
   /** Sales who brought the lead in — distinct from `sales_id`, who owns it. */
   referrer_id?: Identifier | null;
@@ -169,10 +190,25 @@ export type Deal = {
   index: number;
   proposal_edit_url?: string;
   proposal_public_url?: string;
+  /**
+   * Last real activity: the latest of `updated_at`, the newest deal note and
+   * the newest linked call. Computed by `deals_summary`, so it is present on
+   * every read through the data provider but never writable.
+   *
+   * Prefer this over `updated_at` for dormancy: until 20260823110000 no trigger
+   * maintained `updated_at`, so historical rows still carry their creation date.
+   */
+  last_activity_at?: string;
 } & Pick<RaRecord, "id">;
 
 export type DealNote = {
   deal_id: Identifier;
+  /**
+   * Activity kind, backing the deal timeline filters (Notes / Appels /
+   * Meetings / Emails). The column has existed since the table was created; it
+   * was simply never typed here.
+   */
+  type?: string | null;
   text: string;
   date: string;
   sales_id: Identifier;

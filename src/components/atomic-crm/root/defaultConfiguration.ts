@@ -28,58 +28,145 @@ export const defaultCompanySectors = [
 ];
 
 /**
- * The canonical commercial pipeline (8 stages).
+ * The commercial pipeline (NOS-956): seven stages, plus a reclassification
+ * queue in front and churn at the back.
  *
- * Values are deliberately conservative: `lead`, `qualified`, `closed-won` and
- * `perdu` keep the slugs they already had in production so that the vast
- * majority of rows need no data migration at all.
+ * `a-reclasser` holds the deals the v2 migration could not map with certainty.
+ * The spec forbids guessing, so they wait here for a human rather than landing
+ * in an arbitrary column. Once the queue is empty the stage can be removed.
+ *
+ * `churn` stays a stage: it is terminal and still counted in lost ARR, it is
+ * only hidden from the board ("je garderais Churn hors de ce Kanban").
+ *
+ * `lead`, `qualified` and `closed-won` keep the slugs they already had in
+ * production, so most rows were never rewritten.
  */
 export const defaultDealStages = [
-  { value: "lead", label: "Leads" },
-  { value: "qualified", label: "Qualifiés" },
-  { value: "demo-booked", label: "Démo booked" },
-  { value: "proposal-to-send", label: "Proposition à envoyer" },
-  { value: "proposal-sent", label: "Proposition envoyée" },
-  { value: "closed-won", label: "Contrat signé" },
-  { value: "perdu", label: "Perdu" },
+  { value: "a-reclasser", label: "À reclasser" },
+  { value: "lead", label: "Lead" },
+  { value: "qualified", label: "Qualifié" },
+  { value: "demo-poc", label: "Démo / POC" },
+  { value: "proposal", label: "Proposition" },
+  { value: "negociation", label: "Négociation" },
+  { value: "closed-won", label: "Close Won" },
+  { value: "lost", label: "Lost" },
   { value: "churn", label: "Churn" },
 ];
 
 /**
- * Stages that leave the canonical pipeline, mapped to the canonical stage that
- * carries the same commercial meaning.
+ * Stages retired by the v2 migration, kept so their labels stay resolvable.
  *
- * The original value is kept in `deals.legacy_stage` by the migration, so the
- * mapping is fully reversible: no historical information is destroyed.
+ * Two consumers, both mandatory:
+ *   * `deals.legacy_stage` on every migrated deal;
+ *   * the `visibleStages` of the investisseur / partenaire custom views, which
+ *     still point at these slugs. A board that resolves its columns from
+ *     `defaultDealStages` alone renders those two views empty.
+ *
+ * The slugs are the ones actually found in the stored configuration on
+ * 2026-08-23, accents and encoding accidents included (`d-mo-rdv` really is
+ * "Démo booked", `poc-lanc` really is "POC lancé").
+ */
+export const archivedDealStages = [
+  { value: "logiciels-brique", label: "Logiciels (brique)" },
+  { value: "declined", label: "Décliné" },
+  { value: "follow-up", label: "Follow up" },
+  { value: "trial", label: "Essai" },
+  { value: "trial-failed", label: "Essai échoué" },
+  { value: "d-mo-rdv", label: "Démo booked" },
+  { value: "poc-lanc", label: "POC lancé" },
+  { value: "proposition-a-envoyer", label: "Proposition à envoyer" },
+  { value: "proposition-envoy-e", label: "Proposition envoyée" },
+  { value: "proposal-to-send", label: "Proposition à envoyer (ancien slug)" },
+  { value: "perdu", label: "Perdu" },
+  { value: "opportunity", label: "Opportunity" },
+  { value: "partenariats", label: "Partenariats" },
+  { value: "ressources", label: "Ressources" },
+  { value: "invest", label: "Invests potentiel" },
+  { value: "communication-presse", label: "Communication / presse" },
+  { value: "invests-actifs", label: "Invests actifs" },
+];
+
+/**
+ * Stages that leave the pipeline, mapped to the stage carrying the same
+ * commercial meaning. Mirrors `deal_migration_map` in the database.
+ *
+ * A slug absent from this map has no certain equivalent: the migration parks it
+ * in `a-reclasser` rather than inventing one. `logiciels-brique` and
+ * `opportunity` are deliberately missing for that reason.
+ *
+ * The original value is kept in `deals.legacy_stage`, so the mapping stays
+ * fully reversible and no historical information is destroyed.
  */
 export const legacyDealStages: Record<string, string> = {
+  // Retired by the v2 migration (NOS-956).
+  perdu: "lost", // renamed
+  "d-mo-rdv": "demo-poc", // labelled "Démo booked"
+  "poc-lanc": "demo-poc", // labelled "POC lancé"
+  "proposition-a-envoyer": "proposal", // merged, per the spec's mapping table
+  "proposition-envoy-e": "proposal", // merged, per the spec's mapping table
+  "proposal-to-send": "proposal", // orphan slug from 20260820150000
+  // Retired earlier, by 20260820150000. Kept so a row that somehow still
+  // carries one is handled rather than parked.
   "follow-up": "qualified", // Suivi — still being nurtured after qualification
-  "rdv-prix": "demo-booked", // Rendez-vous prix — a meeting is booked
-  trial: "proposal-to-send", // Essai — demo done, proposal is the next step
-  "trial-failed": "perdu", // Essai échoué — a lost deal
-  declined: "perdu", // Décliné — a lost deal
+  "rdv-prix": "demo-poc", // Rendez-vous prix — a meeting is booked
+  trial: "proposal", // Essai — demo done, proposal is the next step
+  "trial-failed": "lost", // Essai échoué
+  declined: "lost", // Décliné
 };
 
-/** Terminal stages: a deal sitting there is no longer moving through the pipeline. */
-export const defaultDealPipelineStatuses = ["closed-won", "perdu", "churn"];
+/**
+ * Terminal stages: a deal sitting there is no longer moving through the
+ * pipeline, and its ARR must not be counted as open.
+ *
+ * Production stored `["closed-won"]` until 20260823093000, which counted 59
+ * lost deals (415 770 €) and 3 churned ones as open pipeline.
+ */
+export const defaultDealPipelineStatuses = ["closed-won", "lost", "churn"];
 
+/**
+ * Commercial priority, shown as P0 / P1 / P2 (NOS-956, NOS-957).
+ *
+ * Labels only — the slugs stay `urgent` / `important` / `normal`, which is what
+ * the `deals_priority_check` constraint and the generated `priority_rank`
+ * column already enforce. Renaming them would mean dropping a constraint and
+ * rewriting a stored generated column to change three strings on screen.
+ *
+ * Listed most urgent first, so the filter bar reads P0 → P1 → P2.
+ */
 export const defaultDealPriorities: DealPriority[] = [
   {
-    value: "normal",
-    label: "Normal",
-    dotClassName: "bg-muted-foreground/40",
-    weight: 0,
+    value: "urgent",
+    label: "P0 Critique",
+    dotClassName: "bg-red-500",
+    weight: 2,
   },
   {
     value: "important",
-    label: "Important",
-    dotClassName: "bg-amber-500",
+    label: "P1 Élevée",
+    dotClassName: "bg-orange-500",
     weight: 1,
   },
-  { value: "urgent", label: "Urgent", dotClassName: "bg-red-500", weight: 2 },
+  {
+    value: "normal",
+    label: "P2 Normale",
+    dotClassName: "bg-muted-foreground/40",
+    weight: 0,
+  },
 ];
 
 export const defaultDealPriority: DealPriorityValue = "normal";
+
+/**
+ * Products an opportunity can cover (NOS-956 filter, NOS-957 header).
+ *
+ * Multi-select: a deal can carry several at once, stored in `deals.products`.
+ * The colours are imposed by the mockups — green / blue / violet.
+ */
+export const defaultDealProducts = [
+  { value: "no-show", label: "No-show" },
+  { value: "entrant", label: "Entrant" },
+  { value: "data", label: "Data" },
+];
 
 export const defaultLeadSources = [
   { value: "inbound", label: "Inbound" },
@@ -103,16 +190,62 @@ export const defaultEstablishmentTypes: EstablishmentType[] = [
 export const defaultDealInactivityAlertDays = 14;
 
 /**
- * Intentionally empty: no stage carries a win probability until the team sets
- * one. The revenue cockpit then shows the weighted figures as "à configurer"
- * instead of presenting a made-up forecast as if it came from the data.
+ * Win probability per stage, in percent, weighting the revenue forecast.
+ *
+ * Seeded (NOS-955): the dashboard's weighted-pipeline KPI and the violet
+ * forecast series would otherwise read "à configurer" on day one. These are
+ * conventional defaults meant to be tuned in the settings, not measured rates.
+ *
+ * Terminal stages are deliberately absent. Won and lost are facts, not
+ * forecasts, and the weighting cascade resolves them before it ever reads this
+ * map — listing them here would suggest a signed deal is 100 % *likely*
+ * rather than simply signed.
  */
-export const defaultDealStageProbabilities: Record<string, number> = {};
+export const defaultDealStageProbabilities: Record<string, number> = {
+  lead: 10,
+  qualified: 30,
+  "demo-poc": 50,
+  proposal: 70,
+  negociation: 85,
+};
+
+/**
+ * Monthly recurring revenue target, in euros, for the dashboard KPI (NOS-955).
+ *
+ * Compared against the cumulated MRR of signed deals. Note that this is
+ * bookings, not live MRR: the CRM holds no contract-termination data, so a
+ * churned client still counts. The KPI is labelled accordingly.
+ */
+export const defaultMrrTarget = 25000;
 
 /** Issue #92: next action becomes mandatory from the "Qualifié" stage. */
 export const defaultDealNextActionFromStage = "qualified";
 
+/**
+ * Client categories (NOS-956): seven, down from twenty.
+ *
+ * The twenty healthcare specialities they replace were never used — production
+ * held four values, all residue from the upstream Atomic CRM demo fixture
+ * (print-project, ui-design, other, copywriting), on 72 of 232 deals. Those are
+ * parked in `a-reclasser`; the 160 deals with no category keep none, because
+ * "no category" is not "ambiguous category".
+ */
 export const defaultDealCategories = [
+  { value: "a-reclasser", label: "À reclasser" },
+  { value: "hopital", label: "Hôpital" },
+  { value: "imagerie", label: "Imagerie" },
+  { value: "dentaire", label: "Dentaire" },
+  { value: "clinique", label: "Clinique" },
+  { value: "esthetique", label: "Esthétique" },
+  { value: "cabinet", label: "Cabinet" },
+  { value: "autre", label: "Autre" },
+];
+
+/**
+ * Categories retired by the migration above, kept so a deal still carrying one
+ * in `legacy_category` renders its real label instead of a raw slug.
+ */
+export const archivedDealCategories = [
   { value: "angiologue", label: "Angiologue" },
   { value: "api", label: "API" },
   { value: "cardiologue", label: "Cardiologue" },
@@ -122,9 +255,7 @@ export const defaultDealCategories = [
   { value: "dentiste", label: "Dentiste" },
   { value: "dermatologue", label: "Dermatologue" },
   { value: "entreprise", label: "Entreprise" },
-  { value: "esthetique", label: "Esthétique" },
   { value: "groupement", label: "Groupement" },
-  { value: "hopital", label: "Hôpital" },
   { value: "institut", label: "Institut" },
   { value: "maison-de-sante", label: "Maison de santé" },
   { value: "medecin", label: "Médecin" },
@@ -133,6 +264,11 @@ export const defaultDealCategories = [
   { value: "orthodontiste", label: "Orthodontiste" },
   { value: "pediatre", label: "Pédiatre" },
   { value: "radiologie", label: "Radiologie" },
+  // Demo fixture residue found in production.
+  { value: "print-project", label: "Print project" },
+  { value: "ui-design", label: "UI design" },
+  { value: "copywriting", label: "Copywriting" },
+  { value: "other", label: "Other" },
 ];
 
 /**
@@ -144,7 +280,8 @@ export const defaultDealCategories = [
  */
 export const defaultDealOpportunityTypes = [
   { value: "nouveau-client", label: "Nouveau client" },
-  { value: "extension", label: "Extension client existant" },
+  // PJ1 of NOS-957 labels this slug "Upsell". Label change only.
+  { value: "extension", label: "Upsell" },
   { value: "renouvellement", label: "Renouvellement" },
 ];
 
@@ -157,7 +294,18 @@ export const defaultDealOpportunityTypes = [
 export const defaultDealContactRoles = [
   { value: "decideur", label: "Décideur" },
   { value: "influenceur", label: "Influenceur" },
-  { value: "operationnel", label: "Opérationnel" },
+  { value: "prescripteur", label: "Prescripteur" },
+  { value: "utilisateur", label: "Utilisateur" },
+];
+
+/**
+ * `operationnel` has no obvious equivalent among the four roles above.
+ * "Utilisateur" is close but would be a guess, so the value is archived rather
+ * than rewritten: already-saved roles keep resolving, and the next person to
+ * edit the deal picks from the new list.
+ */
+export const archivedDealContactRoles = [
+  { value: "operationnel", label: "Opérationnel (retiré)" },
 ];
 
 /**
@@ -201,16 +349,21 @@ export const defaultConfiguration: ConfigurationContextValue = {
   currency: defaultCurrency,
   customViews: [],
   dealCategories: defaultDealCategories,
+  archivedDealCategories,
   dealContactRoles: defaultDealContactRoles,
+  archivedDealContactRoles,
   dealOpportunityTypes: defaultDealOpportunityTypes,
+  dealProducts: defaultDealProducts,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealPriorities: defaultDealPriorities,
   dealStages: defaultDealStages,
+  archivedDealStages,
   establishmentTypes: defaultEstablishmentTypes,
   leadSources: defaultLeadSources,
   dealInactivityAlertDays: defaultDealInactivityAlertDays,
   dealStageProbabilities: defaultDealStageProbabilities,
   dealNextActionFromStage: defaultDealNextActionFromStage,
+  mrrTarget: defaultMrrTarget,
   noteStatuses: defaultNoteStatuses,
   taskTypes: defaultTaskTypes,
   title: defaultTitle,
