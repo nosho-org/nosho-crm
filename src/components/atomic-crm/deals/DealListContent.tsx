@@ -196,7 +196,7 @@ export const DealListContent = () => {
 
       updateDealCompanyType(sourceDeal, targetCompanyType, dataProvider).then(
         () => {
-          queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+          queryClient.invalidateQueries({ queryKey: ["deals"] });
         },
       );
       return;
@@ -222,7 +222,11 @@ export const DealListContent = () => {
 
     // persist the changes and invalidate all deal list caches (all views)
     updateDealStage(sourceDeal, destinationDeal, dataProvider).then(() => {
-      queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+      // The whole resource, not just getList. `getOne` feeds the deal page and
+      // its edit form: left stale, reopening a deal after a drag & drop showed
+      // its previous stage, and saving wrote that stale value back — silently
+      // undoing the move and logging a bogus stage change in the history.
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
     });
   };
 

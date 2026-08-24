@@ -43,7 +43,7 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
               onSuccess: () => {
                 notify("Opportunité mise à jour");
                 queryClient.invalidateQueries({
-                  queryKey: ["deals", "getList"],
+                  queryKey: ["deals"],
                 });
                 redirect(
                   `${basePath}/${id}/show`,

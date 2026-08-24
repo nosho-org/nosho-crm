@@ -39,7 +39,7 @@ export const DealCreate = ({ open }: { open: boolean }) => {
 
   const onSuccess = async (deal: Deal) => {
     if (!allDeals) {
-      await queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+      await queryClient.invalidateQueries({ queryKey: ["deals"] });
       redirect(basePath);
       return;
     }
@@ -69,7 +69,7 @@ export const DealCreate = ({ open }: { open: boolean }) => {
     );
     const now = Date.now();
     queryClient.setQueriesData<GetListResult | undefined>(
-      { queryKey: ["deals", "getList"] },
+      { queryKey: ["deals"] },
       (res) => {
         if (!res) return res;
         return {
@@ -79,7 +79,7 @@ export const DealCreate = ({ open }: { open: boolean }) => {
       },
       { updatedAt: now },
     );
-    await queryClient.invalidateQueries({ queryKey: ["deals", "getList"] });
+    await queryClient.invalidateQueries({ queryKey: ["deals"] });
     redirect(basePath);
   };
 
