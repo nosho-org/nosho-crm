@@ -108,6 +108,7 @@ grant all on table public.favicons_excluded_domains to service_role;
 grant all on table public.deal_migration_map to authenticated;
 grant all on table public.deal_migration_map to service_role;
 
+-- Read only. The application never writes here: the trigger does, as definer.
 grant select on table public.deal_stage_history to authenticated;
 grant all on table public.deal_stage_history to service_role;
 
