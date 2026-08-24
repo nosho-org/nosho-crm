@@ -1,24 +1,39 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRightLeft,
   CalendarDays,
   CheckCircle2,
+  CircleX,
+  Edit,
   Mail,
   Phone,
+  Save,
   StickyNote,
+  Trash2,
 } from "lucide-react";
-import { useGetList, useRecordContext } from "ra-core";
+import {
+  Form,
+  useDelete,
+  useGetList,
+  useNotify,
+  useRecordContext,
+  useUpdate,
+} from "ra-core";
+import type { FieldValues, SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 import { useConfigurationContext } from "../../root/ConfigurationContext";
 import { NoteCreate } from "../../notes/NoteCreate";
+import { NoteAttachments } from "../../notes/NoteAttachments";
+import { NoteInputs } from "../../notes/NoteInputs";
 import type { Deal, DealNote } from "../../types";
 import { DealOwner } from "../cockpit/DealFieldBadges";
 import {
   TIMELINE_FILTERS,
   buildDealTimeline,
   filterTimeline,
+  type TimelineItem,
   type TimelineKind,
 } from "./dealTimeline";
 
@@ -32,7 +47,15 @@ import {
  * Nothing is migrated or rewritten: the existing notes are read as they are,
  * and their `type` column — present since the table was created, never read
  * until now — is what tells a call from a meeting.
+ *
+ * Notes are the only editable source; the other three are records of things
+ * that happened, not things someone wrote.
  */
+
+/** Every write here targets `deal_notes` explicitly. The ambient resource on
+ *  this page is `deals`, so reading it from context would edit — or delete —
+ *  the opportunity itself. */
+const NOTES_RESOURCE = "deal_notes";
 
 const KIND_STYLE: Record<
   TimelineKind,
@@ -95,6 +118,159 @@ const Body = ({ text }: { text: string }) => {
   );
 };
 
+const TimelineRow = ({
+  item,
+  note,
+  isLast,
+  onChanged,
+}: {
+  item: TimelineItem;
+  /** The underlying row, when this item is an editable note. */
+  note?: DealNote;
+  isLast: boolean;
+  onChanged: () => void;
+}) => {
+  const [isHover, setHover] = useState(false);
+  const [isEditing, setEditing] = useState(false);
+  const notify = useNotify();
+
+  const [update, { isPending }] = useUpdate();
+  const [deleteNote] = useDelete(NOTES_RESOURCE, undefined, {
+    mutationMode: "undoable",
+    onSuccess: () => {
+      notify("Activité supprimée", { type: "info", undoable: true });
+    },
+    // Not onSuccess: an undoable delete resolves optimistically, so refetching
+    // there would pull the row straight back from the server.
+    onSettled: () => onChanged(),
+  });
+
+  const handleUpdate: SubmitHandler<FieldValues> = (values) => {
+    update(
+      NOTES_RESOURCE,
+      {
+        id: note!.id,
+        data: {
+          ...values,
+          // The datetime-local input yields a naive string; the create path
+          // normalises it and the update path used not to.
+          date: new Date(values.date ?? note!.date).toISOString(),
+        },
+        previousData: note,
+      },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          setHover(false);
+          onChanged();
+        },
+      },
+    );
+  };
+
+  const style = KIND_STYLE[item.kind];
+  const Icon = style.icon;
+
+  return (
+    <li
+      className="flex gap-3"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* Vertical rail: the chronological thread the mockup shows. */}
+      <div className="flex flex-col items-center shrink-0">
+        <span
+          className="w-7 h-7 rounded-full flex items-center justify-center"
+          style={{
+            background: `color-mix(in oklch, ${style.color} 15%, transparent)`,
+          }}
+          aria-hidden
+        >
+          <Icon className="w-3.5 h-3.5" style={{ color: style.color }} />
+        </span>
+        {!isLast && <span className="w-px flex-1 bg-border my-1" aria-hidden />}
+      </div>
+
+      <div className="flex flex-col gap-1 pb-5 min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <span className="text-sm font-medium min-w-0">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground mr-2">
+              {style.label}
+            </span>
+            {item.title}
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-2">
+            {note && !isEditing && (
+              <span className={isHover ? "visible" : "invisible"}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="p-1 h-auto cursor-pointer"
+                  aria-label="Modifier l'activité"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    deleteNote(NOTES_RESOURCE, {
+                      id: note.id,
+                      previousData: note,
+                    })
+                  }
+                  className="p-1 h-auto cursor-pointer"
+                  aria-label="Supprimer l'activité"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </span>
+            )}
+            {item.salesId != null && (
+              <DealOwner ownerId={item.salesId} title="Auteur" />
+            )}
+            {formatStamp(item.date)}
+          </span>
+        </div>
+
+        {isEditing && note ? (
+          <Form onSubmit={handleUpdate} record={note} className="mt-1">
+            <NoteInputs showType />
+            <div className="flex justify-end mt-2 gap-3">
+              <Button
+                variant="ghost"
+                type="button"
+                className="cursor-pointer"
+                onClick={() => {
+                  setEditing(false);
+                  setHover(false);
+                }}
+              >
+                <CircleX className="w-4 h-4" />
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                Enregistrer
+              </Button>
+            </div>
+          </Form>
+        ) : (
+          <>
+            {item.body && <Body text={item.body} />}
+            {note && <NoteAttachments note={note} />}
+          </>
+        )}
+      </div>
+    </li>
+  );
+};
+
 export const DealActivityTimeline = () => {
   const record = useRecordContext<Deal>();
   const { dealStages, archivedDealStages } = useConfigurationContext();
@@ -104,7 +280,7 @@ export const DealActivityTimeline = () => {
   const dealId = record?.id;
   const query = { enabled: dealId != null };
 
-  const { data: notes } = useGetList<DealNote>(
+  const { data: notes, refetch: refetchNotes } = useGetList<DealNote>(
     "deal_notes",
     {
       filter: { deal_id: dealId },
@@ -140,6 +316,12 @@ export const DealActivityTimeline = () => {
     },
     query,
   );
+
+  const notesById = useMemo(() => {
+    const map = new Map<string, DealNote>();
+    for (const note of notes ?? []) map.set(String(note.id), note);
+    return map;
+  }, [notes]);
 
   if (!record) return null;
 
@@ -179,7 +361,15 @@ export const DealActivityTimeline = () => {
         <div className="border-b border-border pb-4">
           {/* The existing note form, unchanged: "reconnectant la nouvelle
               interface aux mécanismes/backend existants". */}
-          <NoteCreate reference="deals" showStatus={false} />
+          <NoteCreate
+            reference="deals"
+            showStatus={false}
+            showType
+            onSuccess={() => {
+              setComposing(false);
+              refetchNotes();
+            }}
+          />
         </div>
       )}
 
@@ -206,50 +396,19 @@ export const DealActivityTimeline = () => {
         </p>
       ) : (
         <ol className="flex flex-col">
-          {items.map((item, index) => {
-            const style = KIND_STYLE[item.kind];
-            const Icon = style.icon;
-            return (
-              <li key={item.id} className="flex gap-3">
-                {/* Vertical rail: the chronological thread the mockup shows. */}
-                <div className="flex flex-col items-center shrink-0">
-                  <span
-                    className="w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{
-                      background: `color-mix(in oklch, ${style.color} 15%, transparent)`,
-                    }}
-                    aria-hidden
-                  >
-                    <Icon
-                      className="w-3.5 h-3.5"
-                      style={{ color: style.color }}
-                    />
-                  </span>
-                  {index < items.length - 1 && (
-                    <span className="w-px flex-1 bg-border my-1" aria-hidden />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1 pb-5 min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                    <span className="text-sm font-medium min-w-0">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground mr-2">
-                        {style.label}
-                      </span>
-                      {item.title}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-2">
-                      {item.salesId != null && (
-                        <DealOwner ownerId={item.salesId} title="Auteur" />
-                      )}
-                      {formatStamp(item.date)}
-                    </span>
-                  </div>
-                  {item.body && <Body text={item.body} />}
-                </div>
-              </li>
-            );
-          })}
+          {items.map((item, index) => (
+            <TimelineRow
+              key={item.id}
+              item={item}
+              note={
+                item.source === "note"
+                  ? notesById.get(String(item.sourceId))
+                  : undefined
+              }
+              isLast={index === items.length - 1}
+              onChanged={refetchNotes}
+            />
+          ))}
         </ol>
       )}
     </Card>

@@ -28,9 +28,19 @@ export type TimelineKind =
   | "action"
   | "stage";
 
+/** Which table an item came from — only `note` rows are editable. */
+export type TimelineSource = "note" | "call" | "task" | "stage";
+
 export interface TimelineItem {
   id: string;
   kind: TimelineKind;
+  /**
+   * The table this came from, and its id there. `kind` cannot stand in for it:
+   * a note typed "Appel" and a row from `call_logs` are both `kind: "call"`,
+   * but only the first one can be edited.
+   */
+  source: TimelineSource;
+  sourceId: Identifier;
   /** ISO timestamp. Items without one sort last rather than being dropped. */
   date: string | null;
   /** Who did it, when known. */
@@ -60,7 +70,7 @@ export const TIMELINE_FILTERS: {
  * loosely. An unrecognised value falls back to "note" — the note is still shown,
  * under the most neutral heading, rather than dropped for failing a match.
  */
-const noteKind = (type: string | null | undefined): TimelineKind => {
+export const noteKind = (type: string | null | undefined): TimelineKind => {
   const value = (type ?? "").trim().toLowerCase();
   if (/appel|call|phone/.test(value)) return "call";
   if (/meeting|rendez|rdv|demo|démo/.test(value)) return "meeting";
@@ -116,6 +126,8 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
     items.push({
       id: `note-${note.id}`,
       kind: noteKind(note.type),
+      source: "note",
+      sourceId: note.id,
       date: note.date ?? null,
       salesId: note.sales_id ?? null,
       title: firstLine(note.text),
@@ -128,6 +140,8 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
     items.push({
       id: `call-${call.id}`,
       kind: "call",
+      source: "call",
+      sourceId: call.id,
       date: call.started_at ?? null,
       salesId: call.sales_id ?? null,
       title:
@@ -147,6 +161,8 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
     items.push({
       id: `task-${task.id}`,
       kind: "action",
+      source: "task",
+      sourceId: task.id,
       date: task.done_date,
       salesId: task.sales_id ?? null,
       title: task.text?.trim() || "Action terminée",
@@ -157,6 +173,8 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
     items.push({
       id: `stage-${change.id}`,
       kind: "stage",
+      source: "stage",
+      sourceId: change.id,
       date: change.changed_at,
       salesId: change.changed_by ?? null,
       title: change.from_stage

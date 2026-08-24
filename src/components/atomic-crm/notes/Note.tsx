@@ -27,21 +27,28 @@ import { SaleName } from "../sales/SaleName";
 import type { ContactNote, DealNote } from "../types";
 import { NoteAttachments } from "./NoteAttachments";
 import { NoteInputs } from "./NoteInputs";
+import { noteResourceMapping } from "./foreignKeyMapping";
 
 export const Note = ({
   showStatus,
   note,
+  reference,
 }: {
   showStatus?: boolean;
   note: DealNote | ContactNote;
   isLast: boolean;
+  reference?: "contacts" | "deals";
 }) => {
   const [isHover, setHover] = useState(false);
   const [isEditing, setEditing] = useState(false);
   const [isExpanded, setExpanded] = useState(false);
   const [isTruncated, setTruncated] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const resource = useResourceContext();
+  const contextResource = useResourceContext();
+  // Prefer the explicit mapping. Falling back to the ambient resource is only
+  // correct inside a <ReferenceManyField>; anywhere else it resolves to the
+  // parent ("deals"), and the delete below would remove the opportunity.
+  const resource = reference ? noteResourceMapping[reference] : contextResource;
   const notify = useNotify();
 
   // Detect if content is truncated

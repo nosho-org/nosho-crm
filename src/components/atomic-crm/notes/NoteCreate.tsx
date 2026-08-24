@@ -2,10 +2,9 @@ import {
   CreateBase,
   Form,
   useGetIdentity,
-  useListContext,
+  useListContextWithProps,
   useNotify,
   useRecordContext,
-  useResourceContext,
   useUpdate,
   type Identifier,
   type RaRecord,
@@ -16,29 +15,37 @@ import { cn } from "@/lib/utils";
 
 import { NoteInputs } from "./NoteInputs";
 import { getCurrentDate } from "./utils";
-import { foreignKeyMapping } from "./foreignKeyMapping";
+import { foreignKeyMapping, noteResourceMapping } from "./foreignKeyMapping";
 
 export const NoteCreate = ({
   reference,
   showStatus,
+  showType,
   className,
+  onSuccess,
 }: {
   reference: "contacts" | "deals";
   showStatus?: boolean;
+  showType?: boolean;
   className?: string;
+  /** Called after a note is created, for callers that own their own query. */
+  onSuccess?: () => void;
 }) => {
-  const resource = useResourceContext();
   const record = useRecordContext();
   const { identity } = useGetIdentity();
 
   if (!record || !identity) return null;
 
   return (
-    <CreateBase resource={resource} redirect={false}>
+    <CreateBase resource={noteResourceMapping[reference]} redirect={false}>
       <Form>
         <div className={cn("space-y-3", className)}>
-          <NoteInputs showStatus={showStatus} />
-          <NoteCreateButton reference={reference} record={record} />
+          <NoteInputs showStatus={showStatus} showType={showType} />
+          <NoteCreateButton
+            reference={reference}
+            record={record}
+            onSuccess={onSuccess}
+          />
         </div>
       </Form>
     </CreateBase>
@@ -48,15 +55,20 @@ export const NoteCreate = ({
 const NoteCreateButton = ({
   reference,
   record,
+  onSuccess,
 }: {
   reference: "contacts" | "deals";
   record: RaRecord<Identifier>;
+  onSuccess?: () => void;
 }) => {
   const [update] = useUpdate();
   const notify = useNotify();
   const { identity } = useGetIdentity();
   const { reset } = useFormContext();
-  const { refetch } = useListContext();
+  // Not `useListContext()`: that one throws outside a <ListContextProvider>,
+  // which is exactly what blanked the deal page (#109). The deal timeline owns
+  // its queries and refreshes through `onSuccess` instead.
+  const { refetch } = useListContextWithProps();
 
   if (!record || !identity) return null;
 
@@ -77,16 +89,17 @@ const NoteCreateButton = ({
 
   const handleSuccess = (data: any) => {
     reset(resetValues, { keepValues: false });
-    refetch();
-    update(reference, {
-      id: (record && record.id) as unknown as Identifier,
-      data: {
-        last_seen:
-          reference === "contacts" ? new Date().toISOString() : undefined,
-        status: data.status,
-      },
-      previousData: record,
-    });
+    refetch?.();
+    onSuccess?.();
+    // Only contacts carry these two columns. Deals have neither, so the call
+    // used to PATCH `{last_seen: undefined, status: undefined}` on every save.
+    if (reference === "contacts") {
+      update(reference, {
+        id: record.id,
+        data: { last_seen: new Date().toISOString(), status: data.status },
+        previousData: record,
+      });
+    }
     notify("Note ajoutée");
   };
 

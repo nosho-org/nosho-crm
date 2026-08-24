@@ -37,6 +37,7 @@ export const NotesIterator = ({
                 note={note}
                 isLast={index === sortedData.length - 1}
                 showStatus={showStatus}
+                reference={reference}
               />
               {index < sortedData.length - 1 && <Separator />}
             </Fragment>

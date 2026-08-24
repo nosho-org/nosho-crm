@@ -366,6 +366,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/notes/noteTypes.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/notes/index.ts",
           "type": "registry:component"
         },

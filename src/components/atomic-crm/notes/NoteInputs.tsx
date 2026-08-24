@@ -12,6 +12,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { getCurrentDate } from "./utils";
 import { AttachmentField } from "./AttachmentField";
 import { foreignKeyMapping } from "./foreignKeyMapping";
+import { NOTE_TYPE_CHOICES } from "./noteTypes";
 import { AutocompleteInput, ReferenceInput } from "@/components/admin";
 import { required } from "ra-core";
 import { contactOptionText } from "../misc/ContactOption";
@@ -19,10 +20,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 export const NoteInputs = ({
   showStatus,
+  showType,
   selectReference,
   reference,
 }: {
   showStatus?: boolean;
+  /** Deal notes only: `contact_notes` has no `type` column. */
+  showType?: boolean;
   selectReference?: boolean;
   reference?: "contacts" | "deals";
 }) => {
@@ -41,6 +45,19 @@ export const NoteInputs = ({
         placeholder="Ajouter une note…"
         rows={6}
       />
+
+      {/* Front and centre, not behind "Options avancées": filing the activity
+          is what makes the Appels / Meetings / Emails tabs mean anything. */}
+      {showType && (
+        <SelectInput
+          source="type"
+          label="Type d'activité"
+          choices={NOTE_TYPE_CHOICES.map((choice) => ({ ...choice }))}
+          defaultValue="note"
+          helperText={false}
+          emptyText="Note"
+        />
+      )}
 
       {selectReference && reference && (
         <ReferenceInput
