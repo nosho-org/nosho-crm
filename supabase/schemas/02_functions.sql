@@ -694,8 +694,25 @@ BEGIN
 END;
 $$;
 
+-- SECURITY DEFINER is required, not cosmetic. `deal_stage_history` has RLS on
+-- with SELECT as its only policy, so a trigger running with the caller's
+-- privileges cannot insert: RLS refuses an INSERT with no policy regardless of
+-- GRANTs, the trigger raises, and the whole UPDATE on `deals` is rolled back.
+--
+-- Shipped without it on 2026-08-23, this blocked every stage change in
+-- production for ~19 hours. Worse than a plain failure: PostgREST returns 403
+-- for a RLS violation, and ra-supabase's `checkError` treats 403 as an invalid
+-- session — so users were logged out instead of shown an error.
+--
+-- An INSERT policy would have been the wrong fix. This is an audit log: it must
+-- be written whatever the caller may do, and nobody should be able to forge an
+-- entry. SELECT-only policy plus a definer-owned writer is the right posture.
+--
+-- `SET search_path` is mandatory alongside SECURITY DEFINER, otherwise a caller
+-- can hijack the function by prepending a schema of their own.
 CREATE OR REPLACE FUNCTION "public"."log_deal_stage_change"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 DECLARE
