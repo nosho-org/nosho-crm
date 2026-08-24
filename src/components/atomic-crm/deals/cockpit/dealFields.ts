@@ -154,6 +154,11 @@ export interface DealNextAction {
   status: NextActionStatus;
   /** Negative when overdue. Null when there is no date. */
   daysUntil: number | null;
+  /**
+   * True when this action was read off the deal's task backlog rather than the
+   * typed `next_action` fields, so the UI can say where it comes from.
+   */
+  fromTask: boolean;
 }
 
 export interface NextActionOptions {
@@ -192,11 +197,25 @@ export const getDealNextAction = (
   deal: DealRecord,
   options: NextActionOptions,
 ): DealNextAction => {
-  const label =
+  const typedLabel =
     typeof deal.next_action === "string" && deal.next_action.trim() !== ""
       ? deal.next_action.trim()
       : null;
-  const date = deal.next_action_date ?? null;
+  const typedDate = deal.next_action_date ?? null;
+
+  // Fall back to the deal's oldest pending task (issue #108). `next_action`
+  // and `next_action_date` have to be typed in and effectively never are —
+  // production had 0 of 215 opportunities with a date while 100 pending tasks
+  // existed. A task IS the next action; refusing to read it just leaves the
+  // pipeline blank. The typed fields still win when someone did fill them in.
+  const taskLabel =
+    typeof deal.next_task_text === "string" && deal.next_task_text.trim() !== ""
+      ? deal.next_task_text.trim()
+      : null;
+  const fromTask = typedLabel === null && typedDate === null;
+
+  const label = typedLabel ?? taskLabel;
+  const date = typedDate ?? deal.next_task_date ?? null;
   const ownerId = deal.next_action_owner_id ?? deal.sales_id ?? null;
   const ownerIsDealOwner = deal.next_action_owner_id == null;
   const remaining = daysUntil(date, options.today);
@@ -220,6 +239,7 @@ export const getDealNextAction = (
     ownerIsDealOwner,
     status,
     daysUntil: remaining,
+    fromTask: fromTask && (label !== null || date !== null),
   };
 };
 

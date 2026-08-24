@@ -149,6 +149,18 @@ export type Deal = {
    * See 20260823090000.
    */
   next_action_owner_id?: Identifier | null;
+  /**
+   * Due date of the deal's oldest pending task, computed by `deals_summary`
+   * (see 20260824150000). The typed `next_action_date` above is what the sales
+   * team *should* fill in; this is what it actually does — records a task. Used
+   * as a fallback so the pipeline shows a real next step instead of nothing.
+   *
+   * Absent from any record read outside the view (FakeRest, fixtures,
+   * optimistic updates), hence optional.
+   */
+  next_task_date?: string | null;
+  /** Text of that same task. See `next_task_date`. */
+  next_task_text?: string | null;
   contact_ids: Identifier[];
   category: string;
   /**

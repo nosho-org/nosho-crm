@@ -125,7 +125,36 @@ select
         d.updated_at,
         (select max(dn.date)       from public.deal_notes dn where dn.deal_id = d.id),
         (select max(cl.started_at) from public.call_logs cl  where cl.deal_id = d.id)
-    )                                                                                                                  as last_activity_at
+    )                                                                                                                  as last_activity_at,
+    -- Next action derived from the task backlog (issue #108).
+    --
+    -- `deals.next_action`/`next_action_date` are columns someone has to type
+    -- into, and nobody ever has: 0 of 215 opportunities carried one in
+    -- production while 100 pending tasks existed. The sales team records its
+    -- next steps as tasks, so that is where the list must read them from.
+    --
+    -- A task reaches a deal either directly (`tasks.deal_id`, the link the
+    -- Tasks UI does not create yet) or through one of the deal's contacts —
+    -- which is how all 124 production tasks are attached today.
+    --
+    -- Scalar subqueries for the same reason as above: joining `tasks` here
+    -- would multiply the rows feeding `string_agg` and repeat every contact
+    -- name once per task. Ordering by `due_date nulls last` makes an undated
+    -- task a fallback rather than a winner.
+    (
+        select t.due_date from public.tasks t
+        where t.done_date is null
+          and (t.deal_id = d.id or t.contact_id = any(d.contact_ids))
+        order by t.due_date asc nulls last, t.id asc
+        limit 1
+    )                                                                                                                  as next_task_date,
+    (
+        select t.text from public.tasks t
+        where t.done_date is null
+          and (t.deal_id = d.id or t.contact_id = any(d.contact_ids))
+        order by t.due_date asc nulls last, t.id asc
+        limit 1
+    )                                                                                                                  as next_task_text
 from public.deals d
     left join public.contacts c on c.id = any(d.contact_ids)
     left join public.companies comp on comp.id = d.company_id

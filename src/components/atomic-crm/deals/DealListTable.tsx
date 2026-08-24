@@ -103,14 +103,27 @@ const ProductsField = () => {
   return <DealProductBadges products={record.products} />;
 };
 
-/** The action itself. Its date lives in its own column, per the spec. */
+/**
+ * The action itself. Its date lives in its own column, per the spec.
+ *
+ * Falls back to the deal's oldest pending task when nobody typed a next action
+ * — which, in production, is every single opportunity (issue #108).
+ */
 const NextActionField = () => {
   const record = useRecordContext<Deal>();
-  const action = record?.next_action?.trim();
+  const typed = record?.next_action?.trim();
+  const fromTask = record?.next_task_text?.trim();
+  const action = typed || fromTask;
   if (!action) return <span className="text-muted-foreground">—</span>;
   return (
-    <span className="truncate block max-w-56" title={action}>
+    <span
+      className="truncate block max-w-56"
+      title={typed ? action : `Tâche en cours : ${action}`}
+    >
       {action}
+      {!typed && (
+        <span className="ml-1 text-muted-foreground/70 text-xs">(tâche)</span>
+      )}
     </span>
   );
 };
@@ -159,6 +172,15 @@ const StageField = ({
   return <span>{findDealLabel(stages, record.stage) ?? record.stage}</span>;
 };
 
+/**
+ * Category, falling back to the pre-v2 value (issue #108).
+ *
+ * The v2 migration (20260823093000) rewrote every non-null `category` to the
+ * placeholder `'a-reclasser'` and parked the original in `legacy_category`.
+ * Rendering the placeholder alone told the sales team nothing and read as a
+ * bug; showing what the opportunity used to be, marked as such, keeps the
+ * information visible until the reclassification is actually done.
+ */
 const ChoiceField = ({
   choices,
   source,
@@ -168,8 +190,24 @@ const ChoiceField = ({
 }) => {
   const record = useRecordContext<Deal>();
   const value = record?.[source];
-  if (!value) return null;
-  return <span>{choices.find((c) => c.value === value)?.label ?? value}</span>;
+  const legacy = record?.legacy_category?.trim();
+  const label = (raw: string) =>
+    choices.find((c) => c.value === raw)?.label ?? raw;
+
+  if (value && value !== "a-reclasser") return <span>{label(value)}</span>;
+  if (legacy) {
+    return (
+      <span
+        className="text-muted-foreground"
+        title="Catégorie d'avant la refonte v2 — à reclasser"
+      >
+        {label(legacy)}
+        <span className="ml-1 text-xs">(à reclasser)</span>
+      </span>
+    );
+  }
+  if (value) return <span>{label(value)}</span>;
+  return <span className="text-muted-foreground">—</span>;
 };
 
 const ArrField = ({ currency }: { currency: string }) => {

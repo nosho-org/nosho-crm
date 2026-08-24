@@ -98,6 +98,41 @@ describe("getDealNextAction", () => {
     expect(action.label).toBeNull();
   });
 
+  /**
+   * Issue #108: production had 0 of 215 opportunities with a typed next action
+   * while 100 pending tasks existed, so the whole column read as broken.
+   */
+  it("falls back to the deal's pending task when no action was typed in", () => {
+    const action = getDealNextAction(
+      makeDeal({
+        stage: "qualified",
+        next_task_text: "Relancer pour obtenir un rdv",
+        next_task_date: "2026-08-25",
+      }),
+      nextActionOptions,
+    );
+    expect(action.label).toBe("Relancer pour obtenir un rdv");
+    expect(action.date).toBe("2026-08-25");
+    expect(action.status).toBe("upcoming");
+    expect(action.fromTask).toBe(true);
+  });
+
+  it("keeps a typed action over the task backlog", () => {
+    const action = getDealNextAction(
+      makeDeal({
+        stage: "qualified",
+        next_action: "Signer le contrat",
+        next_action_date: "2026-08-22",
+        next_task_text: "Relancer pour obtenir un rdv",
+        next_task_date: "2026-08-25",
+      }),
+      nextActionOptions,
+    );
+    expect(action.label).toBe("Signer le contrat");
+    expect(action.date).toBe("2026-08-22");
+    expect(action.fromTask).toBe(false);
+  });
+
   it("does not nag about early-stage deals", () => {
     expect(
       getDealNextAction(makeDeal({ stage: "lead" }), nextActionOptions).status,
