@@ -223,7 +223,7 @@ export const Task = ({
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-const TaskDealLink = ({ contactId }: { contactId: Identifier }) => {
+const TaskDealLink = ({ contactId }: { contactId?: Identifier | null }) => {
   const { data: deals, isPending } = useGetList<Deal>(
     "deals",
     {

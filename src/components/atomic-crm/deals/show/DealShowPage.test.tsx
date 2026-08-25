@@ -34,30 +34,29 @@ const deal = {
   index: 0,
   created_at: "2026-03-07T10:00:00Z",
   updated_at: "2026-03-07T10:00:00Z",
+  archived_at: null as string | null,
 };
 
-const dataProvider = testDataProvider({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getOne: ((resource: string) =>
-    Promise.resolve({
-      data:
-        resource === "companies"
-          ? { id: 10, name: "Centre Dentaire Mutualiste" }
-          : deal,
-    })) as any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getList: (() => Promise.resolve({ data: [], total: 0 })) as any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getMany: (() => Promise.resolve({ data: [] })) as any,
-});
+const buildProvider = (overrides: Partial<typeof deal> = {}) =>
+  testDataProvider({
+    getOne: ((resource: string) =>
+      Promise.resolve({
+        data:
+          resource === "companies"
+            ? { id: 10, name: "Centre Dentaire Mutualiste" }
+            : { ...deal, ...overrides },
+      })) as never,
+    getList: (() => Promise.resolve({ data: [], total: 0 })) as never,
+    getMany: (() => Promise.resolve({ data: [] })) as never,
+  });
 
-const renderPage = () =>
+const renderPage = (overrides: Partial<typeof deal> = {}) =>
   render(
     <MemoryRouter initialEntries={["/deals/1/show"]}>
       {/* No configuration provider: useConfigurationContext reads the ra-core
           store and falls back to defaultConfiguration, which is what we want
           to assert against. */}
-      <CoreAdminContext dataProvider={dataProvider}>
+      <CoreAdminContext dataProvider={buildProvider(overrides)}>
         {/* In the app this comes from <Resource name="deals" show={…} />. */}
         <ResourceContextProvider value="deals">
           <Routes>
@@ -94,6 +93,34 @@ describe("DealShowPage", () => {
         );
       })
       .toBe(true);
+  });
+
+  /**
+   * Regression cover for #112.
+   *
+   * The page rewrite (8dd2513e) deleted `DealShow.tsx` wholesale and did not
+   * carry its "Créer une tâche" button over. Nothing failed — the button simply
+   * stopped existing, and the sales team lost the only way to attach a task to
+   * an opportunity.
+   */
+  it("offers task creation from the header", async () => {
+    const screen = await renderPage();
+    const header = screen.getByRole("banner");
+    await expect
+      .element(header.getByRole("button", { name: /créer une tâche/i }))
+      .toBeVisible();
+  });
+
+  it("hides task creation on an archived opportunity", async () => {
+    // Same rule as Modifier / Proposition / Archiver: an archived opportunity
+    // is read-only until someone unarchives it.
+    const screen = await renderPage({ archived_at: "2026-08-01T10:00:00Z" });
+    await expect
+      .element(screen.getByText("Opportunité archivée"))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("button", { name: /créer une tâche/i }))
+      .not.toBeInTheDocument();
   });
 
   it("shows the stage, priority and products badges in the header", async () => {

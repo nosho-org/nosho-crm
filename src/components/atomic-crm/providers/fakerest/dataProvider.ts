@@ -457,6 +457,9 @@ export const crmLifecycleCallbacks = [
     afterCreate: async (result, dataProvider) => {
       // update the task count in the related contact
       const { contact_id } = result.data;
+      // A task created from an opportunity has no contact (#112), and
+      // `nb_tasks` counts a contact's tasks — there is nothing to bump.
+      if (contact_id == null) return result;
       const { data: contact } = await dataProvider.getOne("contacts", {
         id: contact_id,
       });
@@ -483,6 +486,7 @@ export const crmLifecycleCallbacks = [
     afterUpdate: async (result, dataProvider) => {
       // update the contact: if the task is done, decrement the nb tasks, otherwise increment it
       const { contact_id } = result.data;
+      if (contact_id == null) return result;
       const { data: contact } = await dataProvider.getOne("contacts", {
         id: contact_id,
       });
@@ -503,6 +507,7 @@ export const crmLifecycleCallbacks = [
     afterDelete: async (result, dataProvider) => {
       // update the task count in the related contact
       const { contact_id } = result.data;
+      if (contact_id == null) return result;
       const { data: contact } = await dataProvider.getOne("contacts", {
         id: contact_id,
       });

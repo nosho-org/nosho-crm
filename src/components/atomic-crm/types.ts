@@ -242,8 +242,14 @@ export type Tag = {
   color: string;
 };
 
+/**
+ * A task hangs off a contact OR an opportunity — `tasks_owner_check` requires
+ * one of the two and accepts either. `contact_id` stopped being mandatory in
+ * migration 20260823140000, which added `deal_id`; this type never followed.
+ */
 export type Task = {
-  contact_id: Identifier;
+  contact_id?: Identifier | null;
+  deal_id?: Identifier | null;
   type: string;
   text: string;
   due_date: string;

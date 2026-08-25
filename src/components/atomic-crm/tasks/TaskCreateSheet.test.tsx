@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
-import { Mobile } from "./TaskCreateSheet.stories";
+import { ForDeal, Mobile } from "./TaskCreateSheet.stories";
 import { useDataProvider, type DataProvider } from "ra-core";
 import { buildContact } from "@/test/StoryWrapper";
 
@@ -67,10 +67,10 @@ describe("TaskCreateSheet", () => {
 
     await screen.getByRole("button", { name: /^save$/i }).click();
 
-    await expect.element(screen.getByText("Task added")).toBeInTheDocument();
+    await expect.element(screen.getByText("Tâche ajoutée")).toBeInTheDocument();
 
     await expect
-      .element(screen.getByText("Create Task"))
+      .element(screen.getByText("Créer une tâche"))
       .not.toBeInTheDocument();
 
     await expect
@@ -105,5 +105,69 @@ describe("TaskCreateSheet", () => {
     });
     expect(updatedContact.data.last_seen).not.toBe(originalLastSeen);
     expect(updatedContact.data.nb_tasks).toBe(1);
+  });
+
+  /**
+   * #112. `tasks.deal_id` has existed since migration 20260823140000 and no UI
+   * ever wrote it — the opportunity page had lost its "Créer une tâche" button
+   * in the same commit that added the column.
+   */
+  it("creates a task on the opportunity itself, asking for no contact", async () => {
+    let dataProvider: DataProvider | null = null;
+    const DataProviderListener = () => {
+      dataProvider = useDataProvider();
+      return null;
+    };
+
+    const screen = await render(
+      <ForDeal>
+        <DataProviderListener />
+      </ForDeal>,
+    );
+
+    await screen.getByLabelText(/description/i).fill("Préparer le comité");
+
+    // One combobox, the type. The contact autocomplete is `required()`, so
+    // rendering it here would block the save of a task that already has an
+    // owner — the opportunity.
+    const comboboxes = screen.getByRole("combobox").all();
+    expect(comboboxes).toHaveLength(1);
+
+    await comboboxes[0].click();
+    await screen.getByRole("listbox").getByText("Appel").click();
+
+    const dueDateInput = screen.getByLabelText(/due date/i);
+    await dueDateInput.clear();
+    await dueDateInput.fill("2026-03-06T12:30");
+
+    await screen.getByRole("button", { name: /^save$/i }).click();
+
+    await expect.element(screen.getByText("Tâche ajoutée")).toBeInTheDocument();
+
+    // The early return in front of the contact lookup used to skip the close.
+    await expect
+      .element(screen.getByLabelText(/description/i))
+      .not.toBeInTheDocument();
+
+    await expect
+      .poll(async () => {
+        const { data } = await dataProvider!.getList("tasks", {
+          filter: {},
+          pagination: { page: 1, perPage: 10 },
+          sort: { field: "id", order: "ASC" },
+        });
+        return data.find((task) => task.text === "Préparer le comité");
+      })
+      .toMatchObject({ deal_id: 36, type: "call" });
+
+    const { data: tasks } = await dataProvider!.getList("tasks", {
+      filter: {},
+      pagination: { page: 1, perPage: 10 },
+      sort: { field: "id", order: "ASC" },
+    });
+    const created = tasks.find((task) => task.text === "Préparer le comité");
+    // Not the first contact of the opportunity, the way the pre-8dd2513e
+    // button did it: the task belongs to the opportunity.
+    expect(created?.contact_id ?? null).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import { DealStageBadge, DealProductBadges } from "../shared/DealBadges";
 import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
+import { DealCreateTaskButton } from "./DealCreateTaskButton";
 import { DealKeyContacts } from "./DealKeyContacts";
 import { DealNextActionBlock } from "./DealNextActionBlock";
 import { DealSidePanel } from "./DealSidePanel";
@@ -71,6 +72,7 @@ const DealHeader = () => {
             <DealUnarchiveButton record={record} />
           ) : (
             <>
+              <DealCreateTaskButton />
               <EditButton />
               <GenerateProposalAction />
               <DealArchiveButton record={record} />
