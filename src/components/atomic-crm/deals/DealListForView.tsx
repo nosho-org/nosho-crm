@@ -154,8 +154,8 @@ const DealViewLayout = () => {
   if (!data?.length && !hasFilters)
     return (
       <>
+        {/* See DealList: <DealEmpty> already mounts its own <DealCreate>. */}
         <DealEmpty>
-          <DealCreate open={!!matchCreate} />
           <DealArchivedList />
         </DealEmpty>
       </>
