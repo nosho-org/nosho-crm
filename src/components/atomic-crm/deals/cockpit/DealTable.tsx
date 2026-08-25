@@ -43,7 +43,7 @@ const COLUMNS: {
   { field: "weighted", label: "Montant pondéré", align: "text-right" },
   { field: null, label: "Probabilité", align: "text-right" },
   { field: "expected_closing_date", label: "Clôture prévue" },
-  { field: "next_action_date", label: "Prochaine action" },
+  { field: "next_action_date", label: "Prochaine tâche" },
   { field: "activity", label: "Dernière activité" },
 ];
 

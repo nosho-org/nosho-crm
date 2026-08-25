@@ -62,7 +62,7 @@ describe("computeHealthAlerts", () => {
       amount: 5000,
       criterion: "Date dépassée et action non terminée",
     });
-    expect(alerts[0].title).toBe("1 prochaine action en retard");
+    expect(alerts[0].title).toBe("1 prochaine tâche en retard");
   });
 
   it("flags a dormant deal and names the configured threshold", () => {

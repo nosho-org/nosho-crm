@@ -10,8 +10,18 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 
 export const TaskFormContent = ({
   selectContact,
+  contactRequired = true,
+  contactFilter,
 }: {
   selectContact?: boolean;
+  /**
+   * False on a task created from an opportunity: `tasks_owner_check` is already
+   * satisfied by `deal_id`, and an opportunity may legitimately have no contact
+   * yet. Defaults to true so every existing caller keeps its current rule.
+   */
+  contactRequired?: boolean;
+  /** Narrows the picker, e.g. to the opportunity's own contacts. */
+  contactFilter?: Record<string, unknown>;
 }) => {
   const { taskTypes } = useConfigurationContext();
   return (
@@ -26,12 +36,16 @@ export const TaskFormContent = ({
         helperText={false}
       />
       {selectContact && (
-        <ReferenceInput source="contact_id" reference="contacts_summary">
+        <ReferenceInput
+          source="contact_id"
+          reference="contacts_summary"
+          filter={contactFilter}
+        >
           <AutocompleteInput
             label="Contact"
             optionText={contactOptionText}
             helperText={false}
-            validate={required()}
+            validate={contactRequired ? required() : undefined}
             modal
           />
         </ReferenceInput>

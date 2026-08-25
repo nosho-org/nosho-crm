@@ -36,18 +36,21 @@ create or replace trigger deals_set_updated_at
     before update on public.deals
     for each row execute function public.set_updated_at();
 
--- Stage history (NOS-819). Written by trigger because the board moves deals by
--- drag & drop straight through the data provider: an application-side write
--- would miss every one of them.
-create or replace trigger deal_stage_history_on_insert
+-- Change journal (NOS-819, then issue #114 for every other field). Written by
+-- trigger because the board moves deals by drag & drop straight through the
+-- data provider and the bulk edit goes through updateMany: an application-side
+-- write would miss both.
+create or replace trigger deal_change_log_on_insert
     after insert on public.deals
-    for each row execute function public.log_deal_stage_change();
+    for each row execute function public.log_deal_change();
 
-create or replace trigger deal_stage_history_on_update
+-- No WHEN clause on purpose: the tracked-column whitelist lives in the
+-- function. Repeating it here as `old.a is distinct from new.a or ...` would be
+-- a second copy that drifts. The function writes nothing when no tracked column
+-- moved, which is the same outcome at a negligible cost.
+create or replace trigger deal_change_log_on_update
     after update on public.deals
-    for each row
-    when (old.stage is distinct from new.stage)
-    execute function public.log_deal_stage_change();
+    for each row execute function public.log_deal_change();
 
 -- A company cannot be its own ancestor: a cycle makes every recursive read of
 -- the hierarchy hang, and the deal page walks it to render the breadcrumb.

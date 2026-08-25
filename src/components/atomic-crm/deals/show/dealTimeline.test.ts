@@ -43,9 +43,9 @@ describe("buildDealTimeline", () => {
     });
 
     expect(items.map((i) => i.kind)).toEqual([
-      "stage",
+      "update",
       "call",
-      "action",
+      "task",
       "note",
     ]);
   });
@@ -211,6 +211,50 @@ describe("buildDealTimeline", () => {
   it("returns an empty list rather than throwing on no sources", () => {
     expect(buildDealTimeline({})).toEqual([]);
   });
+
+  it("reads a call body from ai_summary, the column that exists", () => {
+    // `call_logs` has never had a `summary` column; it carries `ai_summary` and
+    // `summary_short`. Reading the wrong name left every call body empty.
+    const items = buildDealTimeline({
+      calls: [
+        {
+          id: 1,
+          started_at: "2026-08-02T10:00:00Z",
+          ai_summary: "Le Dr Germain veut une démo en septembre",
+        },
+      ],
+    });
+    expect(items[0].body).toBe("Le Dr Germain veut une démo en septembre");
+  });
+
+  it("falls back to summary_short when there is no AI summary", () => {
+    const items = buildDealTimeline({
+      calls: [
+        { id: 1, started_at: "2026-08-02T10:00:00Z", summary_short: "Rappel" },
+      ],
+    });
+    expect(items[0].body).toBe("Rappel");
+  });
+
+  it("carries journal entries as updates, distinct from the stage source", () => {
+    const items = buildDealTimeline({
+      updates: [
+        {
+          id: 7,
+          field: "amount",
+          changed_at: "2026-08-05T10:00:00Z",
+          changed_by: 9,
+          title: "Montant : 18000 → 24000",
+        },
+      ],
+    });
+    expect(items[0]).toMatchObject({
+      kind: "update",
+      source: "audit",
+      title: "Montant : 18000 → 24000",
+      salesId: 9,
+    });
+  });
 });
 
 describe("filterTimeline", () => {
@@ -225,14 +269,12 @@ describe("filterTimeline", () => {
     ],
   });
 
-  it("covers the tabs the spec names", () => {
+  it("covers the four tabs, channels no longer among them", () => {
     expect(TIMELINE_FILTERS.map((f) => f.value)).toEqual([
       "all",
       "note",
-      "call",
-      "meeting",
-      "email",
-      "action",
+      "task",
+      "update",
     ]);
   });
 
@@ -240,18 +282,25 @@ describe("filterTimeline", () => {
     expect(filterTimeline(items, "all")).toHaveLength(4);
   });
 
-  it("groups completed tasks and stage moves under Actions", () => {
-    // Both are things that happened to the deal, rather than things someone
-    // wrote about it.
-    expect(
-      filterTimeline(items, "action")
-        .map((i) => i.kind)
-        .sort(),
-    ).toEqual(["action", "stage"]);
+  it("files completed tasks under Tâches", () => {
+    expect(filterTimeline(items, "task").map((i) => i.kind)).toEqual(["task"]);
   });
 
-  it("narrows to a single kind otherwise", () => {
-    expect(filterTimeline(items, "call")).toHaveLength(1);
-    expect(filterTimeline(items, "email")).toHaveLength(0);
+  it("files stage moves under Mises à jour, not with the tasks", () => {
+    // They used to share an "Actions" tab. A stage move is an edit of the
+    // opportunity; a finished task is work someone did.
+    expect(filterTimeline(items, "update").map((i) => i.kind)).toEqual([
+      "update",
+    ]);
+  });
+
+  it("keeps calls in the Notes tab now that they have no tab of their own", () => {
+    // Removing the Appels tab must not remove the calls: Allo syncs them and
+    // nobody will retype them as notes.
+    expect(
+      filterTimeline(items, "note")
+        .map((i) => i.kind)
+        .sort(),
+    ).toEqual(["call", "note"]);
   });
 });

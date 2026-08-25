@@ -22,14 +22,30 @@ export default (): Db => {
   // No call integration in demo mode, but the collection must exist.
   db.call_logs = [];
   // One entry per deal, mirroring what the migration seeded in production.
-  db.deal_stage_history = db.deals.map((deal, index) => ({
+  //
+  // `deal_stage_history` is a view over `deal_change_log` there
+  // (20260825120000); FakeRest has no views, so both collections are generated
+  // from the same rows. Without the journal the deal page's timeline raised
+  // "Undefined collection" in demo mode.
+  db.deal_change_log = db.deals.map((deal, index) => ({
     id: index,
     deal_id: deal.id,
-    from_stage: deal.legacy_stage ?? null,
-    to_stage: deal.stage,
+    operation: deal.legacy_stage ? "update" : "insert",
+    field: "stage",
+    old_value: deal.legacy_stage ?? null,
+    new_value: deal.stage,
     changed_at: deal.created_at,
     changed_by: deal.sales_id,
     source: "migration",
+  }));
+  db.deal_stage_history = db.deal_change_log.map((change) => ({
+    id: change.id,
+    deal_id: change.deal_id,
+    from_stage: change.old_value,
+    to_stage: change.new_value,
+    changed_at: change.changed_at,
+    changed_by: change.changed_by,
+    source: change.source,
   }));
   db.configuration = [
     {

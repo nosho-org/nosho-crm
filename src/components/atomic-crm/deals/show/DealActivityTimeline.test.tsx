@@ -126,7 +126,9 @@ describe("DealActivityTimeline", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("offers a type so the Appels / Meetings / Emails tabs can match", async () => {
+  // The tabs are Tout / Notes / Tâches / Mises à jour since #114, but the type
+  // still decides whether a row shows a phone, a calendar or an envelope.
+  it("offers a type so the timeline can tell a call from a meeting", async () => {
     const { dataProvider } = buildProvider();
     const screen = await renderTimeline(dataProvider);
 

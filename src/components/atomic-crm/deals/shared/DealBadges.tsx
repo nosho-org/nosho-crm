@@ -5,6 +5,7 @@ import type { DealRecord } from "../cockpit/dealFields";
 import { getDealNextAction } from "../cockpit/dealFields";
 import { useDealFieldOptions } from "../cockpit/DealCockpitContext";
 import { formatDate } from "../cockpit/dealFormat";
+import type { DealTaskStatus } from "../show/useDealTasks";
 
 /**
  * ---------------------------------------------------------------------------
@@ -178,7 +179,7 @@ export const DealNextActionDate = ({
     return (
       <span
         className={`inline-flex items-center gap-1 text-xs text-[var(--deal-status-warning)] ${className}`}
-        title="Aucune date de prochaine action"
+        title="Aucune date de prochaine tâche"
       >
         <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
         Non définie
@@ -202,6 +203,51 @@ export const DealNextActionDate = ({
     >
       <CalendarClock className="w-3 h-3 shrink-0" aria-hidden />
       {action.date ? formatDate(action.date) : "Sans date"}
+    </span>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Task due date                                                               */
+/* -------------------------------------------------------------------------- */
+
+const STATUS_LABELS: Record<DealTaskStatus, string> = {
+  overdue: "En retard",
+  today: "Aujourd'hui",
+  upcoming: "",
+  undated: "Sans date",
+};
+
+/**
+ * A task's due date, colour-coded on the same scale as `DealNextActionDate`.
+ *
+ * Same visual token, different subject: this one reads a `tasks` row, which is
+ * what the deal page has and what it can act on, where `DealNextActionDate`
+ * reads the denormalised columns the list and the board get from
+ * `deals_summary`. Reusing `DATE_STYLES` is the point — there were already
+ * three disagreeing copies of this palette in the deals folder, and #114 must
+ * not add a fourth.
+ */
+export const TaskDueDate = ({
+  dueDate,
+  status,
+  className = "",
+}: {
+  dueDate: string | null | undefined;
+  status: DealTaskStatus;
+  className?: string;
+}) => {
+  const label = STATUS_LABELS[status];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs ${
+        DATE_STYLES[status] ?? "text-foreground"
+      } ${className}`}
+    >
+      <CalendarClock className="w-3 h-3 shrink-0" aria-hidden />
+      {dueDate ? formatDate(dueDate) : "Sans date"}
+      {label && status !== "undated" && ` — ${label}`}
     </span>
   );
 };

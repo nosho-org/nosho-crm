@@ -243,7 +243,17 @@ export type Tag = {
 };
 
 export type Task = {
-  contact_id: Identifier;
+  /**
+   * Nullable since 20260823140000: a task belongs to a contact OR to an
+   * opportunity, and `tasks_owner_check` only requires one of the two.
+   */
+  contact_id?: Identifier | null;
+  /**
+   * The opportunity the task belongs to. Reading a deal's tasks by this column
+   * alone misses every task attached through one of its contacts, which is how
+   * the sales team has always recorded them — see `buildDealTaskFilter`.
+   */
+  deal_id?: Identifier | null;
   type: string;
   text: string;
   due_date: string;

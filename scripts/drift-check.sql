@@ -34,7 +34,8 @@ with declared_tables(name) as (
     ('configuration'),
     ('favicons_excluded_domains'),
     ('google_oauth_tokens'),
-    ('connector_preferences')
+    ('connector_preferences'),
+    ('deal_change_log')
 )
 -- 1. tables without RLS
 select

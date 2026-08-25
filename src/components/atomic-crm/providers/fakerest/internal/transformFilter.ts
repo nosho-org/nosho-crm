@@ -1,6 +1,6 @@
 import { transformContainsFilter } from "./transformContainsFilter";
 import { transformInFilter } from "./transformInFilter";
-import { transformOrFilter } from "./transformOrFilter";
+import { isSearchOrFilter, transformOrFilter } from "./transformOrFilter";
 
 export function transformFilter(filter: Record<string, any>) {
   if (!filter) {
@@ -69,7 +69,19 @@ export function transformFilter(filter: Record<string, any>) {
 
     // Search query
     if (key.endsWith("@or")) {
-      transformedFilters["q"] = transformOrFilter(value);
+      if (isSearchOrFilter(value)) {
+        transformedFilters["q"] = transformOrFilter(value);
+      } else {
+        // A genuine disjunction over distinct columns, e.g. an opportunity's
+        // tasks (#114). Folding it into `q` would full-text search for one
+        // operand's value — `q = "36"` on tasks — which is worse than not
+        // filtering at all. Dropping it over-shows; the demo is the only
+        // consumer, and FakeRest has no OR to express this with.
+        console.warn(
+          "[fakerest] '@or' across distinct columns has no FakeRest equivalent; filter ignored",
+          value,
+        );
+      }
       continue;
     }
 

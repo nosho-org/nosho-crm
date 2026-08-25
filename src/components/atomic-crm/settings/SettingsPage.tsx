@@ -124,11 +124,11 @@ const DealCockpitSettings = ({
 
       <SelectInput
         source="dealNextActionFromStage"
-        label="Prochaine action attendue à partir de l'étape"
+        label="Prochaine tâche attendue à partir de l'étape"
         choices={dealStages ?? []}
         optionText="label"
         optionValue="value"
-        helperText="En deçà de cette étape, aucune prochaine action n'est réclamée."
+        helperText="En deçà de cette étape, aucune prochaine tâche n'est réclamée."
       />
 
       <div className="space-y-2">

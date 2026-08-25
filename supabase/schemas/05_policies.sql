@@ -15,7 +15,7 @@ alter table public.tasks enable row level security;
 alter table public.configuration enable row level security;
 alter table public.favicons_excluded_domains enable row level security;
 alter table public.deal_migration_map enable row level security;
-alter table public.deal_stage_history enable row level security;
+alter table public.deal_change_log enable row level security;
 
 -- Companies
 create policy "Enable read access for authenticated users" on public.companies for select to authenticated using (true);
@@ -74,9 +74,10 @@ create policy "Enable access for authenticated users only" on public.favicons_ex
 -- migration decided; nothing in the UI should rewrite that history.
 create policy deal_migration_map_select on public.deal_migration_map for select to authenticated using (true);
 
--- Read-only for the application: the history is written by trigger, and nothing
--- in the UI should be able to rewrite what happened.
-create policy deal_stage_history_select on public.deal_stage_history for select to authenticated using (true);
+-- Read-only for the application: the journal is written by trigger, as definer,
+-- and nothing in the UI should be able to rewrite or forge what happened. No
+-- INSERT policy on purpose — see log_deal_change() in 02_functions.sql.
+create policy deal_change_log_select on public.deal_change_log for select to authenticated using (true);
 
 -- Prospects
 alter table public.prospects enable row level security;

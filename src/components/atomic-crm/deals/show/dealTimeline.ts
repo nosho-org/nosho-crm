@@ -20,16 +20,34 @@ import type { DealNote } from "../../types";
  * Nothing here writes; it only merges and sorts.
  */
 
+/**
+ * What a row *looks* like: its icon and its little label. Deliberately finer
+ * than the tabs — a call and a note are filed together but must not render
+ * identically.
+ */
 export type TimelineKind =
   | "note"
   | "call"
   | "meeting"
   | "email"
-  | "action"
-  | "stage";
+  | "task"
+  | "update";
 
-/** Which table an item came from — only `note` rows are editable. */
-export type TimelineSource = "note" | "call" | "task" | "stage";
+/**
+ * Which table an item came from — only `note` rows are editable. Two sources
+ * can produce the same kind: `stage` and `audit` are both `kind: "update"`.
+ */
+export type TimelineSource = "note" | "call" | "task" | "stage" | "audit";
+
+/**
+ * The tabs, which are NOT the kinds.
+ *
+ * Coupling the two is what used to make "remove the Appels tab" mean "lose the
+ * phone icon". The team records every exchange as a note whatever the channel,
+ * so channels stop being a filter — but Allo syncs real calls into `call_logs`
+ * that nobody will ever retype, so they stay in the stream.
+ */
+export type TimelineTab = "all" | "note" | "task" | "update";
 
 export interface TimelineItem {
   id: string;
@@ -52,23 +70,31 @@ export interface TimelineItem {
   attachments?: DealNote["attachments"];
 }
 
-/** The filter tabs the spec names, in order. */
-export const TIMELINE_FILTERS: {
-  value: "all" | TimelineKind;
-  label: string;
-}[] = [
+/** The filter tabs, in order. */
+export const TIMELINE_FILTERS: { value: TimelineTab; label: string }[] = [
   { value: "all", label: "Tout" },
   { value: "note", label: "Notes" },
-  { value: "call", label: "Appels" },
-  { value: "meeting", label: "Meetings" },
-  { value: "email", label: "Emails" },
-  { value: "action", label: "Actions" },
+  { value: "task", label: "Tâches" },
+  { value: "update", label: "Mises à jour" },
 ];
+
+/** Which kinds each tab gathers. */
+const TAB_KINDS: Record<Exclude<TimelineTab, "all">, TimelineKind[]> = {
+  // An Allo call is an exchange, like a note. It loses its own tab, not its
+  // place in the stream.
+  note: ["note", "call", "meeting", "email"],
+  task: ["task"],
+  update: ["update"],
+};
 
 /**
  * `deal_notes.type` is free text and predates any referential, so it is matched
  * loosely. An unrecognised value falls back to "note" — the note is still shown,
  * under the most neutral heading, rather than dropped for failing a match.
+ *
+ * Still used after the tabs were reduced to four: it no longer drives filtering
+ * but it still drives the icon and the row label, and it is what the "Type
+ * d'activité" select and the 20260824160000 backfill feed.
  */
 export const noteKind = (type: string | null | undefined): TimelineKind => {
   const value = (type ?? "").trim().toLowerCase();
@@ -91,7 +117,10 @@ export interface TimelineSources {
     id: Identifier;
     started_at?: string | null;
     direction?: string | null;
-    summary?: string | null;
+    // `call_logs` has never had a `summary` column — it carries `ai_summary`
+    // and `summary_short`. Reading the wrong name left every call body empty.
+    ai_summary?: string | null;
+    summary_short?: string | null;
     sales_id?: Identifier | null;
   }[];
   tasks?: {
@@ -107,6 +136,18 @@ export interface TimelineSources {
     to_stage: string;
     changed_at: string;
     changed_by?: Identifier | null;
+  }[];
+  /**
+   * Every other edit of the opportunity, from `deal_change_log` (20260825120000).
+   * One row per field changed; `title` is composed by the caller, which is the
+   * only place that knows how to render a stage slug, a sales id or an amount.
+   */
+  updates?: {
+    id: Identifier;
+    field: string;
+    changed_at: string;
+    changed_by?: Identifier | null;
+    title: string;
   }[];
   /** Resolves a stage slug to its label, archived stages included. */
   stageLabel?: (slug: string | null | undefined) => string;
@@ -150,29 +191,29 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
           : call.direction === "inbound"
             ? "Appel entrant"
             : "Appel",
-      body: call.summary,
+      body: call.ai_summary ?? call.summary_short ?? null,
     });
   }
 
   // Only completed tasks. A pending one is a plan, not an activity, and it is
-  // already shown by the "Prochaine action" block above the timeline.
+  // already shown by the "Prochaine tâche" and "Tâches" blocks above.
   for (const task of sources.tasks ?? []) {
     if (!task.done_date) continue;
     items.push({
       id: `task-${task.id}`,
-      kind: "action",
+      kind: "task",
       source: "task",
       sourceId: task.id,
       date: task.done_date,
       salesId: task.sales_id ?? null,
-      title: task.text?.trim() || "Action terminée",
+      title: task.text?.trim() || "Tâche terminée",
     });
   }
 
   for (const change of sources.stageChanges ?? []) {
     items.push({
       id: `stage-${change.id}`,
-      kind: "stage",
+      kind: "update",
       source: "stage",
       sourceId: change.id,
       date: change.changed_at,
@@ -180,6 +221,18 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
       title: change.from_stage
         ? `Étape : ${label(change.from_stage)} → ${label(change.to_stage)}`
         : `Étape initiale : ${label(change.to_stage)}`,
+    });
+  }
+
+  for (const change of sources.updates ?? []) {
+    items.push({
+      id: `update-${change.id}`,
+      kind: "update",
+      source: "audit",
+      sourceId: change.id,
+      date: change.changed_at,
+      salesId: change.changed_by ?? null,
+      title: change.title,
     });
   }
 
@@ -196,18 +249,15 @@ export function buildDealTimeline(sources: TimelineSources): TimelineItem[] {
 /**
  * Apply a filter tab.
  *
- * "Actions" covers completed tasks and stage moves alike: both are things that
- * happened to the deal rather than things someone wrote about it.
+ * Tabs gather kinds (see `TAB_KINDS`); they are not kinds themselves. "Notes"
+ * holds every exchange whatever its channel, which is what lets the Appels /
+ * Meetings / Emails tabs disappear without their rows disappearing with them.
  */
 export function filterTimeline(
   items: TimelineItem[],
-  filter: "all" | TimelineKind,
+  filter: TimelineTab,
 ): TimelineItem[] {
   if (filter === "all") return items;
-  if (filter === "action") {
-    return items.filter(
-      (item) => item.kind === "action" || item.kind === "stage",
-    );
-  }
-  return items.filter((item) => item.kind === filter);
+  const kinds = TAB_KINDS[filter];
+  return items.filter((item) => kinds.includes(item.kind));
 }

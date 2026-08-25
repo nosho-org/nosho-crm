@@ -35,7 +35,9 @@ import {
   filterTimeline,
   type TimelineItem,
   type TimelineKind,
+  type TimelineTab,
 } from "./dealTimeline";
+import { useDealTasks } from "./useDealTasks";
 
 /**
  * ---------------------------------------------------------------------------
@@ -69,16 +71,55 @@ const KIND_STYLE: Record<
     label: "Meeting",
   },
   email: { icon: Mail, color: "var(--deal-status-warning)", label: "Email" },
-  action: {
+  task: {
     icon: CheckCircle2,
     color: "var(--deal-status-won)",
-    label: "Action",
+    label: "Tâche",
   },
-  stage: {
+  update: {
     icon: ArrowRightLeft,
     color: "var(--muted-foreground)",
-    label: "Étape",
+    label: "Mise à jour",
   },
+};
+
+/**
+ * French names for the columns the journal tracks. A field missing from the map
+ * falls back to its raw column name: showing `probability` is ugly but honest,
+ * and infinitely better than dropping the entry for failing a lookup.
+ */
+const FIELD_LABELS: Record<string, string> = {
+  stage: "Étape",
+  amount: "Montant",
+  priority: "Priorité",
+  sales_id: "Responsable",
+  expected_closing_date: "Date de clôture prévue",
+  contact_ids: "Contacts",
+  products: "Produits",
+  contact_roles: "Rôles des contacts",
+  name: "Nom",
+  company_id: "Société",
+  company_type: "Type de société",
+  opportunity_type: "Type d'opportunité",
+  category: "Catégorie",
+  lead_source: "Source",
+  referrer_id: "Apporteur",
+  probability: "Probabilité",
+  description: "Description",
+  next_action: "Prochaine action",
+  next_action_date: "Date de prochaine action",
+  next_action_owner_id: "Responsable de l'action",
+  trial_start_date: "Début d'essai",
+  entered_at: "Entrée en pipeline",
+  archived_at: "Archivage",
+};
+
+/** `old_value` / `new_value` are jsonb: a scalar, an array or an object. */
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === "") return "—";
+  if (Array.isArray(value)) return value.length ? `${value.length}` : "aucun";
+  if (typeof value === "object") return "…";
+  return String(value);
 };
 
 const formatStamp = (iso: string | null): string => {
@@ -274,7 +315,7 @@ const TimelineRow = ({
 export const DealActivityTimeline = () => {
   const record = useRecordContext<Deal>();
   const { dealStages, archivedDealStages } = useConfigurationContext();
-  const [filter, setFilter] = useState<"all" | TimelineKind>("all");
+  const [filter, setFilter] = useState<TimelineTab>("all");
   const [composing, setComposing] = useState(false);
 
   const dealId = record?.id;
@@ -298,21 +339,19 @@ export const DealActivityTimeline = () => {
     },
     query,
   );
-  const { data: tasks } = useGetList(
-    "tasks",
-    {
-      filter: { deal_id: dealId },
-      sort: { field: "done_date", order: "DESC" },
-      pagination: { page: 1, perPage: 100 },
-    },
-    query,
-  );
-  const { data: stageChanges } = useGetList(
-    "deal_stage_history",
+  // Completed tasks, reached both ways — `{ deal_id }` alone matched nothing,
+  // because no task in production carries one (#114). The `or` lives in
+  // `dealTaskFilter`, so it cannot drift from what the blocks above query.
+  const { tasks } = useDealTasks(record, { scope: "done", perPage: 100 });
+  // The whole change journal, stage moves included. `deal_stage_history` is now
+  // a view over this same table filtered on `field = 'stage'` (20260825120000),
+  // so querying both would list every stage move twice.
+  const { data: changes } = useGetList(
+    "deal_change_log",
     {
       filter: { deal_id: dealId },
       sort: { field: "changed_at", order: "DESC" },
-      pagination: { page: 1, perPage: 100 },
+      pagination: { page: 1, perPage: 200 },
     },
     query,
   );
@@ -331,12 +370,40 @@ export const DealActivityTimeline = () => {
     slug ??
     "—";
 
+  // A stage slug means nothing to a reader, and only this component can resolve
+  // one — which is why the journal stores the raw values and the title is
+  // composed here rather than in `buildDealTimeline`.
+  const changeTitle = (change: {
+    field: string;
+    old_value: unknown;
+    new_value: unknown;
+    operation: string;
+  }): string => {
+    const label = FIELD_LABELS[change.field] ?? change.field;
+    if (change.field === "stage") {
+      return change.operation === "insert" || change.old_value == null
+        ? `Étape initiale : ${stageLabel(change.new_value as string)}`
+        : `Étape : ${stageLabel(change.old_value as string)} → ${stageLabel(
+            change.new_value as string,
+          )}`;
+    }
+    return `${label} : ${formatValue(change.old_value)} → ${formatValue(
+      change.new_value,
+    )}`;
+  };
+
   const items = filterTimeline(
     buildDealTimeline({
       notes,
       calls: calls as never,
-      tasks: tasks as never,
-      stageChanges: stageChanges as never,
+      tasks: tasks.map(({ task }) => task) as never,
+      updates: (changes ?? []).map((change) => ({
+        id: change.id,
+        field: change.field,
+        changed_at: change.changed_at,
+        changed_by: change.changed_by,
+        title: changeTitle(change as never),
+      })),
       stageLabel,
     }),
     filter,

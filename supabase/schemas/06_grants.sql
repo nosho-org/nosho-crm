@@ -50,8 +50,8 @@ grant all on function public.handle_update_user() to service_role;
 grant all on function public.check_company_parent_cycle() to authenticated;
 grant all on function public.check_company_parent_cycle() to service_role;
 
-grant all on function public.log_deal_stage_change() to authenticated;
-grant all on function public.log_deal_stage_change() to service_role;
+grant all on function public.log_deal_change() to authenticated;
+grant all on function public.log_deal_change() to service_role;
 
 grant all on function public.is_admin() to authenticated;
 grant all on function public.is_admin() to service_role;
@@ -109,6 +109,10 @@ grant all on table public.deal_migration_map to authenticated;
 grant all on table public.deal_migration_map to service_role;
 
 -- Read only. The application never writes here: the trigger does, as definer.
+grant select on table public.deal_change_log to authenticated;
+grant all on table public.deal_change_log to service_role;
+
+-- The compatibility view over the journal (03_views.sql).
 grant select on table public.deal_stage_history to authenticated;
 grant all on table public.deal_stage_history to service_role;
 

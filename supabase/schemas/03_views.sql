@@ -160,6 +160,28 @@ from public.deals d
     left join public.companies comp on comp.id = d.company_id
 group by d.id, comp.name;
 
+-- `deal_stage_history` was a table until 20260825120000. It is now a projection
+-- of the generic journal, filtered on the single field it ever carried. Kept
+-- under its original name and shape so the deal page's right column, the
+-- FakeRest demo generator and any external reader keep working unchanged.
+--
+-- Nothing writes here: `deal_change_log` has one writer, and it is a trigger.
+--
+-- `#>> '{}'` unwraps a jsonb scalar to unquoted text and yields NULL for both a
+-- SQL NULL and a `'null'::jsonb`, so `from_stage` stays NULL on a creation row
+-- and the timeline still reads "Étape initiale : X".
+create or replace view public.deal_stage_history with (security_invoker = on) as
+select
+    l.id,
+    l.deal_id,
+    l.old_value #>> '{}' as from_stage,
+    l.new_value #>> '{}' as to_stage,
+    l.changed_at,
+    l.changed_by,
+    l.source
+from public.deal_change_log l
+where l.field = 'stage';
+
 create or replace view public.init_state with (security_invoker = off) as
 select count(sub.id) as is_initialized
 from (

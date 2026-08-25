@@ -694,15 +694,16 @@ BEGIN
 END;
 $$;
 
--- SECURITY DEFINER is required, not cosmetic. `deal_stage_history` has RLS on
--- with SELECT as its only policy, so a trigger running with the caller's
--- privileges cannot insert: RLS refuses an INSERT with no policy regardless of
--- GRANTs, the trigger raises, and the whole UPDATE on `deals` is rolled back.
+-- SECURITY DEFINER is required, not cosmetic. `deal_change_log` has RLS on with
+-- SELECT as its only policy, so a trigger running with the caller's privileges
+-- cannot insert: RLS refuses an INSERT with no policy regardless of GRANTs, the
+-- trigger raises, and the whole UPDATE on `deals` is rolled back.
 --
--- Shipped without it on 2026-08-23, this blocked every stage change in
--- production for ~19 hours. Worse than a plain failure: PostgREST returns 403
--- for a RLS violation, and ra-supabase's `checkError` treats 403 as an invalid
--- session — so users were logged out instead of shown an error.
+-- Shipped without it on 2026-08-23 for the stage history this function
+-- replaces, that blocked every stage change in production for ~19 hours. Worse
+-- than a plain failure: PostgREST returns 403 for a RLS violation, and
+-- ra-supabase's `checkError` treats 403 as an invalid session — so users were
+-- logged out instead of shown an error.
 --
 -- An INSERT policy would have been the wrong fix. This is an audit log: it must
 -- be written whatever the caller may do, and nobody should be able to forge an
@@ -710,26 +711,95 @@ $$;
 --
 -- `SET search_path` is mandatory alongside SECURITY DEFINER, otherwise a caller
 -- can hijack the function by prepending a schema of their own.
-CREATE OR REPLACE FUNCTION "public"."log_deal_stage_change"() RETURNS "trigger"
+--
+-- The EXCEPTION handler is the other half of that lesson: the journal is worth
+-- less than the opportunity. A failure here becomes a WARNING in the Postgres
+-- log, never a rollback of the parent write.
+CREATE OR REPLACE FUNCTION "public"."log_deal_change"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 DECLARE
+  -- Whitelist. Anything absent is never journalised, which is what keeps both
+  -- the volume and the timeline sane:
+  --   * updated_at            rewritten on every single save, so it changes on
+  --                           100% of updates and would double every entry;
+  --   * index                 kanban ordering, rewritten for a whole column on
+  --                           one drag & drop — tens of rows per gesture;
+  --   * mrr, priority_rank    generated columns; they would duplicate every
+  --     name_search, …        amount / priority entry;
+  --   * won_at                derived from stage, same;
+  --   * arr_is_manual         flipped as a side effect of typing an amount;
+  --   * legacy_stage/category migration bookkeeping, never business.
+  v_tracked constant text[] := array[
+    'stage', 'amount', 'priority', 'sales_id', 'expected_closing_date',
+    'contact_ids', 'products', 'contact_roles',
+    'name', 'company_id', 'company_type', 'opportunity_type', 'category',
+    'lead_source', 'referrer_id', 'probability', 'description',
+    'next_action', 'next_action_date', 'next_action_owner_id',
+    'trial_start_date', 'entered_at', 'archived_at'
+  ];
+  v_old      jsonb;
+  v_new      jsonb;
+  v_field    text;
+  v_before   jsonb;
+  v_after    jsonb;
   v_sales_id bigint;
+  v_source   text;
 BEGIN
   -- auth.uid() is NULL under service_role and under the Management API, so the
   -- row is left unattributed rather than the write failing.
   SELECT id INTO v_sales_id FROM sales WHERE user_id = auth.uid();
+  v_source := coalesce(nullif(current_setting('app.change_source', true), ''), 'user');
 
-  INSERT INTO deal_stage_history (deal_id, from_stage, to_stage, changed_by, source)
-  VALUES (
-    NEW.id,
-    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.stage END,
-    NEW.stage,
-    v_sales_id,
-    coalesce(nullif(current_setting('app.change_source', true), ''), 'user')
-  );
+  -- Creation is one entry, not one per column: a brand new opportunity with
+  -- fifteen "-> value" rows would drown the very timeline it opens.
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO deal_change_log (deal_id, operation, field, old_value, new_value, changed_by, source)
+    VALUES (NEW.id, 'insert', 'stage', NULL, to_jsonb(NEW.stage), v_sales_id, v_source);
+    RETURN NULL;
+  END IF;
+
+  v_old := to_jsonb(OLD);
+  v_new := to_jsonb(NEW);
+
+  FOREACH v_field IN ARRAY v_tracked LOOP
+    v_before := v_old -> v_field;
+    v_after  := v_new -> v_field;
+
+    -- Arrays compare as sets. `contact_ids` and `products` come back from the
+    -- form in whatever order the inputs produced, and a reorder is not a
+    -- business change: it must not fill the timeline with phantom entries.
+    IF jsonb_typeof(v_before) = 'array' THEN
+      v_before := coalesce(
+        (SELECT jsonb_agg(e ORDER BY e::text) FROM jsonb_array_elements(v_before) e),
+        '[]'::jsonb);
+    END IF;
+    IF jsonb_typeof(v_after) = 'array' THEN
+      v_after := coalesce(
+        (SELECT jsonb_agg(e ORDER BY e::text) FROM jsonb_array_elements(v_after) e),
+        '[]'::jsonb);
+    END IF;
+
+    CONTINUE WHEN v_before IS NOT DISTINCT FROM v_after;
+
+    INSERT INTO deal_change_log (deal_id, operation, field, old_value, new_value, changed_by, source)
+    VALUES (
+      NEW.id,
+      'update',
+      v_field,
+      nullif(v_before, 'null'::jsonb),
+      nullif(v_after,  'null'::jsonb),
+      v_sales_id,
+      v_source
+    );
+  END LOOP;
+
   RETURN NULL;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'log_deal_change(deal %): %', NEW.id, SQLERRM;
+    RETURN NULL;
 END;
 $$;

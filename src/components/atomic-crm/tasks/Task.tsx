@@ -122,7 +122,11 @@ export const Task = ({
                 showDate
                 showTime={showTime}
               />
-              {showContact && (
+              {/* `contact_id` is nullable since 20260823140000: a task created
+                  from an opportunity has a `deal_id` and no contact. Rendering
+                  the reference anyway asked the provider for id `undefined`,
+                  which surfaced as "No item with identifier undefined". */}
+              {showContact && task.contact_id != null && (
                 <>
                   {" · "}
                   <ReferenceField<TData, Contact>
@@ -223,7 +227,13 @@ export const Task = ({
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-const TaskDealLink = ({ contactId }: { contactId: Identifier }) => {
+const TaskDealLink = ({
+  contactId,
+}: {
+  // Null on a task attached to an opportunity rather than to a contact: there
+  // is no contact to walk back from, so there is no deal to guess.
+  contactId?: Identifier | null;
+}) => {
   const { data: deals, isPending } = useGetList<Deal>(
     "deals",
     {

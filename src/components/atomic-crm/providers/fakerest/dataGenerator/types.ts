@@ -24,5 +24,8 @@ export interface Db {
   // history simply failed in demo mode without them.
   call_logs: Record<string, unknown>[];
   deal_stage_history: Record<string, unknown>[];
+  // In production this is the real table and `deal_stage_history` is a view
+  // over it (20260825120000). FakeRest has no views, so both are generated.
+  deal_change_log: Record<string, any>[];
   configuration: Array<{ id: number; config: ConfigurationContextValue }>;
 }

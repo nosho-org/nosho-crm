@@ -21,7 +21,7 @@ import { formatISODateString } from "./dealUtils";
  *
  * Column order is the one the spec prescribes:
  *   Priorité | Opportunité | Société | Étape | Produit(s) | ARR |
- *   Prochaine action | Date prochaine action | Responsable | Clôture prévue |
+ *   Prochaine tâche | Date prochaine tâche | Responsable | Clôture prévue |
  *   Dernière activité
  *
  * MRR is deliberately gone — "ARR suffit et l'espace est plus utile pour
@@ -70,10 +70,10 @@ export const DealListTable = () => {
       >
         <ArrField currency={currency} />
       </DataTable.Col>
-      <DataTable.Col source="next_action" label="Prochaine action">
+      <DataTable.Col source="next_action" label="Prochaine tâche">
         <NextActionField />
       </DataTable.Col>
-      <DataTable.Col source="next_action_date" label="Date prochaine action">
+      <DataTable.Col source="next_action_date" label="Date prochaine tâche">
         <NextActionDateField />
       </DataTable.Col>
       <DataTable.Col source="category" label="Catégorie">
