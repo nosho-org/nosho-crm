@@ -7,7 +7,6 @@ import {
   useRedirect,
 } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
-import { DeleteButton } from "@/components/admin/delete-button";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -84,8 +83,12 @@ function EditHeader() {
           </ReferenceField>
           <h2 className="text-2xl font-semibold">Edit {deal.name} deal</h2>
         </div>
+        {/* No delete button. Archiving (`archived_at`) covers the same need,
+            is reversible, and is offered on the deal page. A hard delete
+            cascades through `deal_notes`, `call_logs`, `tasks` and
+            `deal_change_log` — it destroys the commercial history of the
+            opportunity along with the opportunity, with no undo. */}
         <div className="flex gap-2 pr-12">
-          <DeleteButton />
           <Button asChild variant="outline" className="h-9">
             <Link to={`/deals/${deal.id}/show`}>Back to deal</Link>
           </Button>

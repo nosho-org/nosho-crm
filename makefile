@@ -14,6 +14,14 @@ endif
 DOPPLER := $(shell command -v doppler 2>/dev/null)
 DOPPLER_RUN := $(if $(DOPPLER),doppler run --,)
 
+# Production secrets, for the two targets that write to the remote project.
+# A bare `doppler run` resolves the config through doppler.yaml, which pins this
+# repo to `dev` — and SUPABASE_ACCESS_TOKEN only lives in `prd`, so
+# `make supabase-push` failed with "SUPABASE_ACCESS_TOKEN is required".
+# Kept separate on purpose: DOPPLER_RUN stays on `dev` so `make start` and
+# `make dev` never pull production secrets.
+DOPPLER_RUN_PRD := $(if $(DOPPLER),doppler run --project nosho-crm --config prd --,)
+
 help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
@@ -99,10 +107,10 @@ supabase-remote-init:
 	$(MAKE) supabase-deploy
 
 supabase-push: ## push pending migrations to remote Supabase (requires Doppler)
-	$(DOPPLER_RUN) ./scripts/supabase-push.sh
+	$(DOPPLER_RUN_PRD) ./scripts/supabase-push.sh
 
 supabase-deploy: supabase-push ## deploy migrations + edge functions to remote Supabase
-	$(DOPPLER_RUN) npx supabase functions deploy
+	$(DOPPLER_RUN_PRD) npx supabase functions deploy
 
 test-app:
 	npm run test:unit:app

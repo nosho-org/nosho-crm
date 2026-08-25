@@ -74,13 +74,21 @@ npx supabase db reset --local           # Reset local database (destructive)
 ```bash
 make supabase-push
 ```
-This command injects `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` via Doppler and pushes
+This command injects `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_ID` via Doppler and pushes
 all pending migrations to the remote database. Never rely on the Coolify build alone —
 the app deploy does not run `db push`.
 
-Secrets required in Doppler (`nosho-crm / prod`):
+Re-run it to confirm the push landed: it prints `No pending migrations` when
+there is nothing left to apply.
+
+Secrets required in Doppler, config **`prd`** (not `prod`):
 - `SUPABASE_ACCESS_TOKEN` — personal access token from supabase.com/dashboard/account/tokens
 - `SUPABASE_PROJECT_ID` — project ref from Supabase Dashboard → Settings → General
+
+`supabase-push` and `supabase-deploy` go through `DOPPLER_RUN_PRD`, which names
+that config explicitly. Every other target uses `DOPPLER_RUN`, which resolves
+through `doppler.yaml` and stays on `dev` — so `make start` never pulls
+production secrets.
 
 ### Registry (Shadcn Components)
 

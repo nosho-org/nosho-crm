@@ -73,12 +73,13 @@ export function transformFilter(filter: Record<string, any>) {
         transformedFilters["q"] = transformOrFilter(value);
       } else {
         // A genuine disjunction over distinct columns, e.g. an opportunity's
-        // tasks (#114). Folding it into `q` would full-text search for one
-        // operand's value — `q = "36"` on tasks — which is worse than not
-        // filtering at all. Dropping it over-shows; the demo is the only
-        // consumer, and FakeRest has no OR to express this with.
+        // tasks (#114). `getList` intercepts those before reaching here and
+        // evaluates them itself, so this branch only fires on a path that does
+        // not yet do so (`getManyReference`). Folding it into `q` would
+        // full-text search for one operand's value — `q = "36"` on tasks —
+        // which is worse than not filtering at all.
         console.warn(
-          "[fakerest] '@or' across distinct columns has no FakeRest equivalent; filter ignored",
+          "[fakerest] '@or' across distinct columns reached transformFilter; filter ignored",
           value,
         );
       }

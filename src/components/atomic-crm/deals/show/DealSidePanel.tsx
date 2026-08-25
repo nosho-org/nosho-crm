@@ -9,6 +9,7 @@ import { UNKNOWN, formatPercent } from "../cockpit/dealFormat";
 import { getDealProbability } from "../cockpit/dealWeighting";
 import { formatISODateString } from "../dealUtils";
 import { DealProductBadges } from "../shared/DealBadges";
+import { DealNextMeetingCard } from "./DealNextMeetingCard";
 
 /**
  * ---------------------------------------------------------------------------
@@ -123,6 +124,11 @@ export const DealSidePanel = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* First in the column, and above "Informations" on purpose: the next
+          appointment is the one date a rep looks for when opening the page.
+          Renders nothing when there is no upcoming meeting task. */}
+      <DealNextMeetingCard />
+
       <Card className="p-4 flex flex-col gap-2.5">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Informations

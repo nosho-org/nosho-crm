@@ -646,10 +646,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/DealTasks.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/deals/DealPriorityField.tsx",
           "type": "registry:component"
         },
@@ -718,7 +714,19 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/show/useDealTasks.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/show/dealTimeline.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/show/dealTaskFilter.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/show/DealTasksBlock.tsx",
           "type": "registry:component"
         },
         {
@@ -734,7 +742,7 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/show/DealNextActionBlock.tsx",
+          "path": "src/components/atomic-crm/deals/show/DealNextTaskBlock.tsx",
           "type": "registry:component"
         },
         {
