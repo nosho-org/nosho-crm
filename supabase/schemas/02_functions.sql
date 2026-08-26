@@ -803,3 +803,48 @@ EXCEPTION
     RETURN NULL;
 END;
 $$;
+
+-- Réaffecte les tâches ouvertes d'une opportunité à son nouveau responsable
+-- (issue #125). Périmètre : `deal_id` direct, ou contact rattaché à cette seule
+-- opportunité. Voir 20260826120000_tasks_follow_deal_owner.sql pour le
+-- raisonnement complet.
+CREATE OR REPLACE FUNCTION "public"."reassign_deal_tasks_to_owner"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_count integer;
+BEGIN
+  UPDATE public.tasks t
+  SET sales_id = NEW.sales_id
+  WHERE t.done_date IS NULL
+    AND t.sales_id IS DISTINCT FROM NEW.sales_id
+    AND (
+      t.deal_id = NEW.id
+      OR (
+        t.deal_id IS NULL
+        AND t.contact_id = ANY (coalesce(NEW.contact_ids, '{}'::bigint[]))
+        AND (
+          SELECT count(*)
+          FROM public.deals d
+          WHERE (d.archived_at IS NULL OR d.id = NEW.id)
+            AND t.contact_id = ANY (coalesce(d.contact_ids, '{}'::bigint[]))
+        ) = 1
+      )
+    );
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  IF v_count > 0 THEN
+    RAISE NOTICE 'reassign_deal_tasks_to_owner(deal %): % tâche(s) -> sales %',
+      NEW.id, v_count, NEW.sales_id;
+  END IF;
+
+  RETURN NULL;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'reassign_deal_tasks_to_owner(deal %): %', NEW.id, SQLERRM;
+    RETURN NULL;
+END;
+$$;

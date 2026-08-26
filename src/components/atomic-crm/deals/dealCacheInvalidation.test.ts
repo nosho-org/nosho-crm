@@ -50,11 +50,24 @@ describe("deal cache invalidation", () => {
       // Scoping to the list leaves the deal page and its form on stale data.
       const keys = invalidatedKeys(source);
       expect(keys.length).toBeGreaterThan(0);
-      for (const key of keys) {
+      // Only the deals cache is this guard's business. A writer may legitimately
+      // invalidate another resource — `DealEdit` invalidates `["tasks"]` because
+      // reassigning a deal reassigns its open tasks in the database (issue #125,
+      // trigger `deal_tasks_follow_owner`). Asserting on every key indiscriminately
+      // would turn any such addition into a false failure.
+      for (const key of keys.filter((k) => k.includes('"deals"'))) {
         expect(key).toBe('["deals"]');
       }
     },
   );
+
+  it("DealEdit.tsx invalidates the tasks cache", () => {
+    // The database moves a deal's open tasks to its new owner behind the
+    // application's back (issue #125). Nothing in the deals cache covers that
+    // write, so "Mes tâches" would keep showing the previous assignee until an
+    // unrelated refetch — the feature would read as broken.
+    expect(invalidatedKeys(dealEditSource)).toContain('["tasks"]');
+  });
 
   it("still watches every file that invalidates the deals cache", () => {
     // If one of these stops invalidating, the assertions above would pass
