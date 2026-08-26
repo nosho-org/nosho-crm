@@ -390,6 +390,27 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
         validate={requiredOnCreate(mode)}
       />
       <DealArrInput />
+      {/*
+       * Probabilité exceptionnelle (NOS-817).
+       *
+       * Laissée vide, l'opportunité est pondérée par la probabilité de son
+       * étape, configurée dans les Paramètres. Une valeur ici la remplace pour
+       * cette seule opportunité — le cockpit marque alors la ligne « exc. »
+       * pour qu'on sache d'où vient le pourcentage affiché.
+       *
+       * Surtout pas de `defaultValue` : 0 n'est pas « pas de probabilité »,
+       * c'est « aucune chance », et poser l'un pour l'autre sortirait toute
+       * opportunité neuve des prévisions. La colonne est nullable exactement
+       * pour cette raison (20260823090000).
+       */}
+      <NumberInput
+        source="probability"
+        label="Probabilité exceptionnelle (%)"
+        min={0}
+        max={100}
+        step={5}
+        helperText="Laisser vide pour utiliser la probabilité de l'étape"
+      />
       <SelectInput
         source="lead_source"
         label="Source du lead"
