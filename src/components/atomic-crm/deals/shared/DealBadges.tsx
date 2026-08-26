@@ -190,7 +190,7 @@ export const DealNextActionDate = ({
     return (
       <span
         className={`inline-flex items-center gap-1 text-xs text-[var(--deal-status-warning)] ${className}`}
-        title="Aucune date de prochaine tâche"
+        title="Aucune date de prochaine action"
       >
         <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
         Non définie

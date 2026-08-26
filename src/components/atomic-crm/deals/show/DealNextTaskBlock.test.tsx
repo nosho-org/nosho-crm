@@ -130,7 +130,7 @@ describe("DealNextTaskBlock", () => {
     const screen = await renderBlock(dataProvider);
 
     const cta = screen.getByRole("button", {
-      name: /Définir la prochaine tâche/,
+      name: /Définir l'action/,
     });
     await expect.element(cta).toBeVisible();
 

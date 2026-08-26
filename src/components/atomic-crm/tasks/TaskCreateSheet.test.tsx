@@ -127,11 +127,13 @@ describe("TaskCreateSheet", () => {
 
     await screen.getByLabelText(/description/i).fill("Préparer le comité");
 
-    // One combobox, the type. The contact autocomplete is `required()`, so
-    // rendering it here would block the save of a task that already has an
-    // owner — the opportunity.
+    // Two comboboxes: the type, then the assignee (NOS-1038). The contact
+    // autocomplete is still absent — it is `required()`, so rendering it here
+    // would block the save of a task that already has an owner: the opportunity.
+    // The count is asserted rather than the absence of the contact input so the
+    // test keeps failing if a third picker appears unannounced.
     const comboboxes = screen.getByRole("combobox").all();
-    expect(comboboxes).toHaveLength(1);
+    expect(comboboxes).toHaveLength(2);
 
     await comboboxes[0].click();
     await screen.getByRole("listbox").getByText("Appel").click();

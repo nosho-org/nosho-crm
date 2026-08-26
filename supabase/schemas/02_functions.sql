@@ -806,8 +806,12 @@ $$;
 
 -- Réaffecte les tâches ouvertes d'une opportunité à son nouveau responsable
 -- (issue #125). Périmètre : `deal_id` direct, ou contact rattaché à cette seule
--- opportunité. Voir 20260826120000_tasks_follow_deal_owner.sql pour le
--- raisonnement complet.
+-- opportunité, et uniquement ce qui appartenait à l'ancien responsable ou à
+-- personne — depuis NOS-1038, `tasks.sales_id` peut être choisi à la main, donc
+-- une assignation à un tiers est une décision, pas un effet de bord.
+-- Raisonnement complet : 20260826120000_tasks_follow_deal_owner.sql pour le
+-- périmètre, 20260826150000_tasks_follow_owner_respect_assignee.sql pour la
+-- restriction.
 CREATE OR REPLACE FUNCTION "public"."reassign_deal_tasks_to_owner"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SECURITY DEFINER
@@ -820,6 +824,7 @@ BEGIN
   SET sales_id = NEW.sales_id
   WHERE t.done_date IS NULL
     AND t.sales_id IS DISTINCT FROM NEW.sales_id
+    AND (t.sales_id IS NULL OR t.sales_id = OLD.sales_id)
     AND (
       t.deal_id = NEW.id
       OR (
@@ -837,8 +842,8 @@ BEGIN
   GET DIAGNOSTICS v_count = ROW_COUNT;
 
   IF v_count > 0 THEN
-    RAISE NOTICE 'reassign_deal_tasks_to_owner(deal %): % tâche(s) -> sales %',
-      NEW.id, v_count, NEW.sales_id;
+    RAISE NOTICE 'reassign_deal_tasks_to_owner(deal %): % tâche(s) % -> %',
+      NEW.id, v_count, OLD.sales_id, NEW.sales_id;
   END IF;
 
   RETURN NULL;

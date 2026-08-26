@@ -137,7 +137,7 @@ export const DealNextActionCell = ({ deal }: { deal: DealRecord }) => {
     return (
       <span
         className="inline-flex items-center gap-1 text-xs text-[var(--deal-status-serious)]"
-        title="Aucune prochaine tâche définie à partir de l'étape Qualifié"
+        title="Aucune prochaine action définie à partir de l'étape Qualifié"
       >
         <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />À définir
       </span>
@@ -166,7 +166,7 @@ export const DealNextActionCell = ({ deal }: { deal: DealRecord }) => {
           title={
             action.ownerIsDealOwner
               ? "Responsable de l'opportunité"
-              : "Responsable de la prochaine tâche"
+              : "Responsable de la prochaine action"
           }
         />
       </span>

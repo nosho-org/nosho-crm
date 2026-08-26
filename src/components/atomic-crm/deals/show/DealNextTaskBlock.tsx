@@ -16,8 +16,12 @@ import { useDealTasks } from "./useDealTasks";
 
 /**
  * ---------------------------------------------------------------------------
- * Prochaine tâche (issue #114, ex-"Prochaine action")
+ * Prochaine action (issue #114, NOS-1038)
  * ---------------------------------------------------------------------------
+ * Le bloc s'était appelé "Prochaine tâche" le temps de #114, pour dire
+ * honnêtement ce qu'il manipulait. NOS-1038 lui rend le vocabulaire commercial
+ * demandé par la spec : ce que le commercial appelle une action, le CRM le
+ * stocke dans `tasks`. Le libellé change, la ressource non.
  * Deliberately the first block after the header: an open opportunity should
  * always have a next step.
  *
@@ -112,7 +116,7 @@ export const DealNextTaskBlock = () => {
 
   const header = (
     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      Prochaine tâche
+      Prochaine action
     </span>
   );
 
@@ -122,20 +126,30 @@ export const DealNextTaskBlock = () => {
     // "aucune" over a value someone recorded would quietly lose it.
     const legacy = !action.fromTask && action.label ? action.label : null;
 
+    // Close Won, Lost, Churn, À reclasser : la spec demande qu'aucune action ne
+    // soit réclamée. Le texte le disait déjà, mais le bouton restait offert —
+    // il invitait à créer une action sur une opportunité fermée. Reste
+    // accessible si une valeur héritée est affichée : il faut pouvoir la
+    // remplacer par une vraie tâche.
+    const expected = action.status !== "not-expected";
+
     return (
       <Card className="p-4 flex flex-col gap-2">
         {header}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <span className="text-sm text-muted-foreground">
-            {legacy ??
-              (action.status === "not-expected"
-                ? "Pas encore requise à cette étape."
-                : "Aucune prochaine tâche définie.")}
+            {legacy ?? (expected ? "À définir" : "Pas encore requise à cette étape.")}
           </span>
-          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-            <Plus className="w-3.5 h-3.5" aria-hidden />
-            Définir la prochaine tâche
-          </Button>
+          {(expected || legacy) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCreating(true)}
+            >
+              <Plus className="w-3.5 h-3.5" aria-hidden />
+              Définir l'action
+            </Button>
+          )}
         </div>
         {sheets}
       </Card>
@@ -157,7 +171,7 @@ export const DealNextTaskBlock = () => {
             <span className="text-muted-foreground">·</span>
             <DealOwner
               ownerId={nextTask.task.sales_id ?? record.sales_id ?? null}
-              title="Responsable de la tâche"
+              title="Responsable de l'action"
             />
           </p>
         </div>
@@ -169,7 +183,7 @@ export const DealNextTaskBlock = () => {
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <Pencil className="w-3.5 h-3.5" aria-hidden />
-            Modifier
+            Modifier l'action
           </Button>
         </div>
       </div>
