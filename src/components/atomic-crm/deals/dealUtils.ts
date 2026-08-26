@@ -415,3 +415,33 @@ export function getDefaultExpectedClosingDate(today: Date = new Date()): string 
   const day = String(target.getDate()).padStart(2, "0");
   return `${target.getFullYear()}-${month}-${day}`;
 }
+
+/**
+ * Étape temporaire, hors du travail commercial courant : une opportunité y est
+ * parquée en attendant qu'un humain décide, pas travaillée.
+ */
+export const UNCLASSIFIED_DEAL_STAGE = "a-reclasser";
+
+/**
+ * Les étapes présélectionnées à l'ouverture de l'écran Opportunités (NOS-1062).
+ *
+ * Dérivées de la configuration plutôt qu'écrites en dur : le pipeline a déjà
+ * changé deux fois cette année, et une liste figée ici aurait masqué en silence
+ * toute étape ajoutée depuis.
+ *
+ * Sont exclues les étapes terminales — `dealPipelineStatuses`, soit Close Won,
+ * Lost et Churn — et « À reclasser ». Restent donc les étapes où une affaire se
+ * travaille. Les opportunités à reclasser ne disparaissent pas pour autant :
+ * `ReclassifyNotice` continue de les compter et d'ouvrir leur filtre.
+ */
+export function getDefaultOpenStages(
+  dealStages: { value: string }[],
+  pipelineStatuses: string[],
+): string[] {
+  return dealStages
+    .map((stage) => stage.value)
+    .filter(
+      (value) =>
+        value !== UNCLASSIFIED_DEAL_STAGE && !pipelineStatuses.includes(value),
+    );
+}
