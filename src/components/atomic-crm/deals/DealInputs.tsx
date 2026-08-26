@@ -34,6 +34,7 @@ import {
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { defaultDealPriority } from "../root/defaultConfiguration";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
+import { ContactCreateSuggestion } from "../contacts/ContactCreateSuggestion";
 import { DealListViewContext } from "./DealListContent";
 import {
   getContactRole,
@@ -119,6 +120,9 @@ const DealLinkedToInputs = ({
   const { companyTypes, customViews } = useConfigurationContext();
   const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
   const { setValue, getValues } = useFormContext();
+  // Société déjà choisie sur l'opportunité : elle préremplit le contact créé à
+  // la volée, pour ne pas la ressaisir (NOS-1048).
+  const companyId = useWatch({ name: "company_id" });
 
   // Initialise company_type au montage si pas encore défini (création)
   useEffect(() => {
@@ -165,11 +169,20 @@ const DealLinkedToInputs = ({
         />
       </ReferenceInput>
 
+      {/*
+       * `reference` reste `contacts_summary` : c'est la vue qui porte
+       * `company_name`, dont `contactOptionText` a besoin, et c'est elle que
+       * `getMany` interroge pour résoudre les puces déjà sélectionnées. La
+       * création, elle, écrit sur la table `contacts` — c'est
+       * `ContactCreateSuggestion` qui s'en charge (NOS-1048).
+       */}
       <ReferenceArrayInput source="contact_ids" reference="contacts_summary">
         <AutocompleteArrayInput
           label="Contacts associés"
           optionText={contactOptionText}
           helperText={false}
+          createItemLabel="Créer le contact « %{item} »"
+          create={<ContactCreateSuggestion companyId={companyId} />}
         />
       </ReferenceArrayInput>
 
