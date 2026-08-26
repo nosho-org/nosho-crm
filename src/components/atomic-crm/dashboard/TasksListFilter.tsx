@@ -14,13 +14,28 @@ export const TasksListFilter = ({
   title,
   filter,
   filterByContact,
+  salesId,
 }: {
   title: string;
   filter: any;
   filterByContact?: Identifier;
+  /**
+   * Responsable dont on veut les tâches (NOS-1064).
+   *
+   * En prop et non lue depuis le contexte du tableau de bord : ce composant
+   * sert aussi la fiche contact, qui n'a pas ce contexte. Absente, on retombe
+   * sur l'utilisateur connecté — le comportement d'avant.
+   *
+   * `null` est une valeur, pas une absence : il veut dire « tous les
+   * responsables », et c'est ce que le tableau de bord envoie quand on choisit
+   * « Tous ». D'où le `undefined` comme seul déclencheur du repli.
+   */
+  salesId?: Identifier | null;
 }) => {
   const { identity } = useGetIdentity();
   const isMobile = useIsMobile();
+
+  const owner = salesId === undefined ? identity?.id : salesId;
 
   const {
     data: tasks,
@@ -35,10 +50,18 @@ export const TasksListFilter = ({
         ...filter,
         ...(filterByContact != null
           ? { contact_id: filterByContact }
-          : { sales_id: identity?.id }),
+          : // `owner` nul = « Tous » : on n'écrit alors aucune clé, sinon
+            // `sales_id: null` demanderait les tâches sans responsable.
+            owner != null
+            ? { sales_id: owner }
+            : {}),
       },
     },
-    { enabled: filterByContact != null ? true : !!identity },
+    // On n'attend l'identité que si c'est elle qu'on va utiliser.
+    {
+      enabled:
+        filterByContact != null || salesId !== undefined ? true : !!identity,
+    },
   );
 
   const listContext = useList({
