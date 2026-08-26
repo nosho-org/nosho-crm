@@ -227,6 +227,20 @@ export const DealTable = () => {
 
                     <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
                       {formatPercent(probability.value)}
+                      {/*
+                        NOS-817 §2 : d'où vient ce pourcentage. Sans ce repère,
+                        une exception saisie à la main est indiscernable de la
+                        probabilité d'étape, et personne ne sait laquelle des
+                        deux il regarde — ni laquelle corriger.
+                      */}
+                      {probability.source === "deal" && (
+                        <span
+                          title="Probabilité saisie sur cette opportunité — elle remplace celle de l'étape"
+                          className="ml-1 text-[10px] font-medium leading-none border rounded px-1 py-0.5 align-middle"
+                        >
+                          exc.
+                        </span>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-xs text-muted-foreground tabular-nums">
