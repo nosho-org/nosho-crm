@@ -52,6 +52,17 @@ create or replace trigger deal_change_log_on_update
     after update on public.deals
     for each row execute function public.log_deal_change();
 
+-- Les tâches ouvertes suivent le responsable de l'opportunité (issue #125).
+-- Clause WHEN ici, contrairement au trigger ci-dessus : cette fonction n'a
+-- qu'un seul champ déclencheur, il n'y a donc pas de liste blanche vivant
+-- ailleurs dont la condition pourrait diverger. `is distinct from` couvre le
+-- passage depuis/vers NULL.
+create or replace trigger deal_tasks_follow_owner
+    after update of sales_id on public.deals
+    for each row
+    when (old.sales_id is distinct from new.sales_id and new.sales_id is not null)
+    execute function public.reassign_deal_tasks_to_owner();
+
 -- A company cannot be its own ancestor: a cycle makes every recursive read of
 -- the hierarchy hang, and the deal page walks it to render the breadcrumb.
 create or replace trigger company_parent_cycle_guard

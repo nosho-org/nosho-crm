@@ -44,6 +44,19 @@ export const DealEdit = ({ open, id }: { open: boolean; id?: string }) => {
                 queryClient.invalidateQueries({
                   queryKey: ["deals"],
                 });
+                // Changer le responsable réaffecte ses tâches ouvertes en base
+                // (trigger `deal_tasks_follow_owner`, issue #125). C'est une
+                // écriture sur `tasks` que le cache ne voit pas passer : sans
+                // ceci, « Mes tâches » et l'onglet Tâches de la fiche restent
+                // sur l'ancien assigné jusqu'au prochain refetch.
+                //
+                // Invalidé à chaque save plutôt que seulement quand le
+                // responsable a bougé : `onSuccess` n'a pas le record d'avant,
+                // donc la condition n'est pas calculable ici, et une
+                // invalidation de trop ne coûte qu'un refetch.
+                queryClient.invalidateQueries({
+                  queryKey: ["tasks"],
+                });
                 redirect(
                   `${basePath}/${id}/show`,
                   undefined,
