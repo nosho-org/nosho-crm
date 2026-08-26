@@ -113,6 +113,35 @@ describe("toListFilter", () => {
     );
   });
 
+  // NOS-1051. Les deux orthographes coexistent : le dashboard envoie une valeur
+  // unique et produit un `@eq`, la barre de filtres envoie un tableau et produit
+  // un `@in`. Forcer `@in` partout casserait la lisibilité des URLs partagées.
+  it("spells a multiple selection as @in and a single one as equality", () => {
+    expect(
+      toListFilter(
+        { stage: ["qualified", "demo-poc", "proposal"] },
+        { today: TODAY },
+      ),
+    ).toEqual({ "stage@in": "(qualified,demo-poc,proposal)" });
+
+    expect(toListFilter({ stage: "qualified" }, { today: TODAY })).toEqual({
+      stage: "qualified",
+    });
+
+    expect(
+      toListFilter({ salesId: [2, 7], priority: ["urgent"] }, { today: TODAY }),
+    ).toEqual({ "sales_id@in": "(2,7)", "priority@in": "(urgent)" });
+  });
+
+  it("drops an empty selection instead of emitting in.()", () => {
+    // PostgREST répond 400 sur `in.()`. Et « rien de coché » veut dire « pas de
+    // filtre », surtout pas « rien ne correspond » : émettre la clé viderait
+    // l'écran au lieu de le laisser complet.
+    expect(
+      toListFilter({ stage: [], category: [], salesId: [] }, { today: TODAY }),
+    ).toEqual({});
+  });
+
   it("combines a dashboard scope with an alert", () => {
     // "Paris / Imagerie / Agent entrant / Thomas" must narrow the alert too —
     // the spec is explicit that pipeline health reacts to the global filters.
