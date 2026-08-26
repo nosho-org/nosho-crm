@@ -195,6 +195,59 @@ export function toDealsLink(
 }
 
 /**
+ * Les clés posées par une alerte, distinguées pour pouvoir le *dire* à l'écran.
+ *
+ * Les trois dernières ne sont plus écrites depuis NOS-1053 — elles visaient les
+ * colonnes `next_action*` que personne ne remplit. Elles restent listées parce
+ * que `ra-core` persiste les filtres dans le navigateur : un utilisateur qui a
+ * cliqué « actions en retard » avant ce correctif porte encore
+ * `next_action@not.is` dans son store, sur une liste vide, sans aucun moyen de
+ * s'en défaire. Les oublier ici, ce serait corriger le bug pour les nouveaux
+ * venus et le laisser intact pour ceux qui l'ont signalé.
+ */
+export const HEALTH_FILTER_KEYS = [
+  "last_activity_at@lt",
+  "next_task_date@lt",
+  "expected_closing_date@is",
+  "next_action_date@is",
+  "next_task_date@is",
+  // Héritées, plus jamais écrites — voir ci-dessus.
+  "next_action@not.is",
+  "next_action@is",
+  "next_action_date@lt",
+] as const;
+
+/**
+ * Toutes les clés que `toListFilter` peut écrire (NOS-1058).
+ *
+ * Le contrat savait *écrire* des filtres, il ne savait pas dire *lesquels*. La
+ * barre de filtres avait donc sa propre liste, qui ne couvrait que les six axes
+ * qu'elle affiche — pas les quatre alertes du dashboard. Conséquence : cliquer
+ * « actions en retard » posait un filtre que la barre ne montrait pas, que
+ * « Réinitialiser » n'effaçait pas, et que `ra-core` persiste dans le
+ * navigateur. L'utilisateur revenait sur une liste vide en étant convaincu
+ * qu'aucun filtre n'était appliqué — et il avait raison de le croire, rien à
+ * l'écran ne disait le contraire.
+ *
+ * Une seule liste, exportée par le module qui écrit ces clés : c'est la même
+ * raison d'être que le contrat lui-même.
+ */
+export const LIST_FILTER_KEYS = [
+  "expected_closing_date@gte",
+  "expected_closing_date@lte",
+  "sales_id",
+  "sales_id@in",
+  "category",
+  "category@in",
+  "priority",
+  "priority@in",
+  "stage",
+  "stage@in",
+  "products@ov",
+  ...HEALTH_FILTER_KEYS,
+] as const;
+
+/**
  * The four pipeline-health alerts of NOS-955, as filter selections.
  *
  * Named here so the dashboard's alert cards and their "Voir" buttons cannot
