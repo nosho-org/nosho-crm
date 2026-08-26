@@ -1,8 +1,8 @@
-import { useGetList } from "ra-core";
+import { useGetIdentity, useGetList } from "ra-core";
 
-import type { Contact, ContactNote } from "../types";
+import type { Contact, ContactNote, Sale } from "../types";
 import { useGoogleConnectionStatus } from "../google/useGoogleConnectionStatus";
-import { DashboardProvider } from "./DashboardContext";
+import { DashboardProvider, useDashboard } from "./DashboardContext";
 import { DashboardFilters } from "./DashboardFilters";
 import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
@@ -34,19 +34,17 @@ import { Welcome } from "./Welcome";
  */
 
 const Reporting = () => (
-  <DashboardProvider>
-    <div className="flex flex-col gap-5">
-      <DashboardFilters />
-      <DashboardKpiBanner />
+  <div className="flex flex-col gap-5">
+    <DashboardFilters />
+    <DashboardKpiBanner />
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <RevenueForecastChart />
-        <PipelineFunnel />
-      </div>
-
-      <PipelineHealthBanner />
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <RevenueForecastChart />
+      <PipelineFunnel />
     </div>
-  </DashboardProvider>
+
+    <PipelineHealthBanner />
+  </div>
 );
 
 export const Dashboard = () => {
@@ -84,29 +82,72 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 mt-1 pb-6">
-      {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
+    /*
+     * Le provider enveloppe désormais « Mon activité » aussi (NOS-1064).
+     *
+     * Il ne couvrait que le bloc de reporting, si bien que la liste de tâches
+     * ne pouvait pas savoir quel responsable était sélectionné : changer de
+     * responsable recalculait tous les chiffres au-dessus et laissait les
+     * tâches inchangées. Deux périmètres sur un même écran, sans rien pour le
+     * dire.
+     */
+    <DashboardProvider>
+      <div className="flex flex-col gap-6 mt-1 pb-6">
+        {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
 
-      <Reporting />
+        <Reporting />
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">
-          Mon activité
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className={showCalendar ? "lg:col-span-5" : "lg:col-span-8"}>
-            <TasksList />
-          </div>
-          {showCalendar && (
-            <div className="lg:col-span-4">
-              <UpcomingCalendarEvents />
+        <section className="flex flex-col gap-3">
+          <ActivityHeading />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className={showCalendar ? "lg:col-span-5" : "lg:col-span-8"}>
+              <TasksList />
             </div>
-          )}
-          <div className={showCalendar ? "lg:col-span-3" : "lg:col-span-4"}>
-            <NoshoAIAssist />
+            {showCalendar && (
+              <div className="lg:col-span-4">
+                <UpcomingCalendarEvents />
+              </div>
+            )}
+            <div className={showCalendar ? "lg:col-span-3" : "lg:col-span-4"}>
+              <NoshoAIAssist />
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </DashboardProvider>
+  );
+};
+
+/**
+ * « Mon activité » ne dit plus la vérité dès qu'on regarde quelqu'un d'autre
+ * (NOS-1064). Le titre suit donc le responsable sélectionné, plutôt que de
+ * laisser croire que ces tâches sont les siennes.
+ */
+const ActivityHeading = () => {
+  const { selection } = useDashboard();
+  const { identity } = useGetIdentity();
+  const { data: sales } = useGetList<Sale>("sales", {
+    pagination: { page: 1, perPage: 100 },
+    sort: { field: "last_name", order: "ASC" },
+  });
+
+  const isMine =
+    selection.salesId != null &&
+    identity?.id != null &&
+    selection.salesId === identity.id.toString();
+
+  const owner = (sales ?? []).find(
+    (sale) => sale.id.toString() === selection.salesId,
+  );
+
+  const label =
+    selection.salesId === null
+      ? "Activité de l'équipe"
+      : isMine || !owner
+        ? "Mon activité"
+        : `Activité de ${owner.first_name} ${owner.last_name}`.trim();
+
+  return (
+    <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
   );
 };
