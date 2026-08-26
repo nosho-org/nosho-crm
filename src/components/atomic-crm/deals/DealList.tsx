@@ -12,7 +12,12 @@ import { SelectInput } from "@/components/admin/select-input";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { TopToolbar } from "../layout/TopToolbar";
 import { createDealExporter } from "./dealExporter";
-import { getCommercialDealsFilter, getCompanyTypeChoices } from "./dealUtils";
+import {
+  getCommercialDealsFilter,
+  getCompanyTypeChoices,
+  getDefaultOpenStages,
+} from "./dealUtils";
+import { toListFilter } from "./dealFilterContract";
 import { DealArchivedList } from "./DealArchivedList";
 import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
@@ -28,11 +33,13 @@ const DealList = () => {
     dealCategories,
     dealPriorities,
     dealStages,
+    dealPipelineStatuses,
     leadSources,
     companyTypes,
     customViews,
   } = useConfigurationContext();
   const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
+  const defaultStages = getDefaultOpenStages(dealStages, dealPipelineStatuses);
 
   if (!identity) return null;
 
@@ -100,6 +107,17 @@ const DealList = () => {
         ...getCommercialDealsFilter(companyTypes, customViews),
       }}
       title={false}
+      /*
+       * Point de départ, pas contrainte (NOS-1062). `filterDefaultValues` est
+       * ce que l'utilisateur voit à l'ouverture et peut défaire ; le `filter`
+       * ci-dessus est ce qu'il ne peut pas lever. Mettre les étapes là-haut
+       * aurait rendu Close Won définitivement inatteignable depuis cet écran.
+       *
+       * Écrit via le contrat partagé plutôt qu'à la main : c'est lui qui décide
+       * comment un `@in` s'orthographie, et la barre de filtres le relit avec
+       * les mêmes règles.
+       */
+      filterDefaultValues={toListFilter({ stage: defaultStages })}
       sort={{ field: "index", order: "DESC" }}
       filters={dealFilters}
       actions={<DealActions />}
