@@ -730,6 +730,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/show/dealOpenTasks.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/show/DealTasksBlock.tsx",
           "type": "registry:component"
         },
@@ -755,6 +759,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/show/DealKeyContacts.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/show/DealCreateTaskButton.tsx",
           "type": "registry:component"
         },
         {
