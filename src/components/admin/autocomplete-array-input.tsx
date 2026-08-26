@@ -15,12 +15,17 @@ import {
   FormLabel,
 } from "@/components/admin/form";
 import { Command as CommandPrimitive } from "cmdk";
-import type { ChoicesProps, InputProps } from "ra-core";
+import type {
+  ChoicesProps,
+  InputProps,
+  SupportCreateSuggestionOptions,
+} from "ra-core";
 import {
   useChoices,
   useChoicesContext,
   useGetRecordRepresentation,
   useInput,
+  useSupportCreateSuggestion,
   useTranslate,
   FieldTitle,
   useEvent,
@@ -64,6 +69,9 @@ import { useCallback } from "react";
  */
 export const AutocompleteArrayInput = (
   props: Omit<InputProps, "source"> &
+    // `handleChange` et `filter` sont fournis par le composant, pas par
+    // l'appelant — même exclusion que dans `autocomplete-input.tsx`.
+    Omit<SupportCreateSuggestionOptions, "handleChange" | "filter"> &
     Partial<Pick<InputProps, "source">> &
     ChoicesProps & {
       className?: string;
@@ -76,7 +84,21 @@ export const AutocompleteArrayInput = (
         | ((option: any | undefined) => React.ReactNode);
     },
 ) => {
-  const { filterToQuery = DefaultFilterToQuery, inputText } = props;
+  const {
+    filterToQuery = DefaultFilterToQuery,
+    inputText,
+    // Création à la volée (NOS-1048). `AutocompleteInput` et `SelectInput`
+    // câblent `useSupportCreateSuggestion` depuis toujours ; l'array input,
+    // lui, ne l'avait jamais été — il était donc impossible de créer un contact
+    // depuis le formulaire d'opportunité. Mêmes props, même hook `ra-core`,
+    // pour que les trois inputs se comportent pareil.
+    create,
+    createValue,
+    createLabel,
+    createHintValue,
+    createItemLabel,
+    onCreate,
+  } = props;
   const {
     allChoices = [],
     source,
@@ -143,7 +165,49 @@ export const AutocompleteArrayInput = (
     [inputText, getChoiceText],
   );
 
+  // Sélectionner une valeur = l'ajouter au tableau. C'est ce que
+  // `useSupportCreateSuggestion` rappellera aussi après une création, avec le
+  // record fraîchement créé — d'où le passage par `getChoiceValue` plutôt que
+  // par un id lu en dur.
+  const handleChange = useEvent((choice: any) => {
+    setFilterValue("");
+    if (isFromReference) {
+      setFilters(filterToQuery(""));
+    }
+    const value = getChoiceValue(choice);
+    if (value == null || field.value?.includes(value)) return;
+    field.onChange([...(field.value ?? []), value]);
+  });
+
+  const {
+    getCreateItem,
+    handleChange: handleChangeWithCreateSupport,
+    createElement,
+  } = useSupportCreateSuggestion({
+    create,
+    createLabel,
+    createValue,
+    createHintValue,
+    createItemLabel,
+    onCreate,
+    handleChange,
+    optionText: props.optionText,
+    filter: filterValue,
+  });
+
+  // Même condition que dans `autocomplete-input.tsx` : l'entrée « créer »
+  // n'apparaît qu'une fois quelque chose tapé, sauf si un `createLabel` la
+  // rend permanente.
+  const createItem =
+    (create || onCreate) && (filterValue !== "" || createLabel)
+      ? getCreateItem(filterValue)
+      : null;
+  const finalChoices = createItem
+    ? [...availableChoices, createItem]
+    : availableChoices;
+
   return (
+    <>
     <FormField className={props.className} id={id} name={field.name}>
       {props.label !== false && (
         <FormLabel>
@@ -212,10 +276,10 @@ export const AutocompleteArrayInput = (
           </div>
           <div className="relative">
             <CommandList>
-              {open && availableChoices.length > 0 ? (
+              {open && finalChoices.length > 0 ? (
                 <div className="absolute top-2 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
                   <CommandGroup className="h-full overflow-auto">
-                    {availableChoices.map((choice) => {
+                    {finalChoices.map((choice) => {
                       return (
                         <CommandItem
                           key={getChoiceValue(choice)}
@@ -223,16 +287,9 @@ export const AutocompleteArrayInput = (
                             e.preventDefault();
                             e.stopPropagation();
                           }}
-                          onSelect={() => {
-                            setFilterValue("");
-                            if (isFromReference) {
-                              setFilters(filterToQuery(""));
-                            }
-                            field.onChange([
-                              ...field.value,
-                              getChoiceValue(choice),
-                            ]);
-                          }}
+                          onSelect={() =>
+                            handleChangeWithCreateSupport(choice)
+                          }
                           className="cursor-pointer"
                         >
                           {getChoiceText(choice)}
@@ -249,6 +306,10 @@ export const AutocompleteArrayInput = (
       <InputHelperText helperText={props.helperText} />
       <FormError />
     </FormField>
+    {/* Monté hors du FormField, comme dans `autocomplete-input.tsx` : c'est ici
+        que s'affiche l'élément passé en prop `create`. */}
+    {createElement}
+    </>
   );
 };
 
