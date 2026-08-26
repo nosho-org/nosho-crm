@@ -18,6 +18,7 @@ import { DealCreate } from "./DealCreate";
 import { DealEdit } from "./DealEdit";
 import { DealEmpty } from "./DealEmpty";
 import { DealFilterBar } from "./DealFilterBar";
+import { DealListInactivityAlert } from "./DealListInactivityAlert";
 import { DealListContent } from "./DealListContent";
 import { SalesFilterInput } from "./SalesFilterInput";
 
@@ -140,13 +141,24 @@ const DealLayout = () => {
   return (
     <div className="w-full">
       {/*
-        The revenue banner, the forecast table and the inactivity alert used to
-        sit here. They moved to the dashboard with NOS-955 — the spec separates
-        "pilotage business" from "pilotage opérationnel", and this screen is the
-        operational one. What remains of the aggregates are the column headers.
+        The revenue banner and the forecast table used to sit here. They moved
+        to the dashboard with NOS-955 — the spec separates "pilotage business"
+        from "pilotage opérationnel", and this screen is the operational one.
+
+        L'alerte d'inactivité était partie avec elles, à tort : elle ne mesure
+        rien, elle dit quoi faire maintenant. NOS-1013 la ramène ici, où
+        Marc-Henri l'avait demandée deux fois.
       */}
       <div className="flex flex-col gap-4 w-full">
         <DealFilterBar />
+        {/*
+          L'alerte « en sommeil » revient ici (NOS-1013). Marc-Henri l'avait
+          demandée deux fois sur cet écran ; NOS-955 l'avait emportée au
+          dashboard avec la bannière de revenus et la table de prévisions. Ces
+          deux-là relèvent bien du pilotage business — l'alerte, elle, dit quoi
+          faire maintenant, et sa place est là où l'on travaille.
+        */}
+        <DealListInactivityAlert />
         <DealListContent />
       </div>
       <DealArchivedList />
