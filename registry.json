@@ -278,6 +278,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/providers/fakerest/internal/disjunctionFilter.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/providers/fakerest/dataGenerator/utils.ts",
           "type": "registry:component"
         },
@@ -650,10 +654,6 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/DealNextMeeting.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/deals/DealListTable.tsx",
           "type": "registry:component"
         },
@@ -743,6 +743,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/show/DealNextTaskBlock.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/show/DealNextMeetingCard.tsx",
           "type": "registry:component"
         },
         {
