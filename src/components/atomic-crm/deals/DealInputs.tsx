@@ -2,7 +2,6 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { isEqual } from "lodash";
 import {
   required,
-  useCanAccess,
   useGetMany,
   useGetOne,
   useRecordContext,
@@ -280,20 +279,27 @@ const saleOptionRenderer = (choice: Sale) =>
   `${choice.first_name} ${choice.last_name}`;
 
 /**
- * Owner picker, admins only.
+ * Owner picker, open to everyone (NOS-1046).
  *
- * Non-admins never see this input, so the `required()` below never registers
- * for them — which is fine: `<DealCreate>` seeds `sales_id` with the current
- * identity, so their opportunity is always owned by them.
+ * It used to be gated behind `canAccess({ resource: "configuration" })`, i.e.
+ * admins only, and gated by an early `return null` rather than a `disabled` —
+ * so a non-admin could not even *see* who owned an opportunity from the form.
+ *
+ * That gate had exactly one victim. In production every active user carries the
+ * admin flag except Marc-Henri, who owns 40 opportunities: the one person unable
+ * to hand an affair over was also the one running them. Transferring is ordinary
+ * commercial work, not configuration — `referrer_id` right below has never been
+ * restricted either.
+ *
+ * Two consequences of lifting it, both wanted:
+ *   - `requiredOnCreate` now registers for everyone, so creation asks for an
+ *     owner instead of silently defaulting. `<DealCreate>` still seeds the
+ *     current identity, so the field arrives filled.
+ *   - Saving a changed owner fires `deal_tasks_follow_owner` (NOS-1017), which
+ *     moves the previous owner's open tasks along — but leaves alone anything
+ *     deliberately assigned to a third party (NOS-1038).
  */
 const DealSalesInput = ({ mode }: { mode: DealFormMode }) => {
-  const { canAccess: isAdmin } = useCanAccess({
-    resource: "configuration",
-    action: "edit",
-  });
-
-  if (!isAdmin) return null;
-
   return (
     <ReferenceInput
       source="sales_id"
