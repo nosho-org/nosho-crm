@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useGetList } from "ra-core";
+import { useGetIdentity, useGetList } from "ra-core";
 import { useSearchParams } from "react-router-dom";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
@@ -110,6 +110,16 @@ const PARAM = {
   products: "produit",
 } as const;
 
+/**
+ * « Tous les responsables », écrit explicitement dans l'URL (NOS-1063).
+ *
+ * Depuis que l'absence de paramètre vaut « moi », `null` ne peut plus dire à la
+ * fois « pas encore choisi » et « tous » : choisir « Tous » reviendrait à ne
+ * rien choisir, et le tableau de bord se replierait sur l'utilisateur courant
+ * au rechargement — en contredisant ce que le sélecteur affiche.
+ */
+const ALL_SALES = "tous";
+
 export const DashboardProvider = ({ children }: { children: ReactNode }) => {
   const {
     dealStages,
@@ -122,6 +132,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     mrrTarget,
   } = useConfigurationContext();
 
+  const { identity, isPending: identityPending } = useGetIdentity();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Frozen for the lifetime of the screen, so a re-render never moves the
@@ -133,15 +144,24 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
   const selection = useMemo<DashboardSelection>(() => {
     const rawPeriod = searchParams.get(PARAM.period);
     const products = searchParams.get(PARAM.products);
+    const rawSales = searchParams.get(PARAM.sales);
     return {
       periodId: PERIOD_IDS.includes(rawPeriod as PeriodId)
         ? (rawPeriod as PeriodId)
         : DASHBOARD_DEFAULT_PERIOD,
-      salesId: searchParams.get(PARAM.sales),
+      // Rien dans l'URL = moi, pas tout le monde (NOS-1063). On arrive sur son
+      // propre tableau de bord, pas sur celui de l'équipe : le chiffre qui
+      // s'affiche à la connexion doit être celui dont on répond.
+      salesId:
+        rawSales === null
+          ? (identity?.id?.toString() ?? null)
+          : rawSales === ALL_SALES
+            ? null
+            : rawSales,
       category: searchParams.get(PARAM.category),
       products: products ? products.split(",").filter(Boolean) : [],
     };
-  }, [searchParams]);
+  }, [searchParams, identity?.id]);
 
   const period = useMemo(
     () => resolvePeriod(selection.periodId, today),
@@ -219,7 +239,9 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       granularity,
       setGranularity: setGranularityOverride,
       setPeriodId: (id) => setParam(PARAM.period, id),
-      setSalesId: (id) => setParam(PARAM.sales, id),
+      // `null` = « Tous », et il faut l'écrire : effacer le paramètre voudrait
+      // dire « pas de choix », donc revenir à moi (NOS-1063).
+      setSalesId: (id) => setParam(PARAM.sales, id ?? ALL_SALES),
       setCategory: (id) => setParam(PARAM.category, id),
       setProducts: (list) =>
         setParam(PARAM.products, list.length ? list.join(",") : null),
@@ -227,7 +249,10 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       selectionFilter,
       hasActiveFilters:
         selection.periodId !== DASHBOARD_DEFAULT_PERIOD ||
-        selection.salesId !== null ||
+        // Comparé au défaut, pas à `null` : « moi » est désormais l'état de
+        // repos, et l'afficher comme un filtre actif ferait clignoter
+        // « Réinitialiser » sur un tableau de bord que personne n'a touché.
+        searchParams.has(PARAM.sales) ||
         selection.category !== null ||
         selection.products.length > 0,
       today,
@@ -248,6 +273,10 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
   }, [
     deals,
     isPending,
+    // `hasActiveFilters` lit `searchParams` directement, pour distinguer
+    // « responsable non choisi » de « responsable choisi et égal au défaut ».
+    // `selection` seul ne suffirait pas : les deux donnent le même `salesId`.
+    searchParams,
     selection,
     selectionFilter,
     period,
@@ -263,6 +292,12 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     mrrTarget,
     total,
   ]);
+
+  // Après tous les hooks, jamais avant. Sans cette attente le tableau de bord
+  // se peint une première fois « Tous » — l'identité n'étant pas résolue — puis
+  // se recalcule sur l'utilisateur : deux requêtes, et un chiffre d'équipe
+  // affiché une fraction de seconde comme s'il était le sien.
+  if (identityPending) return null;
 
   return (
     <DashboardContext.Provider value={value}>
