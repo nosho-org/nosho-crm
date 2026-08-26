@@ -1,5 +1,5 @@
 import {
-  Flag,
+  FlaskConical,
   PieChart,
   Target,
   TrendingUp,
@@ -8,20 +8,32 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-import { formatCurrency, formatCurrencyCompact } from "../misc/formatCurrency";
+import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { computeRevenueSnapshot } from "../deals/cockpit/dealRevenue";
+import {
+  computeStageBreakdown,
+  type DealStageBucket,
+} from "../deals/cockpit/dealStageBreakdown";
+import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatPercent } from "../deals/cockpit/dealFormat";
 import { pluralize } from "../deals/cockpit/dealFormat";
 import { useDashboard } from "./DashboardContext";
-import { computeMrrProgress } from "./dashboardKpi";
 
 /**
  * ---------------------------------------------------------------------------
- * The KPI banner (NOS-955 §1)
+ * The KPI banner (NOS-955 §1, revu par NOS-1065)
  * ---------------------------------------------------------------------------
- * Four ARR figures plus the MRR target. All four come from
- * `computeRevenueSnapshot` — `signed`, `potential`, `weighted` and `lost` map
- * one-to-one onto the spec, so there is no second aggregation here.
+ * Cinq cartes, dans l'ordre où une affaire avance :
+ *
+ *     Pipeline brut → pondéré → Qualifié → Démo/POC → signé
+ *
+ * Trois viennent de `computeRevenueSnapshot`, deux de `computeStageBreakdown`,
+ * la même ventilation que le funnel juste en dessous — jamais un second calcul
+ * maison, sous peine de deux chiffres pour la même étape sur un même écran.
+ *
+ * « ARR perdu » et « Objectif MRR » ont été retirés à la demande de Simon. Le
+ * second était le seul indicateur comparé à une cible ; `computeMrrProgress`
+ * reste dans `dashboardKpi.ts`, sans appelant, pour le jour où on le remet.
  *
  * Colour carries a fixed meaning across the whole interface: green = won,
  * blue = potential, violet = weighted, red = lost, orange = attention. The
@@ -66,27 +78,70 @@ const KpiCard = ({
   </Card>
 );
 
+/**
+ * L'ARR d'une étape précise (NOS-1065).
+ *
+ * Lit la même ventilation que `PipelineFunnel`, pas un second calcul : deux
+ * agrégations sur le même écran finissent toujours par afficher deux chiffres
+ * pour la même étape.
+ *
+ * Couleur neutre, à dessein. La règle du bandeau est qu'une teinte porte un
+ * sens — vert gagné, bleu potentiel, violet pondéré, rouge perdu. Ces deux
+ * cartes ne sont pas une catégorie de plus : elles détaillent le pipeline brut
+ * affiché à gauche. Leur emprunter une teinte déjà prise dirait autre chose que
+ * ce qu'elles montrent.
+ */
+const StageKpiCard = ({
+  stage,
+  icon,
+  buckets,
+}: {
+  stage: string;
+  icon: LucideIcon;
+  buckets: DealStageBucket[];
+}) => {
+  const bucket = buckets.find((entry) => entry.stage === stage);
+  if (!bucket) return null;
+
+  return (
+    <KpiCard
+      label={`ARR en ${bucket.label}`}
+      icon={icon}
+      color="var(--muted-foreground)"
+      value={formatCurrencyCompact(bucket.amount)}
+      context={
+        bucket.hasUnvaluedDeals
+          ? `${pluralize(bucket.count, "opportunité", "opportunités")} — montant manquant sur certaines`
+          : `${pluralize(bucket.count, "opportunité", "opportunités")}`
+      }
+    />
+  );
+};
+
 export const DashboardKpiBanner = () => {
-  const {
-    deals,
-    weighting,
-    inactivityThresholdDays,
-    today,
-    mrrTarget,
-    truncated,
-  } = useDashboard();
+  const { deals, weighting, inactivityThresholdDays, today, truncated } =
+    useDashboard();
+  const { dealStages } = useConfigurationContext();
 
   const snapshot = computeRevenueSnapshot(deals, {
     weighting,
     inactivityThresholdDays,
     today,
   });
-  const mrr = computeMrrProgress(deals, mrrTarget);
+
+  // `includeEmpty` : une étape sans affaire doit afficher 0 €, pas disparaître.
+  // Une carte qui s'évapore laisse croire à un problème d'affichage plutôt qu'à
+  // un pipeline vide — et fait bouger les quatre autres.
+  const buckets = computeStageBreakdown(
+    deals,
+    dealStages,
+    weighting.pipelineStatuses,
+    { openOnly: true, includeEmpty: true },
+  );
 
   const won = "var(--deal-status-won)";
   const potential = "var(--deal-series-potential)";
   const weighted = "var(--deal-series-weighted)";
-  const lost = "var(--deal-status-lost)";
 
   return (
     <section aria-label="Indicateurs clés" className="flex flex-col gap-2">
@@ -99,21 +154,6 @@ export const DashboardKpiBanner = () => {
       )}
 
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard
-          label="ARR signé (won)"
-          icon={Trophy}
-          color={won}
-          value={formatCurrencyCompact(snapshot.signed.amount)}
-          context={`${pluralize(snapshot.signed.count, "opportunité gagnée", "opportunités gagnées")}`}
-        >
-          <span className="text-xs text-muted-foreground mt-1">
-            {mrr.label}{" "}
-            <span className="font-medium text-foreground">
-              {formatCurrencyCompact(mrr.signedMrr)} / mois
-            </span>
-          </span>
-        </KpiCard>
-
         <KpiCard
           label="Pipeline brut (potentiel)"
           icon={TrendingUp}
@@ -138,78 +178,16 @@ export const DashboardKpiBanner = () => {
           }
         />
 
+        <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
+        <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />
+
         <KpiCard
-          label="ARR perdu (lost)"
-          icon={Flag}
-          color={lost}
-          value={formatCurrencyCompact(snapshot.lost.amount)}
-          context={`${pluralize(snapshot.lost.count, "opportunité perdue", "opportunités perdues")}`}
+          label="ARR signé (won)"
+          icon={Trophy}
+          color={won}
+          value={formatCurrencyCompact(snapshot.signed.amount)}
+          context={`${pluralize(snapshot.signed.count, "opportunité gagnée", "opportunités gagnées")}`}
         />
-
-        <Card className="p-4 flex flex-col gap-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Objectif MRR
-            </span>
-            <Target
-              className="w-4 h-4 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          </div>
-
-          {mrr.progress === null ? (
-            <>
-              <span className="text-3xl font-semibold leading-tight">—</span>
-              <span className="text-xs text-muted-foreground">
-                Aucun objectif défini — à renseigner dans Paramètres.
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="text-3xl font-semibold leading-tight truncate">
-                {formatCurrencyCompact(mrr.target)}
-                <span className="text-base font-normal text-muted-foreground">
-                  {" "}
-                  / mois
-                </span>
-              </span>
-              <div className="flex items-center gap-2 mt-1">
-                <div
-                  className="flex-1 bg-muted overflow-hidden"
-                  style={{
-                    height: "var(--skin-bar-height)",
-                    borderRadius: "var(--skin-bar-radius)",
-                  }}
-                  role="progressbar"
-                  aria-valuenow={Math.round(mrr.progress * 100)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Progression vers l'objectif MRR"
-                >
-                  <div
-                    className="h-full"
-                    style={{
-                      // The bar is capped at 100 %; the figure next to it is not.
-                      width: `${Math.min(mrr.progress, 1) * 100}%`,
-                      background: won,
-                      borderRadius: "var(--skin-bar-radius)",
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-medium tabular-nums">
-                  {Math.round(mrr.progress * 100)} %
-                </span>
-              </div>
-              <span
-                className="text-xs text-muted-foreground"
-                title={mrr.caveat}
-              >
-                Écart : {mrr.gap !== null && mrr.gap > 0 ? "+" : ""}
-                {formatCurrency(Math.abs(mrr.gap ?? 0))} / mois
-              </span>
-            </>
-          )}
-        </Card>
       </div>
     </section>
   );
