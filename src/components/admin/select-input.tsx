@@ -278,7 +278,12 @@ export const SelectInput = (props: SelectInputProps) => {
             >
               <SelectValue placeholder={renderEmptyItemOption()} />
 
-              {field.value && field.value !== emptyValue ? (
+              {/*
+                No reset on a required field: `handleReset` writes `emptyValue`
+                unconditionally, so one click on the X left the form permanently
+                unsubmittable — with no way back to a valid value but reloading.
+              */}
+              {!isRequired && field.value && field.value !== emptyValue ? (
                 <div
                   role="button"
                   className="p-0 ml-auto pointer-events-auto hover:bg-transparent text-muted-foreground opacity-50 hover:opacity-100"
@@ -312,6 +317,13 @@ export const SelectInput = (props: SelectInputProps) => {
           </Select>
         </div>
         <InputHelperText helperText={helperText} />
+        {/*
+          Every other input of the kit renders this; only the loading branch of
+          this one did. A `required` SelectInput therefore blocked submit with
+          no message, no red text and no focus to move to — the whole failure
+          was invisible. See issue #115.
+        */}
+        <FormError />
       </FormField>
       {createElement}
     </>

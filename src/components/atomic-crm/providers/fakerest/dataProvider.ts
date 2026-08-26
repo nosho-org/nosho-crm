@@ -458,9 +458,10 @@ export const crmLifecycleCallbacks = [
       // update the task count in the related contact
       const { contact_id } = result.data;
       // A task created from an opportunity has a `deal_id` and no contact
-      // (`tasks_owner_check` only requires one of the two). There is no count
-      // to bump, and asking for contact `undefined` used to fail the whole
-      // creation with "No item with identifier undefined".
+      // (`tasks_owner_check` only requires one of the two), and `nb_tasks`
+      // counts a *contact's* tasks — there is nothing to bump. Asking for
+      // contact `undefined` used to fail the whole creation with
+      // "No item with identifier undefined" (#112, #114).
       if (contact_id == null) return result;
       const { data: contact } = await dataProvider.getOne("contacts", {
         id: contact_id,

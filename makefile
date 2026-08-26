@@ -13,14 +13,12 @@ endif
 # Doppler: use 'doppler run --' to inject secrets if doppler.yaml is present
 DOPPLER := $(shell command -v doppler 2>/dev/null)
 DOPPLER_RUN := $(if $(DOPPLER),doppler run --,)
-
-# Production secrets, for the two targets that write to the remote project.
-# A bare `doppler run` resolves the config through doppler.yaml, which pins this
-# repo to `dev` — and SUPABASE_ACCESS_TOKEN only lives in `prd`, so
-# `make supabase-push` failed with "SUPABASE_ACCESS_TOKEN is required".
-# Kept separate on purpose: DOPPLER_RUN stays on `dev` so `make start` and
-# `make dev` never pull production secrets.
+# Targets that write to the *remote* project need the prd config: doppler.yaml
+# pins this repo to dev, and SUPABASE_ACCESS_TOKEN only exists in prd. Left as a
+# separate variable on purpose — DOPPLER_RUN must keep pointing at dev so that
+# `make start` and friends never pull production secrets.
 DOPPLER_RUN_PRD := $(if $(DOPPLER),doppler run --project nosho-crm --config prd --,)
+
 
 help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

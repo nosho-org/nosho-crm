@@ -127,8 +127,11 @@ const DealLayout = () => {
   if (!data?.length && !hasFilters)
     return (
       <>
+        {/* No <DealCreate> here: <DealEmpty> mounts its own, and for both the
+            /deals and the /views/:viewId routes. Passing a second one stacked
+            two Radix dialogs, and the one underneath is inert — aria-hidden
+            with pointer-events:none — so clicks in it went nowhere. */}
         <DealEmpty>
-          <DealCreate open={!!matchCreate} />
           <DealArchivedList />
         </DealEmpty>
       </>

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type Identifier,
   RecordRepresentation,
@@ -16,8 +17,10 @@ export interface TaskCreateSheetProps {
   onOpenChange: (open: boolean) => void;
   contact_id?: Identifier;
   /**
-   * Attaches the task to an opportunity. When set, the contact becomes optional
-   * — `tasks_owner_check` accepts a task owned by a deal alone — and the picker
+   * Attaches the task to an opportunity (`tasks.deal_id`). The column has
+   * existed since 20260823140000; this is the first UI that writes it
+   * (#112, #114). When set the contact becomes optional —
+   * `tasks_owner_check` accepts a task owned by a deal alone — and the picker
    * is narrowed to that opportunity's contacts.
    */
   deal_id?: Identifier;
@@ -48,7 +51,15 @@ export const TaskCreateSheet = ({
     contact_id ??
     (forDeal && contactIds.length === 1 ? contactIds[0] : undefined);
 
-  const selectContact = seededContactId == null;
+  /**
+   * On an opportunity the contact is a refinement, never a requirement — the
+   * task already has a legitimate owner. So the picker only appears when there
+   * is a real choice to make: several contacts on the deal. With none it would
+   * offer the entire address book on a task that does not need one, and with
+   * exactly one there is nothing to choose.
+   */
+  const selectContact =
+    seededContactId == null && (!forDeal || contactIds.length > 1);
   const { data: contact } = useGetOne(
     "contacts",
     { id: seededContactId! },
@@ -57,17 +68,31 @@ export const TaskCreateSheet = ({
   const [update] = useUpdate();
   const dataProvider = useDataProvider();
   const notify = useNotify();
+  const queryClient = useQueryClient();
 
   if (!identity) return null;
 
   const handleSuccess = async (data: any) => {
-    // Close first. Refreshing the contact's `last_seen` below is a courtesy;
-    // on a task owned by an opportunity there is no contact to touch, and the
-    // early return used to leave the sheet open forever.
+    // Close and notify first, unconditionally. The contact lookup below used to
+    // sit in front of them behind an early return, so a task with no contact —
+    // which is exactly what an opportunity task is — left the sheet open with
+    // no sign anything had happened.
     onOpenChange(false);
     notify("Tâche ajoutée");
+
+    // Invalidated here rather than left to the caller: this sheet is mounted
+    // from several places, and a forgotten refresh shows a stale list.
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    if (forDeal) {
+      // An opportunity's next action is derived from its task backlog by
+      // `deals_summary`, which feeds `getOne("deals")` — invalidating the list
+      // alone would leave the page it was created from stale.
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+    }
     onCreated?.(data);
 
+    // Refreshing the contact's `last_seen` is a courtesy; a task owned by an
+    // opportunity has no contact to touch.
     const referenceRecordId = data[foreignKeyMapping["contacts"]];
     if (!referenceRecordId) return;
     const { data: contact } = await dataProvider.getOne("contacts", {
@@ -85,16 +110,20 @@ export const TaskCreateSheet = ({
     <CreateSheet
       resource="tasks"
       title={
-        <h1 className="text-xl font-semibold truncate pr-10">
-          {forDeal
-            ? `Nouvelle tâche${dealName ? ` — ${dealName}` : ""}`
-            : selectContact
-              ? "Créer une tâche"
-              : "Créer une tâche pour "}
-          {!forDeal && !selectContact && (
-            <RecordRepresentation record={contact} resource="contacts" />
+        // A span, not an h1: `SheetTitle` already renders the heading, and
+        // nesting one inside it is invalid HTML the console has been flagging.
+        <span className="text-xl font-semibold truncate pr-10">
+          {forDeal ? (
+            `Nouvelle tâche${dealName ? ` — ${dealName}` : ""}`
+          ) : selectContact ? (
+            "Créer une tâche"
+          ) : (
+            <>
+              {"Créer une tâche pour "}
+              <RecordRepresentation record={contact} resource="contacts" />
+            </>
           )}
-        </h1>
+        </span>
       }
       redirect={false}
       record={{

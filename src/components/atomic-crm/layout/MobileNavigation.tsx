@@ -121,6 +121,9 @@ const NavigationButton = ({
 
 const CreateButton = () => {
   const contact_id = useMatch("/contacts/:id/*")?.params.id;
+  // On an opportunity the task belongs to it, the same way it does from the
+  // page's own "Créer une tâche" (#112).
+  const deal_id = useMatch("/deals/:id/*")?.params.id;
   const [contactCreateOpen, setContactCreateOpen] = useState(false);
   const [noteCreateOpen, setNoteCreateOpen] = useState(false);
   const [taskCreateOpen, setTaskCreateOpen] = useState(false);
@@ -140,6 +143,7 @@ const CreateButton = () => {
         open={taskCreateOpen}
         onOpenChange={setTaskCreateOpen}
         contact_id={contact_id}
+        deal_id={deal_id}
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

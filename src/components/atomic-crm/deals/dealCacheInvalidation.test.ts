@@ -26,19 +26,33 @@ const WRITERS: [string, string][] = [
   ["DealEdit.tsx", dealEditSource],
 ];
 
+/**
+ * The `queryKey` literal of every `invalidateQueries(` call in a file.
+ *
+ * Scoped to `invalidateQueries` on purpose. The first version of this guard
+ * banned the string `"deals", "getList"` anywhere in the file, which conflates
+ * *invalidating* with *writing to* the cache — two operations with opposite
+ * requirements. Invalidation wants the widest key; `setQueriesData` carries an
+ * updater and must only ever reach the shapes that updater understands. Banning
+ * the literal outright pushed the fix for issue #115 towards the wrong side.
+ */
+const invalidatedKeys = (source: string): string[] =>
+  [
+    ...source.matchAll(
+      /invalidateQueries\(\s*\{[^}]*queryKey:\s*(\[[^\]]*\])/g,
+    ),
+  ].map(([, key]) => key.replace(/\s+/g, " ").trim());
+
 describe("deal cache invalidation", () => {
   it.each(WRITERS)(
     "%s never invalidates getList alone",
     (_file: string, source: string) => {
       // Scoping to the list leaves the deal page and its form on stale data.
-      expect(source).not.toContain('"deals", "getList"');
-    },
-  );
-
-  it.each(WRITERS)(
-    "%s invalidates the whole deals resource",
-    (_file: string, source: string) => {
-      expect(source).toContain('queryKey: ["deals"]');
+      const keys = invalidatedKeys(source);
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(key).toBe('["deals"]');
+      }
     },
   );
 

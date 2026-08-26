@@ -5,6 +5,7 @@ import type { ConfigurationContextValue } from "../root/ConfigurationContext";
 import type { CustomView } from "../root/ConfigurationContext";
 import type {
   CompanyType,
+  Deal,
   DealPriority,
   DealPriorityValue,
   EstablishmentType,
@@ -287,6 +288,34 @@ export function withDealUpdateDates<T extends Record<string, any>>(
   if (previousData?.stage === SIGNED_DEAL_STAGE) return data;
   if (data.won_at != null || previousData?.won_at != null) return data;
   return { ...data, won_at: today };
+}
+
+/**
+ * Patch the deals a creation has just re-indexed into a cached list page.
+ *
+ * Applied through `setQueriesData({ queryKey: ["deals"] })`, which matches by
+ * *prefix*: besides the `getList` pages this is meant for, `["deals"]` also
+ * covers `getOne` — which caches a bare record — and `getMany` — a bare array.
+ * Neither has a `data` array to walk, so anything that is not a list page comes
+ * back untouched.
+ *
+ * Without that guard the updater called `res.data.map(...)` on a record and
+ * threw a TypeError, which aborted the creation's `onSuccess` before it could
+ * invalidate the cache and redirect: the dialog stayed open, the board never
+ * refreshed, and the opportunity was inserted all the same (issue #115).
+ */
+export function applyDealIndexShift<T>(
+  cached: T,
+  dealsById: Record<string, Deal>,
+): T {
+  const page = cached as unknown as { data?: unknown } | null | undefined;
+  if (page == null || typeof page !== "object" || !Array.isArray(page.data)) {
+    return cached;
+  }
+  return {
+    ...page,
+    data: (page.data as Deal[]).map((deal) => dealsById[deal.id] ?? deal),
+  } as T;
 }
 
 export function getRelativeTimeString(dateString: string): string {

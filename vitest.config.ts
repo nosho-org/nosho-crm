@@ -43,6 +43,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ["playwright", "playwright-core"],
+    // Pre-bundle these instead of letting Vite discover them mid-run. When a
+    // test is the first to import one, Vite optimizes it and reloads the page,
+    // which remounts React under the running suite — the component tests then
+    // fail with "Cannot read properties of null (reading 'useRef')". Only on a
+    // cold cache, so it reproduces in CI and almost never locally.
+    include: ["@tanstack/react-query", "date-fns"],
   },
   resolve: {
     preserveSymlinks: true,
