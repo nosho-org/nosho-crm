@@ -7,6 +7,10 @@ import { DateTimeInput } from "@/components/admin";
 
 import { contactOptionText } from "../misc/ContactOption";
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import type { Sale } from "../types";
+
+const saleOptionRenderer = (choice: Sale) =>
+  `${choice.first_name} ${choice.last_name}`;
 
 export const TaskFormContent = ({
   selectContact,
@@ -66,6 +70,35 @@ export const TaskFormContent = ({
           defaultValue="none"
           helperText={false}
         />
+        {/*
+         * Responsable de la tâche (NOS-1038).
+         *
+         * Jusqu'ici `tasks.sales_id` était un tampon de créateur : rempli par
+         * `set_sales_id_default` à l'insert, jamais choisi. Ce champ en fait une
+         * assignation délibérée — et c'est ce qui oblige à restreindre le
+         * trigger `deal_tasks_follow_owner` (migration NOS-1038), sans quoi
+         * réaffecter une opportunité retirerait sa tâche au collègue à qui on
+         * vient de la confier.
+         *
+         * Pas de `required()` : les appelants seedent déjà `sales_id` avec
+         * l'identité courante, et `set_sales_id_default` rattrape une insertion
+         * qui n'en porterait pas. Le rendre obligatoire ne protégerait de rien
+         * et bloquerait l'édition d'une tâche historique sans responsable.
+         *
+         * Même filtre que le sélecteur de responsable d'opportunité : un compte
+         * désactivé ne doit plus recevoir de travail (cf. DealInputs.tsx).
+         */}
+        <ReferenceInput
+          source="sales_id"
+          reference="sales"
+          filter={{ "disabled@neq": true }}
+        >
+          <SelectInput
+            label="Responsable"
+            helperText={false}
+            optionText={saleOptionRenderer}
+          />
+        </ReferenceInput>
       </div>
     </div>
   );

@@ -73,7 +73,7 @@ describe("DealShowPage", () => {
     await expect.element(screen.getByText("Nicolas Roussey")).toBeVisible();
 
     const headings = [
-      "Prochaine tâche",
+      "Prochaine action",
       "Tâches",
       "Synthèse de l'opportunité",
       "Société & groupe",

@@ -140,7 +140,7 @@ export function computeHealthAlerts(
     {
       id: "overdue-action",
       severity: "critical",
-      title: `${overdue.length} ${plural(overdue.length, "prochaine tâche en retard", "prochaines tâches en retard")}`,
+      title: `${overdue.length} ${plural(overdue.length, "prochaine action en retard", "prochaines actions en retard")}`,
       criterion: "Date dépassée et action non terminée",
       count: overdue.length,
       amount: sumArr(overdue),
@@ -158,8 +158,8 @@ export function computeHealthAlerts(
     {
       id: "missing-next-action",
       severity: "anomaly",
-      title: `${missingNextAction.length} ${plural(missingNextAction.length, "opportunité sans prochaine tâche", "opportunités sans prochaine tâche")}`,
-      criterion: "Prochaine tâche ou date manquante",
+      title: `${missingNextAction.length} ${plural(missingNextAction.length, "opportunité sans prochaine action", "opportunités sans prochaine action")}`,
+      criterion: "Prochaine action ou date manquante",
       count: missingNextAction.length,
       amount: sumArr(missingNextAction),
       filter: HEALTH_FILTERS.missingNextAction(),

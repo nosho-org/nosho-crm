@@ -137,7 +137,7 @@ export const DealListTable = () => {
       </DataTable.Col>
       <DataTable.Col
         source="next_action"
-        label="Prochaine tâche"
+        label="Prochaine action"
         headerClassName={COLUMN_WIDTHS.nextAction}
         cellClassName="truncate"
       >
@@ -145,7 +145,7 @@ export const DealListTable = () => {
       </DataTable.Col>
       <DataTable.Col
         source="next_action_date"
-        label="Date prochaine tâche"
+        label="Date prochaine action"
         headerClassName={COLUMN_WIDTHS.nextActionDate}
         cellClassName="truncate"
       >
