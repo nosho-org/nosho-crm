@@ -286,9 +286,25 @@ const CalmDormantPanel = ({
  * The three skins say the same thing with different weight: a warning banner,
  * a scannable table, or a composed panel. They share one dormant set.
  */
-export const DealInactivityAlert = () => {
+/**
+ * Le corps de l'alerte, sans le contexte cockpit (NOS-1013).
+ *
+ * L'alerte vivait uniquement dans `DealCockpit`, donc uniquement sur les vues
+ * personnalisées `/views/:viewId` — alors que Marc-Henri l'avait demandée deux
+ * fois « sur l'écran opportunité ». NOS-955 l'avait déplacée vers le dashboard
+ * sans le lui dire. Séparer la lecture des données de leur rendu permet de la
+ * remonter sur `/deals` sans y monter tout le cockpit.
+ */
+export const DormantAlert = ({
+  deals,
+  activityOptions,
+  thresholdDays,
+}: {
+  deals: DormantDeal["deal"][];
+  activityOptions: Parameters<typeof getDormantDeals>[1];
+  thresholdDays: number;
+}) => {
   const { currency } = useConfigurationContext();
-  const { deals, activityOptions, inactivityThresholdDays } = useDealCockpit();
   const skin = useCrmSkin();
   const redirect = useRedirect();
   const [expanded, setExpanded] = useState(false);
@@ -310,11 +326,23 @@ export const DealInactivityAlert = () => {
         _scrollToTop: false,
       }),
     total: formatAmount(sumDormantAmounts(dormant), currency),
-    thresholdDays: inactivityThresholdDays,
+    thresholdDays,
     currency,
   };
 
   if (skin === "dense") return <DenseDormantTable {...props} />;
   if (skin === "calme") return <CalmDormantPanel {...props} />;
   return <DefaultDormantAlert {...props} />;
+};
+
+/** L'alerte telle que la monte le cockpit des vues personnalisées. */
+export const DealInactivityAlert = () => {
+  const { deals, activityOptions, inactivityThresholdDays } = useDealCockpit();
+  return (
+    <DormantAlert
+      deals={deals}
+      activityOptions={activityOptions}
+      thresholdDays={inactivityThresholdDays}
+    />
+  );
 };
