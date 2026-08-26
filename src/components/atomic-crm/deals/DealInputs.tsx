@@ -397,9 +397,16 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
         defaultValue={new Date().toISOString().split("T")[0]}
       />
       <DateInput source="won_at" label="Date de signature" helperText={false} />
+      {/*
+       * « POC » et non « trial » : c'est le vocabulaire du pipeline, dont
+       * l'étape s'appelle « Démo / POC ». La colonne, elle, reste
+       * `trial_start_date` — la renommer pour du wording imposerait une
+       * migration et toucherait six emplacements dont le trigger d'audit, sans
+       * rien apporter (NOS-1049).
+       */}
       <DateInput
         source="trial_start_date"
-        label="Début du trial"
+        label="Début du POC"
         helperText={false}
       />
       <SelectInput

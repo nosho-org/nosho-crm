@@ -109,7 +109,7 @@ const FIELD_LABELS: Record<string, string> = {
   next_action: "Prochaine action",
   next_action_date: "Date de prochaine action",
   next_action_owner_id: "Responsable de l'action",
-  trial_start_date: "Début d'essai",
+  trial_start_date: "Début du POC",
   entered_at: "Entrée en pipeline",
   archived_at: "Archivage",
 };
