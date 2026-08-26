@@ -118,15 +118,26 @@ const PRODUCT_STYLES: Record<string, string> = {
 export const DealProductBadges = ({
   products,
   className = "",
+  wrap = true,
 }: {
   products: string[] | null | undefined;
   className?: string;
+  /**
+   * Wrapping is right everywhere the badges own their vertical space. It is
+   * wrong in a fixed-width table cell, where a three-product deal doubles its
+   * row height (issue #124) — hence the opt-out rather than a `flex-nowrap`
+   * passed through `className`, which loses the cascade coin-flip against the
+   * `flex-wrap` below.
+   */
+  wrap?: boolean;
 }) => {
   const { dealProducts } = useConfigurationContext();
   if (!products?.length) return null;
 
   return (
-    <span className={`inline-flex flex-wrap items-center gap-1 ${className}`}>
+    <span
+      className={`inline-flex ${wrap ? "flex-wrap" : "flex-nowrap"} items-center gap-1 ${className}`}
+    >
       {products.map((product) => (
         <span
           key={product}

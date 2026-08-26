@@ -27,7 +27,50 @@ import { formatISODateString } from "./dealUtils";
  * MRR is deliberately gone — "ARR suffit et l'espace est plus utile pour
  * l'action commerciale". Dernière activité is not in the spec text but is in
  * the mockup, and it is what makes the dormancy alert legible from here.
+ *
+ * ---------------------------------------------------------------------------
+ * Why every column carries a width (issue #124)
+ * ---------------------------------------------------------------------------
+ * The table used to lay out in `auto` mode, which sizes each column from the
+ * content of the rows currently rendered. Filtering by stage changes the rows,
+ * so it changed the geometry: measured on the demo dataset at a 1512 px
+ * viewport, `stage=lead` overflowed by 4 px with everything on screen, while
+ * `stage=qualified` overflowed by 63 px and pushed "Dernière activité" past
+ * the scroll edge — and "Responsable" went from 98 px to 147 px on the way.
+ * The reporter read that as columns appearing and disappearing depending on
+ * the stage, which is exactly what it was.
+ *
+ * `table-fixed` plus a width on every column makes the layout a property of
+ * the screen rather than of the rows: same columns, same widths, same scroll,
+ * whatever the filter. Cells truncate instead of widening, and `min-w`
+ * guarantees the headers stay readable on a narrow window — where the table
+ * scrolls by the same amount for every stage.
  */
+
+/**
+ * Column widths, in pixels, summing to the table's `min-w`.
+ *
+ * Sized so each header fits without being clipped; the text-heavy columns get
+ * whatever is left. Above the `min-w` the browser stretches them all
+ * proportionally, which is still stage-independent.
+ */
+const COLUMN_WIDTHS = {
+  priority: "w-[100px]",
+  name: "w-[140px]",
+  company: "w-[116px]",
+  stage: "w-[84px]",
+  products: "w-[124px]",
+  amount: "w-[104px]",
+  nextAction: "w-[120px]",
+  nextActionDate: "w-[140px]",
+  category: "w-[88px]",
+  sales: "w-[108px]",
+  closingDate: "w-[100px]",
+  // Widest header of the lot, and it is last: anything narrower and the label
+  // is the one thing clipped on an otherwise complete row.
+  lastActivity: "w-[136px]",
+} as const;
+
 export const DealListTable = () => {
   const { dealStages, dealCategories, currency } = useConfigurationContext();
   const { data } = useListContext<Deal>();
@@ -40,55 +83,103 @@ export const DealListTable = () => {
       // Row selection is what makes the bulk stage change possible — the tool
       // the spec asks for to empty the "À reclasser" queue.
       bulkActionButtons={<DealBulkEditStage />}
+      // <DataTable> puts its own className on the wrapper and renders <Table>
+      // with no way through, so the layout lands on the nested table.
+      className="[&_table]:table-fixed [&_table]:min-w-[1392px]"
     >
       <DataTable.Col
         source="priority_rank"
         label="Priorité"
-        headerClassName="w-32"
+        headerClassName={COLUMN_WIDTHS.priority}
       >
         <DealPriorityField />
       </DataTable.Col>
-      <DataTable.Col source="name" label="Opportunité" />
-      <DataTable.Col source="company_id" label="Société">
+      <DataTable.Col
+        source="name"
+        label="Opportunité"
+        headerClassName={COLUMN_WIDTHS.name}
+        cellClassName="truncate"
+      />
+      <DataTable.Col
+        source="company_id"
+        label="Société"
+        headerClassName={COLUMN_WIDTHS.company}
+        cellClassName="truncate"
+      >
         <ReferenceField
           source="company_id"
           reference="companies"
           link={false}
         />
       </DataTable.Col>
-      <DataTable.Col source="stage" label="Étape">
+      <DataTable.Col
+        source="stage"
+        label="Étape"
+        headerClassName={COLUMN_WIDTHS.stage}
+        cellClassName="truncate"
+      >
         <StageField stages={dealStages} />
       </DataTable.Col>
-      <DataTable.Col label="Produit(s)">
+      <DataTable.Col
+        label="Produit(s)"
+        headerClassName={COLUMN_WIDTHS.products}
+        cellClassName="truncate"
+      >
         <ProductsField />
       </DataTable.Col>
       <DataTable.Col
         source="amount"
         label="ARR"
-        headerClassName="text-right"
-        cellClassName="text-right tabular-nums"
+        headerClassName={`text-right ${COLUMN_WIDTHS.amount}`}
+        cellClassName="text-right tabular-nums truncate"
       >
         <ArrField currency={currency} />
       </DataTable.Col>
-      <DataTable.Col source="next_action" label="Prochaine tâche">
+      <DataTable.Col
+        source="next_action"
+        label="Prochaine tâche"
+        headerClassName={COLUMN_WIDTHS.nextAction}
+        cellClassName="truncate"
+      >
         <NextActionField />
       </DataTable.Col>
-      <DataTable.Col source="next_action_date" label="Date prochaine tâche">
+      <DataTable.Col
+        source="next_action_date"
+        label="Date prochaine tâche"
+        headerClassName={COLUMN_WIDTHS.nextActionDate}
+        cellClassName="truncate"
+      >
         <NextActionDateField />
       </DataTable.Col>
-      <DataTable.Col source="category" label="Catégorie">
+      <DataTable.Col
+        source="category"
+        label="Catégorie"
+        headerClassName={COLUMN_WIDTHS.category}
+        cellClassName="truncate"
+      >
         <ChoiceField choices={dealCategories} source="category" />
       </DataTable.Col>
-      <DataTable.Col source="sales_id" label="Responsable">
+      <DataTable.Col
+        source="sales_id"
+        label="Responsable"
+        headerClassName={COLUMN_WIDTHS.sales}
+        cellClassName="truncate"
+      >
         <ReferenceField source="sales_id" reference="sales" link={false} />
       </DataTable.Col>
-      <DataTable.Col source="expected_closing_date" label="Clôture prévue">
+      <DataTable.Col
+        source="expected_closing_date"
+        label="Clôture prévue"
+        headerClassName={COLUMN_WIDTHS.closingDate}
+        cellClassName="truncate"
+      >
         <DateField source="expected_closing_date" />
       </DataTable.Col>
       <DataTable.Col
         source="last_activity_at"
         label="Dernière activité"
-        cellClassName="text-right"
+        headerClassName={COLUMN_WIDTHS.lastActivity}
+        cellClassName="text-right truncate"
       >
         <LastActivityField />
       </DataTable.Col>
@@ -96,11 +187,18 @@ export const DealListTable = () => {
   );
 };
 
-/** Products carried by the deal, in the shared badge style. */
+/**
+ * Products carried by the deal, in the shared badge style.
+ *
+ * `flex-nowrap` because the column has a fixed width now (issue #124): left to
+ * wrap, a deal carrying all three products made its row twice as tall as its
+ * neighbours. The badges clip instead, and the full list is one click away on
+ * the deal page.
+ */
 const ProductsField = () => {
   const record = useRecordContext<Deal>();
   if (!record) return null;
-  return <DealProductBadges products={record.products} />;
+  return <DealProductBadges products={record.products} wrap={false} />;
 };
 
 /**
