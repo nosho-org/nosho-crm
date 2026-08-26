@@ -15,6 +15,7 @@ import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
+import { DealEmailHistory } from "./DealEmailHistory";
 import { DealKeyContacts } from "./DealKeyContacts";
 import { DealNextTaskBlock } from "./DealNextTaskBlock";
 import { DealSidePanel } from "./DealSidePanel";
@@ -119,6 +120,7 @@ const DealShowLayout = () => (
         <DealSynthesis />
         <DealCompanyGroup />
         <DealKeyContacts />
+        <DealEmailHistory />
         <DealActivityTimeline />
       </div>
 

@@ -62,7 +62,12 @@ export const ContactEmailHistory = () => {
   );
 };
 
-const EmailItem = ({ message }: { message: GoogleEmailMessage }) => {
+/**
+ * Exporté depuis NOS-1016 : la fiche opportunité affiche les mêmes messages,
+ * pour les contacts de l'opportunité. Un second rendu aurait divergé — celui-ci
+ * a déjà réglé le parsing de « Nom <adresse> » et la double origine de la date.
+ */
+export const EmailItem = ({ message }: { message: GoogleEmailMessage }) => {
   const date = message.date
     ? new Date(message.date)
     : message.internalDate
