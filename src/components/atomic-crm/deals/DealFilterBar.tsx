@@ -86,9 +86,13 @@ export const DealFilterBar = () => {
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const today = startOfToday();
 
+  // Deactivated owners are gone from the team, so they have no business in the
+  // filter (issue #123). Every other sales picker in the app already filters
+  // this way — this bar and the dashboard were the two that did not.
   const { data: sales } = useGetList<Sale>("sales", {
     pagination: { page: 1, perPage: 100 },
     sort: { field: "last_name", order: "ASC" },
+    filter: { "disabled@neq": true },
   });
 
   const merge = (changes: Record<string, unknown>) => {

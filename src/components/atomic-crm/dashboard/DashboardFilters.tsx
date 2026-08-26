@@ -120,9 +120,12 @@ export const DashboardFilters = () => {
     hasActiveFilters,
   } = useDashboard();
 
+  // Same rule as everywhere else: a deactivated owner is not a filter option
+  // (issue #123).
   const { data: sales } = useGetList<Sale>("sales", {
     pagination: { page: 1, perPage: 100 },
     sort: { field: "last_name", order: "ASC" },
+    filter: { "disabled@neq": true },
   });
 
   return (
