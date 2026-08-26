@@ -114,7 +114,8 @@ export const DealCreate = ({ open }: { open: boolean }) => {
                 stage: defaultStage,
               }}
             >
-              <DealInputs />
+              {/* Issue #122 — an opportunity cannot be created half-filled. */}
+              <DealInputs mode="create" />
               <FormToolbar>
                 <SaveButton />
               </FormToolbar>

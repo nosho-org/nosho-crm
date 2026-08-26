@@ -49,7 +49,28 @@ import {
 } from "./dealUtils";
 import type { Company, Contact, DealContactRoles, Sale } from "../types";
 
-export const DealInputs = () => {
+export type DealFormMode = "create" | "edit";
+
+/**
+ * Marks the fields an opportunity cannot be *created* without (issue #122):
+ * type d'opportunité, produit(s), catégorie, priorité, source du lead and
+ * responsable. ARR, étape, nom et société were already mandatory in both
+ * modes and stay declared at their own input.
+ *
+ * Creation only, deliberately. Production holds 219 open opportunities, and
+ * 198 of them carry no lead source, 181 no type and 180 no product: applying
+ * the same rule to the edit form would put a six-field wall in front of anyone
+ * who just wanted to correct a closing date on a deal that predates the v2
+ * model. New opportunities are held to the standard; the backlog gets cleaned
+ * up on its own schedule.
+ *
+ * `required()` is memoised by ra-core, so this returns the same validator
+ * instance on every render and never re-registers the field.
+ */
+const requiredOnCreate = (mode: DealFormMode) =>
+  mode === "create" ? required() : undefined;
+
+export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
   const isMobile = useIsMobile();
   const { companyType: contextCompanyType } = useContext(DealListViewContext);
   const record = useRecordContext();
@@ -67,7 +88,7 @@ export const DealInputs = () => {
           onCompanyTypeFilterChange={setCompanyTypeFilter}
         />
         <Separator orientation={isMobile ? "horizontal" : "vertical"} />
-        <DealMiscInputs />
+        <DealMiscInputs mode={mode} />
       </div>
     </div>
   );
@@ -258,7 +279,14 @@ const DealContactRolesInput = () => {
 const saleOptionRenderer = (choice: Sale) =>
   `${choice.first_name} ${choice.last_name}`;
 
-const DealSalesInput = () => {
+/**
+ * Owner picker, admins only.
+ *
+ * Non-admins never see this input, so the `required()` below never registers
+ * for them — which is fine: `<DealCreate>` seeds `sales_id` with the current
+ * identity, so their opportunity is always owned by them.
+ */
+const DealSalesInput = ({ mode }: { mode: DealFormMode }) => {
   const { canAccess: isAdmin } = useCanAccess({
     resource: "configuration",
     action: "edit",
@@ -276,12 +304,13 @@ const DealSalesInput = () => {
         label="Responsable commercial"
         helperText={false}
         optionText={saleOptionRenderer}
+        validate={requiredOnCreate(mode)}
       />
     </ReferenceInput>
   );
 };
 
-const DealMiscInputs = () => {
+const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
   const {
     dealStages,
     dealCategories,
@@ -306,6 +335,7 @@ const DealMiscInputs = () => {
         optionText="label"
         optionValue="value"
         helperText={false}
+        validate={requiredOnCreate(mode)}
       />
       {/* Products (NOS-956). Multi-select: a deal can cover No-show, Entrant
           and Data at once. Stored in `deals.products` as a text[]. */}
@@ -316,6 +346,7 @@ const DealMiscInputs = () => {
         optionText="label"
         optionValue="value"
         helperText={false}
+        validate={requiredOnCreate(mode)}
       />
       <SelectInput
         source="category"
@@ -324,6 +355,7 @@ const DealMiscInputs = () => {
         optionText="label"
         optionValue="value"
         helperText={false}
+        validate={requiredOnCreate(mode)}
       />
       <SelectInput
         source="priority"
@@ -333,6 +365,7 @@ const DealMiscInputs = () => {
         optionValue="value"
         defaultValue={defaultDealPriority}
         helperText={false}
+        validate={requiredOnCreate(mode)}
       />
       <DealArrInput />
       <SelectInput
@@ -342,6 +375,7 @@ const DealMiscInputs = () => {
         optionText="label"
         optionValue="value"
         helperText={false}
+        validate={requiredOnCreate(mode)}
       />
       <DateInput
         validate={required()}
@@ -372,7 +406,7 @@ const DealMiscInputs = () => {
         helperText={false}
         validate={required()}
       />
-      <DealSalesInput />
+      <DealSalesInput mode={mode} />
       <DealReferrerInput />
     </div>
   );
