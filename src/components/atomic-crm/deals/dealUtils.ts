@@ -390,3 +390,28 @@ export function formatDealMeetingDate(
 
   return format(date, "PP · p");
 }
+
+/**
+ * Date de clôture prévue proposée à la création : six semaines (NOS-1014).
+ *
+ * Le formulaire proposait « aujourd'hui », soit la même valeur que la date
+ * d'entrée en pipeline — donc une opportunité créée et close le jour même. Il
+ * fallait la corriger à chaque saisie, et l'oublier faussait les prévisions.
+ *
+ * Six semaines est le délai demandé par Simon, pas une constante déduite des
+ * données : c'est une valeur de départ, pas une prédiction.
+ *
+ * Rendue par une fonction et non par une constante de module : figée à
+ * l'import, elle vieillirait d'un jour à chaque jour d'onglet ouvert.
+ */
+export const DEAL_DEFAULT_CLOSING_WEEKS = 6;
+
+export function getDefaultExpectedClosingDate(today: Date = new Date()): string {
+  const target = new Date(today);
+  target.setDate(target.getDate() + DEAL_DEFAULT_CLOSING_WEEKS * 7);
+  // Champs de calendrier locaux, comme partout ailleurs : `toISOString()` lit
+  // en UTC et décale d'un jour pour tout le monde à l'est de Greenwich.
+  const month = String(target.getMonth() + 1).padStart(2, "0");
+  const day = String(target.getDate()).padStart(2, "0");
+  return `${target.getFullYear()}-${month}-${day}`;
+}

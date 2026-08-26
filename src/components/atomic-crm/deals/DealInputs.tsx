@@ -399,12 +399,18 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
         helperText={false}
         validate={requiredOnCreate(mode)}
       />
+      {/*
+       * Pas de `defaultValue` ici (NOS-1014). Le défaut vit dans
+       * `<DealCreate>`, au niveau du formulaire, pour qu'il ne s'applique qu'à
+       * la création : posé sur l'input, il remplirait aussi le champ à
+       * l'ouverture d'une opportunité existante qui n'a pas de date, et
+       * l'écrirait au premier enregistrement sans que personne ne l'ait décidé.
+       */}
       <DateInput
         validate={required()}
         source="expected_closing_date"
         label="Date de clôture prévue"
         helperText={false}
-        defaultValue={new Date().toISOString().split("T")[0]}
       />
       <DateInput
         source="entered_at"
