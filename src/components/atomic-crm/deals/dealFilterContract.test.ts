@@ -84,13 +84,15 @@ describe("toListFilter", () => {
 
     expect(
       toListFilter({ overdueAction: true }, { today: localMidnight }),
-    ).toMatchObject({ "next_action_date@lt": "2026-08-23" });
+    ).toMatchObject({ "next_task_date@lt": "2026-08-23" });
   });
 
-  it("requires an action to exist for it to be overdue", () => {
+  // NOS-1053. The typed `next_action*` columns are empty in production, while
+  // the screen reads the deal's tasks. An overdue action is an overdue open
+  // task — `next_task_date` only ever surfaces tasks without a `done_date`.
+  it("reads overdue from the deal's open tasks, not the typed columns", () => {
     expect(toListFilter({ overdueAction: true }, { today: TODAY })).toEqual({
-      "next_action_date@lt": "2026-08-23",
-      "next_action@not.is": null,
+      "next_task_date@lt": "2026-08-23",
     });
   });
 
@@ -99,9 +101,14 @@ describe("toListFilter", () => {
       toListFilter({ missingClosingDate: true }, { today: TODAY }),
     ).toEqual({ "expected_closing_date@is": null });
 
+    // « Aucune action datée », des deux côtés de la cascade — la règle que
+    // `dashboardHealth` applique déjà en mémoire (`missing` OU `undated`).
+    // N'asserter qu'une des deux clés laisserait le filtre redériver vers les
+    // colonnes que personne n'écrit.
     expect(toListFilter({ missingNextAction: true }, { today: TODAY })).toEqual(
       {
-        "next_action@is": null,
+        "next_action_date@is": null,
+        "next_task_date@is": null,
       },
     );
   });
