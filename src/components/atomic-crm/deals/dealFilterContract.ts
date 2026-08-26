@@ -27,18 +27,22 @@ import { toISODateString as isoDay } from "./cockpit/dealDates";
  * cible fausse.
  */
 
+/** Valeur simple ou multiple pour un filtre d'égalité (NOS-1051). */
+export type FilterSelection = string | number | (string | number)[] | null;
+
 /** Selection shared by both screens. Every field is optional. */
 export interface DealFilterState {
   /** ISO dates bounding `expected_closing_date`. */
   periodStart?: string | null;
   periodEnd?: string | null;
-  salesId?: number | string | null;
-  category?: string | null;
+  /** Scalaire → `@eq`, tableau → `@in` (NOS-1051). Idem pour les trois suivants. */
+  salesId?: FilterSelection;
+  category?: FilterSelection;
   /** Multi-select. Matches deals carrying *any* of these products. */
   products?: string[] | null;
   /** Stored slugs: `urgent` (P0) / `important` (P1) / `normal` (P2). */
-  priority?: string | null;
-  stage?: string | null;
+  priority?: FilterSelection;
+  stage?: FilterSelection;
   /** Deals with no activity for at least this many days. */
   staleForDays?: number | null;
   /** Next action past due — read from the deal's open tasks (NOS-1053). */
@@ -47,6 +51,28 @@ export interface DealFilterState {
   missingClosingDate?: boolean | null;
   /** No next action at all: no open task, and no imported typed value. */
   missingNextAction?: boolean | null;
+}
+
+/**
+ * Écrit `field` (égalité) ou `field@in` (appartenance) selon la forme reçue.
+ *
+ * Un tableau vide n'écrit rien : `in.()` est rejeté par PostgREST avec un 400,
+ * et « aucune valeur cochée » veut dire « pas de filtre », pas « rien ne
+ * correspond ». Même piège que `products@ov` sur un tableau vide.
+ */
+function assignIn(
+  filter: Record<string, unknown>,
+  field: string,
+  value: FilterSelection | undefined,
+): void {
+  if (value == null || value === "") return;
+  if (!Array.isArray(value)) {
+    filter[field] = value;
+    return;
+  }
+  const values = value.filter((entry) => entry != null && entry !== "");
+  if (values.length === 0) return;
+  filter[`${field}@in`] = `(${values.join(",")})`;
 }
 
 /**
@@ -70,18 +96,17 @@ export function toListFilter(
   if (state.periodEnd) {
     filter["expected_closing_date@lte"] = state.periodEnd;
   }
-  if (state.salesId != null && state.salesId !== "") {
-    filter.sales_id = state.salesId;
-  }
-  if (state.category) {
-    filter.category = state.category;
-  }
-  if (state.priority) {
-    filter.priority = state.priority;
-  }
-  if (state.stage) {
-    filter.stage = state.stage;
-  }
+  // Scalaire ou tableau, au choix de l'appelant (NOS-1051). Le dashboard
+  // continue d'envoyer une valeur unique — « voir les Qualifié » — et produit
+  // toujours un `@eq` ; la barre de filtres envoie un tableau et produit un
+  // `@in`. Les deux orthographes coexistent volontairement plutôt que de
+  // forcer `@in` partout : un `@eq` reste plus lisible dans une URL partagée,
+  // et `@in` est déjà supporté de bout en bout (cf. `activity.ts`, l'adaptateur
+  // FakeRest et ses tests).
+  assignIn(filter, "sales_id", state.salesId);
+  assignIn(filter, "category", state.category);
+  assignIn(filter, "priority", state.priority);
+  assignIn(filter, "stage", state.stage);
 
   // `ov` (overlaps) is the OR the spec asks for: "Produit = No-show + Entrant"
   // means either, not both. `cs` (contains) would demand both and quietly

@@ -1,6 +1,12 @@
-import { RotateCcw } from "lucide-react";
+import { ChevronDown, RotateCcw } from "lucide-react";
 import { useGetList, useListFilterContext } from "ra-core";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -38,6 +44,128 @@ import { toListFilter } from "./dealFilterContract";
  */
 
 const ALL = "__all__";
+
+/**
+ * Lit une sélection multiple depuis les filtres de liste (NOS-1051).
+ *
+ * Deux orthographes coexistent, et il faut savoir lire les deux : `field@in`
+ * `(a,b)` que produit cette barre, et `field` scalaire que produisent encore
+ * les liens du dashboard. Sans ça, arriver depuis « voir les Qualifié »
+ * afficherait un filtre Étape vide alors que la liste est bien filtrée.
+ */
+const readSelection = (
+  filterValues: Record<string, unknown> | undefined,
+  field: string,
+): string[] => {
+  const multi = filterValues?.[`${field}@in`];
+  if (typeof multi === "string") {
+    return multi
+      .replace(/^\(|\)$/g, "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  const single = filterValues?.[field];
+  return single == null || single === "" ? [] : [String(single)];
+};
+
+/** Étiquette compacte demandée par la spec : « Qualifié + Démo/POC +1 ». */
+const summarise = (
+  selected: string[],
+  choices: { value: string; label: string }[],
+  allLabel: string,
+): string => {
+  if (selected.length === 0) return allLabel;
+  const labels = selected.map(
+    (value) => choices.find((choice) => choice.value === value)?.label ?? value,
+  );
+  if (labels.length <= 2) return labels.join(" + ");
+  return `${labels[0]} + ${labels[1]} +${labels.length - 2}`;
+};
+
+/**
+ * Un filtre à cocher, pour les axes où « Lead + Qualifié + Démo/POC » a un sens.
+ *
+ * `DropdownMenuCheckboxItem` plutôt qu'un composant multi-select maison : la
+ * brique existe déjà dans `ui/`, elle est accessible au clavier, et elle évite
+ * d'introduire un cinquième patron de sélection dans cet écran. Le menu ne se
+ * referme pas à chaque clic — `onSelect` annule l'événement — sinon cocher
+ * trois étapes demanderait d'ouvrir le menu trois fois.
+ */
+const FilterMultiSelect = ({
+  label,
+  selected,
+  onToggle,
+  onClear,
+  allLabel,
+  choices,
+  className = "w-40",
+}: {
+  label: string;
+  selected: string[];
+  onToggle: (value: string) => void;
+  onClear: () => void;
+  allLabel: string;
+  choices: { value: string; label: string }[];
+  className?: string;
+}) => (
+  <div className="flex flex-col gap-1 min-w-0">
+    <span className="text-xs font-medium text-muted-foreground">
+      {label} {selected.length > 1 && `(${selected.length})`}
+    </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-label={label}
+          className={`${className} justify-between font-normal`}
+        >
+          <span className="truncate">
+            {summarise(selected, choices, allLabel)}
+          </span>
+          <ChevronDown className="w-4 h-4 opacity-50 shrink-0" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+        <DropdownMenuCheckboxItem
+          checked={selected.length === 0}
+          onSelect={(event) => {
+            event.preventDefault();
+            onClear();
+          }}
+        >
+          {allLabel}
+        </DropdownMenuCheckboxItem>
+        {choices.map((choice) => (
+          <DropdownMenuCheckboxItem
+            key={choice.value}
+            checked={selected.includes(choice.value)}
+            onSelect={(event) => {
+              event.preventDefault();
+              onToggle(choice.value);
+            }}
+          >
+            {choice.label}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+);
+
+/**
+ * Colonne PostgREST → champ du contrat partagé.
+ *
+ * Le passage par `toListFilter` n'est pas un détour : c'est lui qui décide
+ * comment un `@in` s'écrit, et le faire ici à la main rouvrirait exactement la
+ * dérive que le contrat existe pour empêcher.
+ */
+const contractKeyOf = (field: string): "salesId" | "category" | "priority" | "stage" =>
+  field === "sales_id"
+    ? "salesId"
+    : (field as "category" | "priority" | "stage");
 
 const PERIOD_KEYS = [
   "expected_closing_date@gte",
@@ -136,6 +264,31 @@ export const DealFilterBar = () => {
     });
   };
 
+  /**
+   * Bascule une valeur dans un filtre multiple (NOS-1051).
+   *
+   * Écrit toujours les deux clés : `field@in` avec la nouvelle sélection, et
+   * `field` à `undefined`. Sans cette remise à zéro, un filtre scalaire hérité
+   * d'un lien du dashboard resterait en place à côté du `@in`, et les deux se
+   * combineraient en ET — « Qualifié ET (Lead, Qualifié) », qui ne rend jamais
+   * ce que l'utilisateur vient de cocher.
+   */
+  const toggleSelection = (field: string, value: string) => {
+    const current = readSelection(filterValues, field);
+    const next = current.includes(value)
+      ? current.filter((entry) => entry !== value)
+      : [...current, value];
+    merge({
+      [field]: undefined,
+      [`${field}@in`]: next.length
+        ? toListFilter({ [contractKeyOf(field)]: next })[`${field}@in`]
+        : undefined,
+    });
+  };
+
+  const clearSelection = (field: string) =>
+    merge({ [field]: undefined, [`${field}@in`]: undefined });
+
   const toggleProduct = (value: string) => {
     const next = products.includes(value)
       ? products.filter((product) => product !== value)
@@ -150,14 +303,23 @@ export const DealFilterBar = () => {
     });
   };
 
-  const hasFilters = [
+  // Les deux orthographes comptent : `@in` posé par cette barre, et le scalaire
+  // que peut poser un lien du dashboard. N'en surveiller qu'une masquerait le
+  // bouton Réinitialiser alors qu'un filtre est bien actif.
+  const RESET_KEYS = [
     ...PERIOD_KEYS,
     "sales_id",
+    "sales_id@in",
     "priority",
+    "priority@in",
     "category",
+    "category@in",
     "products@ov",
     "stage",
-  ].some((key) => filterValues?.[key] != null);
+    "stage@in",
+  ];
+
+  const hasFilters = RESET_KEYS.some((key) => filterValues?.[key] != null);
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -173,12 +335,11 @@ export const DealFilterBar = () => {
         className="w-56"
       />
 
-      <FilterSelect
+      <FilterMultiSelect
         label="Responsable"
-        value={
-          filterValues?.sales_id != null ? String(filterValues.sales_id) : null
-        }
-        onChange={(value) => merge({ sales_id: value ?? undefined })}
+        selected={readSelection(filterValues, "sales_id")}
+        onToggle={(value) => toggleSelection("sales_id", value)}
+        onClear={() => clearSelection("sales_id")}
         allLabel="Tous"
         choices={(sales ?? []).map((sale) => ({
           value: String(sale.id),
@@ -190,10 +351,17 @@ export const DealFilterBar = () => {
         Priority is pills, not a dropdown. The mockup shows the four levels side
         by side, and the spec asks to "garder visuellement que P0 — plus visuel
         et plus rapide": one click to isolate the critical deals.
+
+        Additives depuis NOS-1051 : cliquer P1 après P0 ajoute au lieu de
+        remplacer, pour que « P0 + P1 » soit possible comme le demande la spec.
+        Les pastilles restent le bon support — elles montrent honnêtement deux
+        valeurs actives à la fois, ce qu'un `Select` ne sait pas faire.
       */}
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-muted-foreground">
-          Priorité
+          Priorité{" "}
+          {readSelection(filterValues, "priority").length > 1 &&
+            `(${readSelection(filterValues, "priority").length})`}
         </span>
         <div
           className="flex items-center gap-1"
@@ -201,7 +369,9 @@ export const DealFilterBar = () => {
           aria-label="Priorité"
         >
           {dealPriorities.map((priority) => {
-            const active = filterValues?.priority === priority.value;
+            const active = readSelection(filterValues, "priority").includes(
+              priority.value,
+            );
             return (
               <Button
                 key={priority.value}
@@ -210,9 +380,7 @@ export const DealFilterBar = () => {
                 variant={active ? "default" : "outline"}
                 aria-pressed={active}
                 title={priority.label}
-                onClick={() =>
-                  merge({ priority: active ? undefined : priority.value })
-                }
+                onClick={() => toggleSelection("priority", priority.value)}
               >
                 <span
                   className={`w-2 h-2 rounded-full ${priority.dotClassName}`}
@@ -225,14 +393,11 @@ export const DealFilterBar = () => {
         </div>
       </div>
 
-      <FilterSelect
+      <FilterMultiSelect
         label="Catégorie"
-        value={
-          typeof filterValues?.category === "string"
-            ? filterValues.category
-            : null
-        }
-        onChange={(value) => merge({ category: value ?? undefined })}
+        selected={readSelection(filterValues, "category")}
+        onToggle={(value) => toggleSelection("category", value)}
+        onClear={() => clearSelection("category")}
         allLabel="Toutes"
         choices={dealCategories}
       />
@@ -266,14 +431,14 @@ export const DealFilterBar = () => {
         </div>
       </div>
 
-      <FilterSelect
+      <FilterMultiSelect
         label="Étape"
-        value={
-          typeof filterValues?.stage === "string" ? filterValues.stage : null
-        }
-        onChange={(value) => merge({ stage: value ?? undefined })}
+        selected={readSelection(filterValues, "stage")}
+        onToggle={(value) => toggleSelection("stage", value)}
+        onClear={() => clearSelection("stage")}
         allLabel="Toutes"
         choices={dealStages}
+        className="w-48"
       />
 
       {hasFilters && (
@@ -283,15 +448,9 @@ export const DealFilterBar = () => {
           size="sm"
           className="mb-0.5"
           onClick={() =>
-            merge({
-              "expected_closing_date@gte": undefined,
-              "expected_closing_date@lte": undefined,
-              sales_id: undefined,
-              priority: undefined,
-              category: undefined,
-              "products@ov": undefined,
-              stage: undefined,
-            })
+            merge(
+              Object.fromEntries(RESET_KEYS.map((key) => [key, undefined])),
+            )
           }
         >
           <RotateCcw className="w-3.5 h-3.5" aria-hidden />
