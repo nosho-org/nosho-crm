@@ -1,5 +1,6 @@
 import {
   HEALTH_FILTERS,
+  LIST_FILTER_KEYS,
   toDealsLink,
   toListFilter,
 } from "./dealFilterContract";
@@ -140,6 +141,48 @@ describe("toListFilter", () => {
     expect(
       toListFilter({ stage: [], category: [], salesId: [] }, { today: TODAY }),
     ).toEqual({});
+  });
+
+  /**
+   * NOS-1058. Le contrat savait écrire des filtres sans savoir dire lesquels,
+   * si bien que « Réinitialiser » n'effaçait que les six axes affichés. Un
+   * filtre d'alerte survivait, invisible et persisté par ra-core — d'où une
+   * liste vide « sans filtre appliqué ».
+   *
+   * Ce test est le garde-fou : toute clé qu'une sélection peut produire doit
+   * figurer dans `LIST_FILTER_KEYS`, sinon elle redeviendra ineffaçable.
+   */
+  it("declares every key toListFilter can write", () => {
+    const everything = toListFilter(
+      {
+        periodStart: "2026-01-01",
+        periodEnd: "2026-12-31",
+        salesId: [1, 2],
+        category: ["hopital"],
+        priority: ["urgent"],
+        stage: ["lead"],
+        products: ["no-show"],
+        staleForDays: 30,
+        overdueAction: true,
+        missingClosingDate: true,
+        missingNextAction: true,
+      },
+      { today: TODAY },
+    );
+
+    for (const key of Object.keys(everything)) {
+      expect(LIST_FILTER_KEYS).toContain(key);
+    }
+
+    // Et les orthographes scalaires, que produisent encore les liens du
+    // dashboard, doivent l'être aussi.
+    const scalars = toListFilter(
+      { salesId: 1, category: "hopital", priority: "urgent", stage: "lead" },
+      { today: TODAY },
+    );
+    for (const key of Object.keys(scalars)) {
+      expect(LIST_FILTER_KEYS).toContain(key);
+    }
   });
 
   it("combines a dashboard scope with an alert", () => {

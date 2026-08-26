@@ -1,4 +1,4 @@
-import { ChevronDown, RotateCcw } from "lucide-react";
+import { AlertTriangle, ChevronDown, RotateCcw } from "lucide-react";
 import { useGetList, useListFilterContext } from "ra-core";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,11 @@ import {
   resolvePeriod,
   type PeriodId,
 } from "./cockpit/dealPeriods";
-import { toListFilter } from "./dealFilterContract";
+import {
+  HEALTH_FILTER_KEYS,
+  LIST_FILTER_KEYS,
+  toListFilter,
+} from "./dealFilterContract";
 
 /**
  * ---------------------------------------------------------------------------
@@ -303,23 +307,18 @@ export const DealFilterBar = () => {
     });
   };
 
-  // Les deux orthographes comptent : `@in` posé par cette barre, et le scalaire
-  // que peut poser un lien du dashboard. N'en surveiller qu'une masquerait le
-  // bouton Réinitialiser alors qu'un filtre est bien actif.
-  const RESET_KEYS = [
-    ...PERIOD_KEYS,
-    "sales_id",
-    "sales_id@in",
-    "priority",
-    "priority@in",
-    "category",
-    "category@in",
-    "products@ov",
-    "stage",
-    "stage@in",
-  ];
+  // La liste vient du contrat, pas d'une énumération locale (NOS-1058) : elle
+  // couvre les six axes affichés **et** les quatre alertes du dashboard, que la
+  // barre ne montre pas mais que ra-core persiste dans le navigateur.
+  const hasFilters = LIST_FILTER_KEYS.some(
+    (key) => filterValues?.[key] != null,
+  );
 
-  const hasFilters = RESET_KEYS.some((key) => filterValues?.[key] != null);
+  // Un filtre d'alerte est actif mais invisible : il faut le dire, sinon une
+  // liste vide passe pour une liste sans données.
+  const healthFilterActive = HEALTH_FILTER_KEYS.some(
+    (key) => filterValues?.[key] != null,
+  );
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -441,6 +440,18 @@ export const DealFilterBar = () => {
         className="w-48"
       />
 
+      {healthFilterActive && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            &nbsp;
+          </span>
+          <span className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-md border border-[var(--deal-status-serious)] text-xs text-[var(--deal-status-serious)]">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            Alerte du tableau de bord active
+          </span>
+        </div>
+      )}
+
       {hasFilters && (
         <Button
           type="button"
@@ -449,7 +460,9 @@ export const DealFilterBar = () => {
           className="mb-0.5"
           onClick={() =>
             merge(
-              Object.fromEntries(RESET_KEYS.map((key) => [key, undefined])),
+              Object.fromEntries(
+                LIST_FILTER_KEYS.map((key) => [key, undefined]),
+              ),
             )
           }
         >
