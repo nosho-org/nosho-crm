@@ -18,7 +18,11 @@ import type { Deal } from "../types";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { DealInputs } from "./DealInputs";
 import { DealListViewContext } from "./DealListContent";
-import { applyDealIndexShift, getDefaultDealStage } from "./dealUtils";
+import {
+  applyDealIndexShift,
+  getDefaultDealStage,
+  getDefaultExpectedClosingDate,
+} from "./dealUtils";
 
 export const DealCreate = ({ open }: { open: boolean }) => {
   const redirect = useRedirect();
@@ -112,6 +116,10 @@ export const DealCreate = ({ open }: { open: boolean }) => {
                 index: 0,
                 company_type: companyType || null,
                 stage: defaultStage,
+                // Six semaines, et seulement à la création (NOS-1014) : posé
+                // sur l'input, ce défaut remplirait aussi une opportunité
+                // existante dépourvue de date.
+                expected_closing_date: getDefaultExpectedClosingDate(),
               }}
             >
               {/* Issue #122 — an opportunity cannot be created half-filled. */}
