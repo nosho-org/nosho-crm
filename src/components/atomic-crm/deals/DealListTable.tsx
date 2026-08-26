@@ -65,6 +65,10 @@ const COLUMN_WIDTHS = {
   nextActionDate: "w-[140px]",
   category: "w-[88px]",
   sales: "w-[108px]",
+  // NOS-1015. Ajoutée après « Clôture prévue » : les deux dates de vie de
+  // l'opportunité se lisent côte à côte, et l'écart entre elles est justement
+  // ce qu'on vient regarder. Même largeur que sa voisine, même en-tête court.
+  enteredAt: "w-[100px]",
   closingDate: "w-[100px]",
   // Widest header of the lot, and it is last: anything narrower and the label
   // is the one thing clipped on an otherwise complete row.
@@ -85,7 +89,11 @@ export const DealListTable = () => {
       bulkActionButtons={<DealBulkEditStage />}
       // <DataTable> puts its own className on the wrapper and renders <Table>
       // with no way through, so the layout lands on the nested table.
-      className="[&_table]:table-fixed [&_table]:min-w-[1392px]"
+      //
+      // 1492px = 1392 + les 100 de « Date entrée » (NOS-1015). Ce `min-w` doit
+      // suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière qu'#124 avait
+      // fait disparaître « Dernière activité » du bout de la ligne.
+      className="[&_table]:table-fixed [&_table]:min-w-[1492px]"
     >
       <DataTable.Col
         source="priority_rank"
@@ -166,6 +174,14 @@ export const DealListTable = () => {
         cellClassName="truncate"
       >
         <ReferenceField source="sales_id" reference="sales" link={false} />
+      </DataTable.Col>
+      <DataTable.Col
+        source="entered_at"
+        label="Date entrée"
+        headerClassName={COLUMN_WIDTHS.enteredAt}
+        cellClassName="truncate"
+      >
+        <DateField source="entered_at" />
       </DataTable.Col>
       <DataTable.Col
         source="expected_closing_date"
@@ -319,7 +335,11 @@ const ArrField = ({ currency }: { currency: string }) => {
   );
 };
 
-const DateField = ({ source }: { source: "expected_closing_date" }) => {
+const DateField = ({
+  source,
+}: {
+  source: "expected_closing_date" | "entered_at";
+}) => {
   const record = useRecordContext<Deal>();
   const value = record?.[source];
   if (!value) return <span className="text-muted-foreground">–</span>;
