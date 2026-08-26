@@ -20,7 +20,11 @@ import { toISODateString as isoDay } from "./cockpit/dealDates";
  * turns the same state into `<List filter>` values through `toListFilter`.
  * Neither reads the other's code.
  *
- * Frozen after the socle: consumers compose, nobody edits.
+ * Frozen after the socle: consumers compose, nobody edits. Rouvert une fois,
+ * pour NOS-1053 — les deux filtres de prochaine action visaient des colonnes
+ * que personne n'écrit, et contredisaient donc l'écran qu'ils prétendaient
+ * filtrer. Le gel protège la *syntaxe* d'une dérive entre appelants, pas une
+ * cible fausse.
  */
 
 /** Selection shared by both screens. Every field is optional. */
@@ -37,11 +41,11 @@ export interface DealFilterState {
   stage?: string | null;
   /** Deals with no activity for at least this many days. */
   staleForDays?: number | null;
-  /** Next action past due. */
+  /** Next action past due — read from the deal's open tasks (NOS-1053). */
   overdueAction?: boolean | null;
   /** `expected_closing_date` missing. */
   missingClosingDate?: boolean | null;
-  /** No next action, or no date on it. */
+  /** No next action at all: no open task, and no imported typed value. */
   missingNextAction?: boolean | null;
 }
 
@@ -97,11 +101,31 @@ export function toListFilter(
     filter["last_activity_at@lt"] = isoDay(threshold);
   }
 
+  // ---------------------------------------------------------------------
+  // Prochaine action : lire les tâches, pas les colonnes typées (NOS-1053)
+  // ---------------------------------------------------------------------
+  //
+  // Ces deux filtres visaient `next_action` / `next_action_date`. Personne
+  // n'écrit ces colonnes — 0 des 44 opportunités commerciales ouvertes en
+  // portait une — alors que la fiche et la liste, elles, affichent l'action en
+  // retombant sur les tâches (`getDealNextAction`). Les filtres contredisaient
+  // donc l'écran : « sans prochaine action » les retournait toutes, « action en
+  // retard » aucune.
+  //
+  // `deals_summary` calcule déjà `next_task_date` / `next_task_text` pour cette
+  // raison exacte : « ce que l'équipe devrait remplir » contre « ce qu'elle
+  // enregistre réellement » (20260824150000). C'est là qu'il faut lire.
+
   if (state.overdueAction) {
-    filter["next_action_date@lt"] = isoDay(today);
-    // A next action still on the deal is by definition not done: completing one
-    // clears the three next_action fields and files it in the timeline.
-    filter["next_action@not.is"] = null;
+    filter["next_task_date@lt"] = isoDay(today);
+    // Une tâche ouverte est par définition non faite : `next_task_date` ne
+    // remonte que des tâches sans `done_date`.
+    //
+    // Angle mort assumé : une opportunité importée portant un `next_action_date`
+    // typé dépassé, et aucune tâche, n'est pas retournée ici. PostgREST ne sait
+    // pas filtrer sur un `coalesce`, et le cas est absent de la production. S'il
+    // apparaît, la réponse est une colonne dérivée dans `deals_summary`, pas un
+    // second filtre qui redivergerait.
   }
 
   if (state.missingClosingDate) {
@@ -109,7 +133,20 @@ export function toListFilter(
   }
 
   if (state.missingNextAction) {
-    filter["next_action@is"] = null;
+    // « Aucune action **datée** », des deux côtés de la cascade. C'est la règle
+    // que `dashboardHealth` applique déjà en mémoire (`missing` OU `undated`) :
+    // une action sans échéance est aussi inexploitable qu'une action absente.
+    // Les deux clés, pas une : sans la première, une valeur typée héritée d'un
+    // import ferait remonter l'opportunité alors qu'elle porte bien une action.
+    filter["next_action_date@is"] = null;
+    filter["next_task_date@is"] = null;
+
+    // Divergence connue et assumée : `dashboardHealth` exclut en plus les
+    // étapes qui n'attendent pas encore d'action (`not-expected`, en deçà de
+    // `dealNextActionFromStage`). Ce contrat ne connaît pas la configuration,
+    // donc la liste remonte aussi les Leads. Le compteur du dashboard reste
+    // donc plus petit que la liste qu'il ouvre — beaucoup moins faux qu'avant,
+    // pas encore identique.
   }
 
   return filter;
