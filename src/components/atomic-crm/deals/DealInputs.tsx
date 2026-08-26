@@ -166,6 +166,9 @@ const DealLinkedToInputs = ({
         <AutocompleteCompanyInput
           validate={required()}
           defaultType={companyTypeFilter || undefined}
+          // Feuille de création complète ici seulement : c'est le parcours où
+          // la catégorie manquait, et donc l'ARR proposé avec elle (NOS-1047).
+          richCreate
         />
       </ReferenceInput>
 
