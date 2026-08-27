@@ -143,12 +143,18 @@ export const defaultDealPriorities: DealPriority[] = [
   {
     value: "important",
     label: "P1 Élevée",
-    dotClassName: "bg-orange-500",
+    // Bleu et non orange (NOS-1067) : dans ce CRM l'orange veut déjà dire
+    // « quelque chose ne va pas » — inactivité, alerte, échéance dépassée. Une
+    // affaire P1 n'est pas en difficulté, elle est importante. Deux sens sur
+    // une même teinte, et on ne sait plus lequel on lit.
+    dotClassName: "bg-blue-500",
     weight: 1,
   },
   {
     value: "normal",
     label: "P2 Normale",
+    // Gris volontairement pâle : le cas courant ne doit pas attirer l'œil, ce
+    // sont les deux autres qui doivent ressortir.
     dotClassName: "bg-muted-foreground/40",
     weight: 0,
   },
