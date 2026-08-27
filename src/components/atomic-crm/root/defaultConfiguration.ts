@@ -201,10 +201,25 @@ export const defaultDealInactivityAlertDays = 14;
  * map — listing them here would suggest a signed deal is 100 % *likely*
  * rather than simply signed.
  */
+/**
+ * Probabilité de gain par étape, en pourcentage (NOS-1066).
+ *
+ * Ne figurent ici que les étapes **ouvertes**. Les trois autres n'ont pas leur
+ * place dans une grille d'estimation :
+ *
+ *   - `closed-won` et `lost` / `churn` sont des faits, pas des paris.
+ *     `getDealProbability` les tranche avant de consulter cette grille — 100 %
+ *     et 0 % — et une entrée ici serait morte tout en laissant croire qu'on
+ *     peut les régler.
+ *   - `a-reclasser` est délibérément absente : sans valeur, l'opportunité est
+ *     déclarée *non pondérable* et sort des totaux. Un 0 % explicite, lui, la
+ *     ferait compter comme une affaire estimée sans valeur — ce n'est pas la
+ *     même chose que « on ne sait pas encore ce que c'est ».
+ */
 export const defaultDealStageProbabilities: Record<string, number> = {
   lead: 10,
-  qualified: 30,
-  "demo-poc": 50,
+  qualified: 20,
+  "demo-poc": 40,
   proposal: 70,
   negociation: 85,
 };
