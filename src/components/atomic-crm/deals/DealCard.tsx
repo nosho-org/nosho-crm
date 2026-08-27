@@ -4,7 +4,6 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
 
-import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
@@ -58,32 +57,35 @@ export const DealCardContent = ({
           }`}
         >
           <CardContent className="px-3 flex flex-col">
-            {/* Priority leads the card (issue #93); it is rendered by the
-                socle's <DealPriorityField> just below, next to the title, so
-                only the staleness signal sits on this row. */}
-            <div className="flex items-center justify-end gap-2 mb-1.5">
+            {/*
+              La priorité ouvre la carte, écrite (NOS-1068).
+
+              Elle était un point de 8 px avec son libellé en `sr-only` : rien
+              à lire pour qui ne connaît pas le code couleur, et un niveau P0
+              indiscernable d'un P2 à distance. « P0 » écrit tient dans la même
+              place et se lit sans apprentissage.
+            */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <DealPriorityField compact />
+              <span className="flex-1" />
               <DealStaleBadge deal={deal} />
             </div>
             <div className="flex-1 flex">
-              <p className="flex-1 text-sm font-medium mb-2 flex items-start gap-1.5">
-                <DealPriorityField labelled={false} className="mt-1.5" />
-                <span>
-                  <ReferenceField
-                    source="company_id"
-                    reference="companies"
-                    link={false}
-                  />
-                  {" - "}
-                  {deal.name}
-                </span>
+              {/*
+                L'avatar de la société a été retiré ici. Il n'affichait qu'une
+                initiale, souvent la même d'une carte à l'autre dans une même
+                colonne, alors que le nom de la société est écrit juste à côté
+                du nom de l'opportunité — l'information était déjà là, en clair.
+              */}
+              <p className="flex-1 text-sm font-medium mb-2">
+                <ReferenceField
+                  source="company_id"
+                  reference="companies"
+                  link={false}
+                />
+                {" - "}
+                {deal.name}
               </p>
-              <ReferenceField
-                source="company_id"
-                reference="companies"
-                link={false}
-              >
-                <CompanyAvatar width={20} height={20} />
-              </ReferenceField>
             </div>
             {/* Products (NOS-956): a deal can carry several, so they get their
                 own row rather than being crammed next to the amount. */}

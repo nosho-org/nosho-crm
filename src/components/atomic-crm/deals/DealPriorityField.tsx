@@ -13,9 +13,20 @@ import { getDealPriority } from "./dealUtils";
  */
 export const DealPriorityField = ({
   labelled = true,
+  compact = false,
   className = "",
 }: {
   labelled?: boolean;
+  /**
+   * Rend le niveau seul — « P0 », « P1 », « P2 » — dans une pastille lisible
+   * (NOS-1068).
+   *
+   * Sur une carte kanban, le point de 8 px ne dit rien à qui ne connaît pas le
+   * code couleur, et son libellé était en `sr-only`. Le niveau écrit tient dans
+   * la même place et se lit sans apprentissage. Le libellé complet reste porté
+   * par `title` et par les lecteurs d'écran.
+   */
+  compact?: boolean;
   className?: string;
 }) => {
   const record = useRecordContext<Deal>();
@@ -28,6 +39,22 @@ export const DealPriorityField = ({
   // excuse to show the first choice in the list.
   const dotClassName = priority?.dotClassName ?? "bg-muted-foreground/25";
   const label = priority?.label ?? "Priorité à définir";
+
+  if (compact) {
+    // « P0 Critique » → « P0 ». Sans niveau reconnaissable — priorité absente
+    // ou valeur inconnue — on écrit un tiret plutôt qu'un mot tronqué au
+    // hasard.
+    const level = /^P\d/.exec(label)?.[0] ?? "—";
+    return (
+      <span
+        title={label}
+        className={`inline-flex items-center justify-center shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white ${dotClassName} ${className}`}
+      >
+        <span aria-hidden="true">{level}</span>
+        <span className="sr-only">{label}</span>
+      </span>
+    );
+  }
 
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
