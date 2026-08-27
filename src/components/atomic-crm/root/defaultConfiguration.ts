@@ -259,6 +259,11 @@ export const defaultDealCategories = [
   { value: "clinique", label: "Clinique" },
   { value: "esthetique", label: "Esthétique" },
   { value: "cabinet", label: "Cabinet" },
+  // NOS-1090. Avant « Autre », qui reste le fourre-tout et se lit mieux en
+  // dernier. À ne pas confondre avec le *type de société* `partenaire`, qui
+  // sert lui à exclure une opportunité du pipeline commercial : ici c'est une
+  // catégorie de clientèle, au même titre que « Dentaire » ou « Hôpital ».
+  { value: "partenaire", label: "Partenaire" },
   { value: "autre", label: "Autre" },
 ];
 

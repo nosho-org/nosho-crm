@@ -1,3 +1,4 @@
+import { AlertTriangle } from "lucide-react";
 import { useListContext, useRecordContext } from "ra-core";
 import { DataTable } from "@/components/admin/data-table";
 import { ReferenceField } from "@/components/admin/reference-field";
@@ -7,9 +8,9 @@ import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
 import { DealBulkEditStage } from "./DealBulkEditStage";
 import { DealPriorityField } from "./DealPriorityField";
-import { DealNextActionDate, DealProductBadges } from "./shared/DealBadges";
-import { getDealActivity } from "./cockpit/dealFields";
-import { startOfToday } from "./cockpit/dealDates";
+import { DealProductBadges } from "./shared/DealBadges";
+import { getDealActivity, isOpenStage } from "./cockpit/dealFields";
+import { parseISODateLocal, startOfToday } from "./cockpit/dealDates";
 import { findDealLabel } from "./deal";
 import { formatISODateString } from "./dealUtils";
 
@@ -19,14 +20,30 @@ import { formatISODateString } from "./dealUtils";
  * Complements the Kanban board rather than replacing it: the toggle in
  * <DealListContent> switches between the two and remembers the choice.
  *
- * Column order is the one the spec prescribes:
- *   Priorité | Opportunité | Société | Étape | Produit(s) | ARR |
- *   Prochaine tâche | Date prochaine tâche | Responsable | Clôture prévue |
- *   Dernière activité
+ * Ordre des colonnes, revu par Simon (NOS-1091) :
+ *   Priorité | Date entrée | Catégorie | Société | Produit(s) | Étape | ARR |
+ *   Responsable | Clôture prévue | Dernière activité
  *
  * MRR is deliberately gone — "ARR suffit et l'espace est plus utile pour
  * l'action commerciale". Dernière activité is not in the spec text but is in
  * the mockup, and it is what makes the dormancy alert legible from here.
+ *
+ * ---------------------------------------------------------------------------
+ * Trois colonnes retirées, et ce que ça coûte
+ * ---------------------------------------------------------------------------
+ * « Prochaine action » et « Date prochaine action » partent : l'information
+ * reste sur la fiche et dans l'alerte de santé du pipeline, elle n'avait pas
+ * besoin de deux colonnes ici.
+ *
+ * « Opportunité » part aussi, à la demande de Simon. Deux conséquences à
+ * connaître avant d'y toucher à nouveau :
+ *
+ *   1. La navigation survit. `rowClick="show"` ouvre l'opportunité depuis
+ *      n'importe quel point de la ligne ; le nom n'en était pas le seul accès.
+ *   2. Le nom, lui, disparaît de l'écran. En production 7 sociétés portent
+ *      deux opportunités ouvertes ou plus — 14 lignes sur 116 où la société
+ *      seule ne dit plus laquelle est laquelle. C'est un arbitrage assumé en
+ *      faveur de la densité, pas un oubli.
  *
  * ---------------------------------------------------------------------------
  * Why every column carries a width (issue #124)
@@ -56,20 +73,23 @@ import { formatISODateString } from "./dealUtils";
  */
 const COLUMN_WIDTHS = {
   priority: "w-[100px]",
-  name: "w-[140px]",
-  company: "w-[116px]",
-  stage: "w-[84px]",
-  products: "w-[124px]",
-  amount: "w-[104px]",
-  nextAction: "w-[120px]",
-  nextActionDate: "w-[140px]",
-  category: "w-[88px]",
-  sales: "w-[108px]",
-  // NOS-1015. Ajoutée après « Clôture prévue » : les deux dates de vie de
-  // l'opportunité se lisent côte à côte, et l'écart entre elles est justement
-  // ce qu'on vient regarder. Même largeur que sa voisine, même en-tête court.
   enteredAt: "w-[100px]",
-  closingDate: "w-[100px]",
+  category: "w-[88px]",
+  /*
+   * La plus large, et c'est nouveau (NOS-1091).
+   *
+   * Depuis que la colonne « Opportunité » est retirée, la société est le seul
+   * texte qui identifie la ligne. Lui laisser les 116 px qu'elle avait quand
+   * le nom l'accompagnait tronquerait la moitié des raisons sociales.
+   */
+  company: "w-[200px]",
+  products: "w-[124px]",
+  stage: "w-[84px]",
+  amount: "w-[104px]",
+  sales: "w-[108px]",
+  // Un peu plus large que ses voisines : elle porte en plus le pictogramme
+  // d'avertissement quand la date est dépassée (NOS-1091).
+  closingDate: "w-[120px]",
   // Widest header of the lot, and it is last: anything narrower and the label
   // is the one thing clipped on an otherwise complete row.
   lastActivity: "w-[136px]",
@@ -90,10 +110,11 @@ export const DealListTable = () => {
       // <DataTable> puts its own className on the wrapper and renders <Table>
       // with no way through, so the layout lands on the nested table.
       //
-      // 1492px = 1392 + les 100 de « Date entrée » (NOS-1015). Ce `min-w` doit
-      // suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière qu'#124 avait
-      // fait disparaître « Dernière activité » du bout de la ligne.
-      className="[&_table]:table-fixed [&_table]:min-w-[1492px]"
+      // 1164px = la somme exacte de `COLUMN_WIDTHS` après NOS-1091 :
+      // 100 + 100 + 88 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce `min-w`
+      // doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière qu'#124
+      // avait fait disparaître « Dernière activité » du bout de la ligne.
+      className="[&_table]:table-fixed [&_table]:min-w-[1164px]"
     >
       <DataTable.Col
         source="priority_rank"
@@ -103,11 +124,21 @@ export const DealListTable = () => {
         <DealPriorityField />
       </DataTable.Col>
       <DataTable.Col
-        source="name"
-        label="Opportunité"
-        headerClassName={COLUMN_WIDTHS.name}
+        source="entered_at"
+        label="Date entrée"
+        headerClassName={COLUMN_WIDTHS.enteredAt}
         cellClassName="truncate"
-      />
+      >
+        <DateField source="entered_at" />
+      </DataTable.Col>
+      <DataTable.Col
+        source="category"
+        label="Catégorie"
+        headerClassName={COLUMN_WIDTHS.category}
+        cellClassName="truncate"
+      >
+        <ChoiceField choices={dealCategories} source="category" />
+      </DataTable.Col>
       <DataTable.Col
         source="company_id"
         label="Société"
@@ -121,19 +152,19 @@ export const DealListTable = () => {
         />
       </DataTable.Col>
       <DataTable.Col
+        label="Produit(s)"
+        headerClassName={COLUMN_WIDTHS.products}
+        cellClassName="truncate"
+      >
+        <ProductsField />
+      </DataTable.Col>
+      <DataTable.Col
         source="stage"
         label="Étape"
         headerClassName={COLUMN_WIDTHS.stage}
         cellClassName="truncate"
       >
         <StageField stages={dealStages} />
-      </DataTable.Col>
-      <DataTable.Col
-        label="Produit(s)"
-        headerClassName={COLUMN_WIDTHS.products}
-        cellClassName="truncate"
-      >
-        <ProductsField />
       </DataTable.Col>
       <DataTable.Col
         source="amount"
@@ -144,30 +175,6 @@ export const DealListTable = () => {
         <ArrField currency={currency} />
       </DataTable.Col>
       <DataTable.Col
-        source="next_action"
-        label="Prochaine action"
-        headerClassName={COLUMN_WIDTHS.nextAction}
-        cellClassName="truncate"
-      >
-        <NextActionField />
-      </DataTable.Col>
-      <DataTable.Col
-        source="next_action_date"
-        label="Date prochaine action"
-        headerClassName={COLUMN_WIDTHS.nextActionDate}
-        cellClassName="truncate"
-      >
-        <NextActionDateField />
-      </DataTable.Col>
-      <DataTable.Col
-        source="category"
-        label="Catégorie"
-        headerClassName={COLUMN_WIDTHS.category}
-        cellClassName="truncate"
-      >
-        <ChoiceField choices={dealCategories} source="category" />
-      </DataTable.Col>
-      <DataTable.Col
         source="sales_id"
         label="Responsable"
         headerClassName={COLUMN_WIDTHS.sales}
@@ -176,20 +183,12 @@ export const DealListTable = () => {
         <ReferenceField source="sales_id" reference="sales" link={false} />
       </DataTable.Col>
       <DataTable.Col
-        source="entered_at"
-        label="Date entrée"
-        headerClassName={COLUMN_WIDTHS.enteredAt}
-        cellClassName="truncate"
-      >
-        <DateField source="entered_at" />
-      </DataTable.Col>
-      <DataTable.Col
         source="expected_closing_date"
         label="Clôture prévue"
         headerClassName={COLUMN_WIDTHS.closingDate}
         cellClassName="truncate"
       >
-        <DateField source="expected_closing_date" />
+        <ClosingDateField />
       </DataTable.Col>
       <DataTable.Col
         source="last_activity_at"
@@ -218,39 +217,47 @@ const ProductsField = () => {
 };
 
 /**
- * The action itself. Its date lives in its own column, per the spec.
+ * Date de clôture prévue, en rouge et signalée quand elle est passée
+ * (NOS-1091).
  *
- * Falls back to the deal's oldest pending task when nobody typed a next action
- * — which, in production, is every single opportunity (issue #108).
+ * Deux précautions qui font toute la différence entre une alerte et du bruit :
+ *
+ * 1. **Seules les opportunités ouvertes sont signalées.** Une date de clôture
+ *    dépassée sur une affaire gagnée, perdue ou en churn est le cours normal
+ *    des choses : l'affaire s'est conclue, la date prévisionnelle n'a plus
+ *    d'objet. La colorer en rouge apprendrait à ignorer le rouge.
+ *
+ * 2. **La couleur reste sur cette cellule.** Marc-Henri : « ne pas colorer
+ *    toute la ligne ou toute la carte […] sans transformer le CRM en arc en
+ *    ciel. » Le style ne doit pas être remonté sur la ligne.
+ *
+ * Le rouge et le pictogramme sont ceux de `DealBadges` — même sens, même
+ * apparence. Deux rouges différents pour « en retard » sur un même écran, et
+ * la convention ne veut plus rien dire.
  */
-const NextActionField = () => {
+const ClosingDateField = () => {
   const record = useRecordContext<Deal>();
-  const typed = record?.next_action?.trim();
-  const fromTask = record?.next_task_text?.trim();
-  const action = typed || fromTask;
-  if (!action) return <span className="text-muted-foreground">—</span>;
+  const { dealPipelineStatuses } = useConfigurationContext();
+  const value = record?.expected_closing_date;
+  if (!value) return <span className="text-muted-foreground">–</span>;
+
+  const date = parseISODateLocal(value);
+  const isOverdue =
+    date != null &&
+    date < startOfToday() &&
+    isOpenStage(record?.stage, dealPipelineStatuses);
+
+  if (!isOverdue) return <span>{formatISODateString(value)}</span>;
+
   return (
     <span
-      className="truncate block max-w-56"
-      title={typed ? action : `Tâche en cours : ${action}`}
+      className="inline-flex items-center gap-1 text-[var(--deal-status-critical)] font-medium"
+      title="Date de clôture prévue dépassée"
     >
-      {action}
-      {!typed && (
-        <span className="ml-1 text-muted-foreground/70 text-xs">(tâche)</span>
-      )}
+      <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
+      {formatISODateString(value)}
     </span>
   );
-};
-
-/**
- * Colour-coded date: red overdue, orange today, neutral upcoming, warning when
- * undefined. The colour goes on this cell and nowhere else — "ne pas colorer
- * toute la ligne ou toute la carte […] sans transformer le CRM en arc en ciel".
- */
-const NextActionDateField = () => {
-  const record = useRecordContext<Deal>();
-  if (!record) return null;
-  return <DealNextActionDate deal={record} />;
 };
 
 /** How long since anything happened — the dormancy signal, read at a glance. */
