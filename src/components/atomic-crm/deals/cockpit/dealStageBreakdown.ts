@@ -33,9 +33,14 @@ export interface StageBreakdownOptions {
    */
   openOnly?: boolean;
   /**
-   * Keep stages with no deal. The kanban needs them — an empty column is
-   * information, and `negociation` starts empty after the v2 migration. The
-   * funnel drops them.
+   * Keep stages with no deal. An empty column is information — "rien n'est
+   * passé en Proposition" is a commercial signal, not an absence of data.
+   *
+   * Every consumer now keeps them. The funnel used to drop them, until
+   * NOS-1084: in production `proposal`, `negociation` and `a-reclasser` hold no
+   * deal at all, so it listed three stages out of six while the KPI banner
+   * above it announced "ARR en Proposition : 0 €". Two widgets, one aggregate,
+   * two answers — the exact disagreement this module exists to prevent.
    */
   includeEmpty?: boolean;
 }
