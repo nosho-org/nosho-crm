@@ -4,6 +4,7 @@ import { useDataProvider, useGetMany, useRecordContext } from "ra-core";
 import { Card } from "@/components/ui/card";
 
 import { EmailItem } from "../../contacts/ContactEmailHistory";
+import { useGoogleConnectionStatus } from "../../google/useGoogleConnectionStatus";
 import type { CrmDataProvider } from "../../providers/types";
 import type { Contact, Deal } from "../../types";
 
@@ -39,13 +40,33 @@ const MAX_MESSAGES = 10;
  * un appel Gmail à chaque ouverture de fiche — atténué par un `staleTime` de
  * cinq minutes, comme sur la fiche contact.
  *
- * Le bloc se tait complètement s'il n'y a rien à dire : pas de contact, pas
- * d'adresse, Gmail non connecté, ou aucun message. Une carte vide sur une fiche
- * ne fait que poser une question sans y répondre.
+ * ## Les états vides disent pourquoi (NOS-1069)
+ *
+ * La première version se taisait dès qu'il n'y avait rien à montrer, pour ne
+ * pas poser une question sans y répondre. Elle a produit l'inverse : Simon a
+ * signalé que ses mails ne remontaient pas, alors que le seul contact de son
+ * opportunité n'avait **aucune adresse enregistrée**. Quatre situations très
+ * différentes donnaient le même écran vide, et la seule réparable était
+ * indiscernable d'une panne.
+ *
+ * Chaque cas a donc sa phrase — sauf l'échec de l'appel Gmail, qui reste
+ * silencieux : il ne dit rien d'utile au commercial, et une carte en erreur sur
+ * chaque fiche serait du bruit.
  */
+/** Le bloc garde son titre même vide : sinon il semble avoir disparu. */
+const EmptyState = ({ children }: { children: React.ReactNode }) => (
+  <Card className="p-4 flex flex-col gap-2">
+    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      Mails
+    </span>
+    <p className="text-sm text-muted-foreground">{children}</p>
+  </Card>
+);
+
 export const DealEmailHistory = () => {
   const record = useRecordContext<Deal>();
   const dataProvider = useDataProvider<CrmDataProvider>();
+  const { data: googleStatus } = useGoogleConnectionStatus();
 
   const contactIds = record?.contact_ids ?? [];
   const { data: contacts } = useGetMany<Contact>(
@@ -70,9 +91,47 @@ export const DealEmailHistory = () => {
     retry: false,
   });
 
-  // Gmail non connecté, ou aucune adresse : rien à montrer, donc rien à
-  // afficher. Une erreur ici n'est pas une erreur de l'opportunité.
-  if (!record || emails.length === 0 || error) return null;
+  if (!record) return null;
+
+  // Gmail pas branché : le dire, une fois, sans insister. Ce n'est pas une
+  // erreur de l'opportunité, c'est un réglage de compte.
+  if (googleStatus && !googleStatus.connected) {
+    return (
+      <EmptyState>
+        Connectez votre compte Google dans les Paramètres pour voir ici les
+        échanges avec les contacts de cette opportunité.
+      </EmptyState>
+    );
+  }
+
+  if (contactIds.length === 0) {
+    return (
+      <EmptyState>
+        Aucun contact rattaché à cette opportunité — rien à rapprocher d'une
+        boîte mail.
+      </EmptyState>
+    );
+  }
+
+  /*
+   * Le cas qui a motivé NOS-1069.
+   *
+   * L'opportunité 241 n'avait qu'un contact, sans adresse enregistrée : le
+   * bloc se taisait, et rien ne distinguait « aucun échange » de « aucune
+   * adresse saisie ». 99 contacts sur 458 sont dans ce cas en production.
+   *
+   * C'est le seul état vide réparable en trente secondes par le commercial.
+   * Se taire ici, c'est lui laisser croire que Gmail est en panne.
+   */
+  if (emails.length === 0) {
+    return (
+      <EmptyState>
+        Aucune adresse email sur {contactIds.length > 1 ? "les" : "le"} contact
+        {contactIds.length > 1 ? "s" : ""} de cette opportunité. Ajoutez-en une
+        sur la fiche du contact pour retrouver les échanges ici.
+      </EmptyState>
+    );
+  }
 
   if (isPending) {
     return (
@@ -82,7 +141,13 @@ export const DealEmailHistory = () => {
     );
   }
 
-  if (!data?.messages?.length) return null;
+  // Une panne de l'appel Gmail reste silencieuse : elle ne dit rien d'utile au
+  // commercial, et une carte en erreur sur chaque fiche serait du bruit.
+  if (error) return null;
+
+  if (!data?.messages?.length) {
+    return <EmptyState>Aucun échange trouvé avec ces contacts.</EmptyState>;
+  }
 
   return (
     <Card className="p-4 flex flex-col gap-2">
