@@ -5,7 +5,10 @@ import { Card } from "@/components/ui/card";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { pluralize } from "../deals/cockpit/dealFormat";
-import { computeStageBreakdown } from "../deals/cockpit/dealStageBreakdown";
+import {
+  computeStageBreakdown,
+  totalStageBreakdown,
+} from "../deals/cockpit/dealStageBreakdown";
 import { toDealsLink } from "../deals/dealFilterContract";
 import { useDashboard } from "./DashboardContext";
 
@@ -33,12 +36,30 @@ export const PipelineFunnel = () => {
   const { dealStages } = useConfigurationContext();
   const { deals, weighting, selectionFilter } = useDashboard();
 
+  /*
+   * `includeEmpty` : une étape sans opportunité reste affichée, à 0 € (NOS-1084).
+   *
+   * Le funnel les masquait. En production, Proposition, Négociation et
+   * À reclasser n'ont aucune opportunité — le bloc listait donc trois étapes
+   * sur six, pendant que le bandeau juste au-dessus annonçait « ARR en
+   * Proposition : 0 € ». Deux widgets nourris par la même agrégation
+   * répondaient différemment à la même question, ce que ce module existe
+   * précisément pour empêcher.
+   *
+   * Et une étape vide est une information : « rien n'est passé en Proposition »
+   * est un signal commercial. La masquer laisse croire que l'étape n'existe pas.
+   */
   const buckets = computeStageBreakdown(
     deals,
     dealStages,
     weighting.pipelineStatuses,
-    { openOnly: true, includeEmpty: false },
+    { openOnly: true, includeEmpty: true },
   );
+
+  // Le vide se mesure désormais sur les opportunités, pas sur les lignes : il y
+  // a toujours des étapes configurées, donc `buckets.length` ne tombe plus
+  // jamais à zéro et le message ne serait plus jamais rendu.
+  const isEmpty = totalStageBreakdown(buckets).count === 0;
 
   // Bars are scaled against the largest bucket, not the total: the point is to
   // compare stages with one another, and a share-of-total scale would flatten
@@ -61,7 +82,7 @@ export const PipelineFunnel = () => {
         </Link>
       </div>
 
-      {buckets.length === 0 ? (
+      {isEmpty ? (
         <p className="text-sm text-muted-foreground py-6 text-center">
           Aucune opportunité ouverte sur cette sélection.
         </p>
