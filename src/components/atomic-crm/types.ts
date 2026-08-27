@@ -187,6 +187,15 @@ export type Deal = {
   arr_is_manual?: boolean;
   priority?: DealPriorityValue;
   /**
+   * Numeric mirror of `priority`, generated and indexed in PostgreSQL:
+   * urgent = 2, important = 1, normal = 0.
+   *
+   * Read-only — writing it is rejected by the database. It exists so a query
+   * can sort by urgency: ordering on `priority` itself would be alphabetical,
+   * `important` < `normal` < `urgent`, which reads P1, P2, P0.
+   */
+  priority_rank?: number;
+  /**
    * Per-deal win probability override, 0-100 (NOS-817). `null`/undefined means
    * no exception was recorded and the weighting cascade falls back to the stage
    * probability — which is a different claim from "0 % chance".

@@ -116,9 +116,33 @@ const DealList = () => {
        * Écrit via le contrat partagé plutôt qu'à la main : c'est lui qui décide
        * comment un `@in` s'orthographie, et la barre de filtres le relit avec
        * les mêmes règles.
+       *
+       * `salesId` : on arrive sur ses propres affaires, pas sur celles de
+       * l'équipe (NOS-1085), comme le tableau de bord le fait déjà (NOS-1063).
+       *
+       * `identity.id` part avec son type natif, sans `String()`. `SalesFilterInput`
+       * compare `value === identity.id` en égalité stricte et retire
+       * l'utilisateur courant de sa liste : une chaîne ne correspondrait ni à
+       * « Mes opportunités » ni à aucun commercial, et le sélecteur s'afficherait
+       * vide en contredisant le filtre réellement appliqué.
        */
-      filterDefaultValues={toListFilter({ stage: defaultStages })}
-      sort={{ field: "index", order: "DESC" }}
+      filterDefaultValues={toListFilter({
+        stage: defaultStages,
+        salesId: identity.id,
+      })}
+      /*
+       * P0 d'abord, puis P1, puis P2 (NOS-1085).
+       *
+       * Sur `priority_rank` et non `priority` : la colonne texte se trierait
+       * alphabétiquement — `important` < `normal` < `urgent`, soit P1, P2, P0.
+       * `priority_rank` est une colonne générée et indexée qui n'existe que
+       * pour cette raison.
+       *
+       * Le kanban n'est pas concerné : `getDealsByStage` retrie chaque colonne
+       * par `index` quel que soit le tri de la liste. C'est voulu — ordonner
+       * les cartes par priorité rendrait le glisser-déposer sans effet.
+       */
+      sort={{ field: "priority_rank", order: "DESC" }}
       filters={dealFilters}
       actions={<DealActions />}
       pagination={null}

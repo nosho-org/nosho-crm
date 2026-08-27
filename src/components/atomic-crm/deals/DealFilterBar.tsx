@@ -81,7 +81,17 @@ const summarise = (
 ): string => {
   if (selected.length === 0) return allLabel;
   const labels = selected.map(
-    (value) => choices.find((choice) => choice.value === value)?.label ?? value,
+    /*
+     * Une valeur sans libellé s'écrit « … », jamais sa valeur brute.
+     *
+     * Les choix des étapes et des priorités viennent de la configuration et
+     * sont là immédiatement ; ceux des responsables arrivent d'une requête.
+     * Depuis que la liste s'ouvre filtrée sur l'utilisateur courant (NOS-1085),
+     * ce filtre est toujours posé au premier rendu — et affichait donc « 0 »,
+     * l'identifiant nu, le temps que les commerciaux répondent. Un identifiant
+     * technique ne dit rien à personne ; l'ellipse dit « ça arrive ».
+     */
+    (value) => choices.find((choice) => choice.value === value)?.label ?? "…",
   );
   if (labels.length <= 2) return labels.join(" + ");
   return `${labels[0]} + ${labels[1]} +${labels.length - 2}`;
@@ -166,7 +176,9 @@ const FilterMultiSelect = ({
  * comment un `@in` s'écrit, et le faire ici à la main rouvrirait exactement la
  * dérive que le contrat existe pour empêcher.
  */
-const contractKeyOf = (field: string): "salesId" | "category" | "priority" | "stage" =>
+const contractKeyOf = (
+  field: string,
+): "salesId" | "category" | "priority" | "stage" =>
   field === "sales_id"
     ? "salesId"
     : (field as "category" | "priority" | "stage");

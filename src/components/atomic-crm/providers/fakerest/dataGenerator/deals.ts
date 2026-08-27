@@ -44,6 +44,9 @@ export const generateDeals = (db: Db): Deal[] => {
     // The ARR grid works in whole euros, so keep the generated amounts in the
     // same order of magnitude as the real tiers (800 → 15 000 €).
     const amount = datatype.number({ min: 1, max: 40 }) * 500;
+    // Hoisted so `priority_rank` below can mirror it, exactly as the database
+    // derives one from the other.
+    const priority = random.arrayElement(defaultDealPriorities).value;
 
     return {
       id,
@@ -71,7 +74,18 @@ export const generateDeals = (db: Db): Deal[] => {
       ),
       // `stage` is the local computed above — `won_at` below depends on it.
       stage,
-      priority: random.arrayElement(defaultDealPriorities).value,
+      priority,
+      /*
+       * Mirrors the generated column of the same name in PostgreSQL:
+       * `case priority when 'urgent' then 2 when 'important' then 1 else 0 end`.
+       *
+       * Sans elle, la démo trie sur `undefined` et la liste des opportunités
+       * s'ouvre dans un ordre quelconque, alors que la production l'ordonne
+       * bien P0 → P2 (NOS-1085). Un défaut invérifiable en local est un défaut
+       * qu'on livre sans le voir.
+       */
+      priority_rank:
+        priority === "urgent" ? 2 : priority === "important" ? 1 : 0,
       lead_source: random.arrayElement(defaultLeadSources).value,
       description: lorem.paragraphs(datatype.number({ min: 1, max: 4 })),
       amount,
