@@ -110,15 +110,23 @@ const Header = () => {
               </div>
               <div>
                 <nav className="flex items-center">
+                  {/*
+                    Ordre voulu par Simon (NOS-1089) : tableau de bord, puis
+                    opportunités, sociétés, contacts.
+
+                    Ce n'est pas de l'esthétique — l'ordre descend du général au
+                    particulier, et met l'écran de travail quotidien en deuxième
+                    position plutôt qu'en quatrième.
+                  */}
                   <NavigationTab
                     label="Tableau de bord"
                     to="/"
                     isActive={currentPath === "/"}
                   />
                   <NavigationTab
-                    label="Contacts"
-                    to="/contacts"
-                    isActive={currentPath === "/contacts"}
+                    label="Opportunités"
+                    to="/deals"
+                    isActive={currentPath === "/deals"}
                   />
                   <NavigationTab
                     label="Sociétés"
@@ -126,9 +134,9 @@ const Header = () => {
                     isActive={currentPath === "/companies"}
                   />
                   <NavigationTab
-                    label="Opportunités"
-                    to="/deals"
-                    isActive={currentPath === "/deals"}
+                    label="Contacts"
+                    to="/contacts"
+                    isActive={currentPath === "/contacts"}
                   />
                   {visibleViews.map((view) => (
                     <NavigationTab
