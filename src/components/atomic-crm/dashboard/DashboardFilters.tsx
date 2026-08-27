@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import { useGetList } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,11 @@ import {
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Sale } from "../types";
-import { getPeriodChoices, type PeriodId } from "../deals/cockpit/dealPeriods";
+import {
+  CUSTOM_PERIOD_ID,
+  getPeriodChoices,
+  type PeriodId,
+} from "../deals/cockpit/dealPeriods";
 import { useDashboard } from "./DashboardContext";
 
 /**
@@ -108,6 +113,59 @@ const ProductFilter = () => {
   );
 };
 
+/**
+ * Les bornes de la période libre (NOS-1083).
+ *
+ * Deux champs date natifs plutôt qu'un calendrier à intervalle : ils acceptent
+ * la saisie au clavier, ce qui compte pour viser 2027 sans faire défiler douze
+ * mois, et le navigateur les localise déjà.
+ *
+ * Les deux sont facultatives. « À partir de janvier 2027 » est une question
+ * légitime, et exiger l'autre borne obligerait à en inventer une.
+ */
+const CustomPeriodBounds = () => {
+  const { selection, setCustomPeriod, period } = useDashboard();
+
+  const field = (
+    label: string,
+    value: string | null,
+    onChange: (next: string | null) => void,
+  ) => (
+    <label className="flex flex-col gap-1 min-w-0">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <Input
+        type="date"
+        className="w-full sm:w-40"
+        aria-label={label}
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value || null)}
+      />
+    </label>
+  );
+
+  const bounded = Boolean(selection.customFrom || selection.customTo);
+
+  return (
+    <>
+      {field("Du", selection.customFrom, (next) =>
+        setCustomPeriod(next, selection.customTo),
+      )}
+      {field("Au", selection.customTo, (next) =>
+        setCustomPeriod(selection.customFrom, next),
+      )}
+      <p className="text-xs text-muted-foreground mb-2">
+        {/* Sans borne, rien n'est filtré. Le dire, plutôt que de laisser le
+            sélecteur afficher « Période personnalisée » sur la totalité des
+            opportunités — l'écart entre ce qui est annoncé et ce qui est
+            compté est exactement ce qui a coûté NOS-1058. */}
+        {bounded
+          ? period.label
+          : "Renseignez une borne — sinon toutes les périodes restent affichées."}
+      </p>
+    </>
+  );
+};
+
 export const DashboardFilters = () => {
   const { dealCategories } = useConfigurationContext();
   const {
@@ -138,8 +196,12 @@ export const DashboardFilters = () => {
         value={selection.periodId === "all" ? null : selection.periodId}
         onChange={(value) => setPeriodId((value ?? "all") as PeriodId)}
         allLabel="Toutes périodes"
-        choices={getPeriodChoices(today).filter((c) => c.value !== "all")}
+        choices={getPeriodChoices(today, { includeCustom: true }).filter(
+          (c) => c.value !== "all",
+        )}
       />
+
+      {selection.periodId === CUSTOM_PERIOD_ID && <CustomPeriodBounds />}
 
       <FilterSelect
         label="Responsable"

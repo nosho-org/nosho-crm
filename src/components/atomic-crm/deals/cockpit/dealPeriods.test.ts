@@ -2,6 +2,8 @@ import {
   getPeriodBuckets,
   getPeriodChoices,
   getPeriodFilter,
+  granularityForPeriod,
+  isPeriodId,
   isWithinPeriod,
   resolvePeriod,
 } from "./dealPeriods";
@@ -132,5 +134,77 @@ describe("getPeriodBuckets", () => {
       "T3 2026",
       "T4 2026",
     ]);
+  });
+});
+
+describe("période personnalisée (NOS-1083)", () => {
+  it("borne l'intervalle sur les deux dates saisies", () => {
+    const period = resolvePeriod("custom", NOW, {
+      start: "2027-01-01",
+      end: "2027-03-31",
+    });
+    expect(getPeriodFilter(period)).toEqual({
+      "expected_closing_date@gte": "2027-01-01",
+      "expected_closing_date@lte": "2027-03-31",
+    });
+  });
+
+  it("accepte une borne seule, dans un sens comme dans l'autre", () => {
+    // Le cas qui motive la demande : « et après 2026 ? », sans date de fin à
+    // inventer. L'ancien `getPeriodFilter` exigeait les deux et ne filtrait
+    // alors rien du tout.
+    expect(
+      getPeriodFilter(resolvePeriod("custom", NOW, { start: "2027-01-01" })),
+    ).toEqual({ "expected_closing_date@gte": "2027-01-01" });
+    expect(
+      getPeriodFilter(resolvePeriod("custom", NOW, { end: "2025-12-31" })),
+    ).toEqual({ "expected_closing_date@lte": "2025-12-31" });
+  });
+
+  it("remet dans l'ordre des bornes inversées", () => {
+    // Saisir la fin avant le début est une faute de frappe, pas une demande de
+    // ne rien voir.
+    const period = resolvePeriod("custom", NOW, {
+      start: "2027-03-31",
+      end: "2027-01-01",
+    });
+    expect(getPeriodFilter(period)).toEqual({
+      "expected_closing_date@gte": "2027-01-01",
+      "expected_closing_date@lte": "2027-03-31",
+    });
+  });
+
+  it("ne filtre rien tant qu'aucune borne n'est posée", () => {
+    expect(getPeriodFilter(resolvePeriod("custom", NOW))).toEqual({});
+  });
+
+  it("déduit la granularité de la durée réelle", () => {
+    const short = resolvePeriod("custom", NOW, {
+      start: "2027-01-01",
+      end: "2027-04-30",
+    });
+    const long = resolvePeriod("custom", NOW, {
+      start: "2027-01-01",
+      end: "2028-06-30",
+    });
+    expect(granularityForPeriod(short)).toBe("month");
+    expect(granularityForPeriod(long)).toBe("quarter");
+  });
+
+  it("n'apparaît dans les choix que si on la demande", () => {
+    // `PERIOD_IDS` sert aussi de table de correspondance inverse au cockpit :
+    // y glisser `custom` ferait résoudre une période sans bornes et matcher
+    // « toutes périodes ».
+    const values = (options?: { includeCustom?: boolean }) =>
+      getPeriodChoices(NOW, options).map((choice) => choice.value);
+    expect(values()).not.toContain("custom");
+    expect(values({ includeCustom: true })).toContain("custom");
+  });
+
+  it("reconnaît un identifiant venu de l'URL", () => {
+    expect(isPeriodId("custom")).toBe(true);
+    expect(isPeriodId("current-quarter")).toBe(true);
+    expect(isPeriodId("trimestre")).toBe(false);
+    expect(isPeriodId(null)).toBe(false);
   });
 });

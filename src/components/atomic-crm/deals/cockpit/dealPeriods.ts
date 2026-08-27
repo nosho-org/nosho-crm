@@ -30,7 +30,20 @@ export type PeriodId =
   | "next-quarter"
   | "current-semester"
   | "current-year"
-  | "all";
+  | "all"
+  | "custom";
+
+/**
+ * Bornes d'une période libre, en `YYYY-MM-DD` local (NOS-1083).
+ *
+ * Les deux sont indépendantes : « à partir de janvier 2026 » et « jusqu'à fin
+ * 2025 » sont deux questions légitimes, et exiger les deux forcerait à inventer
+ * une borne qu'on n'a pas.
+ */
+export interface CustomPeriodBounds {
+  start?: string | null;
+  end?: string | null;
+}
 
 export type BucketGranularity = "month" | "quarter";
 
@@ -67,8 +80,33 @@ const startOfSemester = (date: Date): Date =>
 const endOfSemester = (date: Date): Date =>
   endOfMonth(new Date(date.getFullYear(), date.getMonth() < 6 ? 5 : 11, 1));
 
-export const resolvePeriod = (id: PeriodId, now: Date): ResolvedPeriod => {
+/** Libellé d'une période libre, dans le sens de lecture d'un intervalle. */
+const customLabel = (start: Date | null, end: Date | null): string => {
+  const day = (date: Date) =>
+    new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(date);
+  if (start && end) return `${day(start)} → ${day(end)}`;
+  if (start) return `À partir du ${day(start)}`;
+  if (end) return `Jusqu'au ${day(end)}`;
+  // Choisie mais pas encore renseignée : ne pas prétendre filtrer.
+  return "Période personnalisée";
+};
+
+export const resolvePeriod = (
+  id: PeriodId,
+  now: Date,
+  bounds?: CustomPeriodBounds,
+): ResolvedPeriod => {
   switch (id) {
+    case "custom": {
+      const start = parseISODateLocal(bounds?.start);
+      const end = parseISODateLocal(bounds?.end);
+      // Bornes inversées : on les remet dans l'ordre plutôt que de renvoyer un
+      // intervalle vide. Saisir la fin avant le début est une erreur de frappe,
+      // pas une demande de ne rien voir.
+      const [from, to] =
+        start && end && start > end ? [end, start] : [start, end];
+      return { id, label: customLabel(from, to), start: from, end: to };
+    }
     case "current-month":
       return {
         id,
@@ -121,6 +159,15 @@ export const resolvePeriod = (id: PeriodId, now: Date): ResolvedPeriod => {
   }
 };
 
+/**
+ * Les périodes **prédéfinies**, toutes calculables à partir d'aujourd'hui.
+ *
+ * `custom` en est volontairement absente : cette liste sert aussi de table de
+ * correspondance inverse — `DealCockpitContext` cherche quelle période produit
+ * les bornes lues dans l'URL — et une période libre n'a par nature aucune
+ * définition à retrouver. L'y mettre ferait résoudre `custom` sans bornes et
+ * matcher « toutes périodes ».
+ */
 export const PERIOD_IDS: PeriodId[] = [
   "current-month",
   "next-month",
@@ -131,10 +178,44 @@ export const PERIOD_IDS: PeriodId[] = [
   "all",
 ];
 
+export const CUSTOM_PERIOD_ID: PeriodId = "custom";
+
+/** Un identifiant venu de l'URL est-il exploitable ? */
+export const isPeriodId = (value: string | null): value is PeriodId =>
+  value === CUSTOM_PERIOD_ID || PERIOD_IDS.includes(value as PeriodId);
+
+/**
+ * Granularité des colonnes du graphique pour une période libre.
+ *
+ * Les périodes prédéfinies la déduisent de leur nature ; une période libre n'a
+ * que sa durée. Au-delà de six mois, le mois donne treize colonnes ou plus et
+ * pousse le total hors écran — c'est le même seuil que celui appliqué à
+ * « année en cours ».
+ */
+export const granularityForPeriod = (
+  period: ResolvedPeriod,
+): BucketGranularity => {
+  if (!period.start || !period.end) return "quarter";
+  const months =
+    (period.end.getFullYear() - period.start.getFullYear()) * 12 +
+    (period.end.getMonth() - period.start.getMonth());
+  return months > 6 ? "quarter" : "month";
+};
+
 export const getPeriodChoices = (
   now: Date,
-): { value: PeriodId; label: string }[] =>
-  PERIOD_IDS.map((id) => ({ value: id, label: resolvePeriod(id, now).label }));
+  options: { includeCustom?: boolean } = {},
+): { value: PeriodId; label: string }[] => {
+  const choices = PERIOD_IDS.map((id) => ({
+    value: id,
+    label: resolvePeriod(id, now).label,
+  }));
+  // En dernier, et sous un nom fixe : les autres entrées portent la période
+  // qu'elles désignent (« T3 2026 »), celle-ci désigne une action.
+  return options.includeCustom
+    ? [...choices, { value: CUSTOM_PERIOD_ID, label: "Période personnalisée…" }]
+    : choices;
+};
 
 /**
  * PostgREST filter for the list query. Bounds are inclusive on both ends and
@@ -147,11 +228,17 @@ export const getPeriodChoices = (
 export const getPeriodFilter = (
   period: ResolvedPeriod,
 ): Record<string, string> => {
-  if (!period.start || !period.end) return {};
-  return {
-    "expected_closing_date@gte": toISODateString(period.start),
-    "expected_closing_date@lte": toISODateString(period.end),
-  };
+  // Chaque borne est posée indépendamment (NOS-1083). La version précédente
+  // exigeait les deux et ne renvoyait rien sinon : « à partir de janvier 2026 »
+  // n'aurait filtré personne, en affichant pourtant la période à l'écran.
+  const filter: Record<string, string> = {};
+  if (period.start) {
+    filter["expected_closing_date@gte"] = toISODateString(period.start);
+  }
+  if (period.end) {
+    filter["expected_closing_date@lte"] = toISODateString(period.end);
+  }
+  return filter;
 };
 
 export const isWithinPeriod = (

@@ -15,8 +15,10 @@ import type { DealRecord } from "../deals/cockpit/dealFields";
 import type { NextActionOptions } from "../deals/cockpit/dealFields";
 import type { WeightingConfig } from "../deals/cockpit/dealWeighting";
 import {
-  PERIOD_IDS,
   getPeriodFilter,
+  CUSTOM_PERIOD_ID,
+  granularityForPeriod,
+  isPeriodId,
   resolvePeriod,
   type BucketGranularity,
   type PeriodId,
@@ -44,6 +46,9 @@ import {
 
 export interface DashboardSelection {
   periodId: PeriodId;
+  /** Bornes de la periode libre, en YYYY-MM-DD local (NOS-1083). */
+  customFrom: string | null;
+  customTo: string | null;
   salesId: string | null;
   category: string | null;
   products: string[];
@@ -57,6 +62,8 @@ export interface DashboardContextValue {
   granularity: BucketGranularity;
   setGranularity: (value: BucketGranularity) => void;
   setPeriodId: (value: PeriodId) => void;
+  /** Bascule sur la période libre et pose ses bornes (NOS-1083). */
+  setCustomPeriod: (from: string | null, to: string | null) => void;
   setSalesId: (value: string | null) => void;
   setCategory: (value: string | null) => void;
   setProducts: (value: string[]) => void;
@@ -108,6 +115,10 @@ const PARAM = {
   sales: "responsable",
   category: "categorie",
   products: "produit",
+  // Bornes de la période libre (NOS-1083). Dans l'URL comme le reste : un
+  // tableau de bord doit survivre au rechargement et se partager par lien.
+  from: "debut",
+  to: "fin",
 } as const;
 
 /**
@@ -146,9 +157,9 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     const products = searchParams.get(PARAM.products);
     const rawSales = searchParams.get(PARAM.sales);
     return {
-      periodId: PERIOD_IDS.includes(rawPeriod as PeriodId)
-        ? (rawPeriod as PeriodId)
-        : DASHBOARD_DEFAULT_PERIOD,
+      periodId: isPeriodId(rawPeriod) ? rawPeriod : DASHBOARD_DEFAULT_PERIOD,
+      customFrom: searchParams.get(PARAM.from),
+      customTo: searchParams.get(PARAM.to),
       // Rien dans l'URL = moi, pas tout le monde (NOS-1063). On arrive sur son
       // propre tableau de bord, pas sur celui de l'équipe : le chiffre qui
       // s'affiche à la connexion doit être celui dont on répond.
@@ -164,17 +175,25 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
   }, [searchParams, identity?.id]);
 
   const period = useMemo(
-    () => resolvePeriod(selection.periodId, today),
-    [selection.periodId, today],
+    () =>
+      resolvePeriod(selection.periodId, today, {
+        start: selection.customFrom,
+        end: selection.customTo,
+      }),
+    [selection.periodId, selection.customFrom, selection.customTo, today],
   );
 
   // A year split by month is 13 columns, which pushes the total off screen.
   // Long periods therefore open on quarters; the toggle still overrides it.
   const granularity: BucketGranularity =
     granularityOverride ??
-    (selection.periodId === "all" || selection.periodId === "current-year"
-      ? "quarter"
-      : "month");
+    // Une periode libre n'a pas de nature dont deduire la granularite : on la
+    // lit dans sa duree reelle (NOS-1083).
+    (selection.periodId === "custom"
+      ? granularityForPeriod(period)
+      : selection.periodId === "all" || selection.periodId === "current-year"
+        ? "quarter"
+        : "month");
 
   const setParam = useCallback(
     (key: string, value: string | null) => {
@@ -238,7 +257,37 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       period,
       granularity,
       setGranularity: setGranularityOverride,
-      setPeriodId: (id) => setParam(PARAM.period, id),
+      setPeriodId: (id) =>
+        setSearchParams(
+          (previous) => {
+            const next = new URLSearchParams(previous);
+            next.set(PARAM.period, id);
+            // Quitter la période libre efface ses bornes. Les garder ferait
+            // réapparaître l'ancien intervalle en y revenant, sans crier gare.
+            if (id !== CUSTOM_PERIOD_ID) {
+              next.delete(PARAM.from);
+              next.delete(PARAM.to);
+            }
+            return next;
+          },
+          { replace: true },
+        ),
+      // Les trois clés bougent ensemble : poser une borne sans basculer sur
+      // `custom` la laisserait dans l'URL sans effet visible — exactement le
+      // filtre fantôme que NOS-1058 a coûté.
+      setCustomPeriod: (from, to) =>
+        setSearchParams(
+          (previous) => {
+            const next = new URLSearchParams(previous);
+            next.set(PARAM.period, CUSTOM_PERIOD_ID);
+            if (from) next.set(PARAM.from, from);
+            else next.delete(PARAM.from);
+            if (to) next.set(PARAM.to, to);
+            else next.delete(PARAM.to);
+            return next;
+          },
+          { replace: true },
+        ),
       // `null` = « Tous », et il faut l'écrire : effacer le paramètre voudrait
       // dire « pas de choix », donc revenir à moi (NOS-1063).
       setSalesId: (id) => setParam(PARAM.sales, id ?? ALL_SALES),
