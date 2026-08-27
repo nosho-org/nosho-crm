@@ -8,7 +8,10 @@ import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
 import { DealBulkEditStage } from "./DealBulkEditStage";
 import { DealPriorityField } from "./DealPriorityField";
-import { DealProductBadges } from "./shared/DealBadges";
+import {
+  DealOpportunityTypeBadge,
+  DealProductBadges,
+} from "./shared/DealBadges";
 import { getDealActivity, isOpenStage } from "./cockpit/dealFields";
 import { parseISODateLocal, startOfToday } from "./cockpit/dealDates";
 import { findDealLabel } from "./deal";
@@ -119,15 +122,37 @@ export const DealListTable = () => {
       // `min-w` doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière
       // qu'#124 avait fait disparaître « Dernière activité » du bout de la
       // ligne.
-      className="[&_table]:table-fixed [&_table]:min-w-[1276px]"
+      /*
+       * `text-xs` sur toute la table (NOS-1094).
+       *
+       * `<Table>` pose `text-sm` à sa racine, dont toutes les cellules
+       * héritaient — sauf la colonne Priorité et « Dernière activité », qui
+       * rendaient déjà en `text-xs`. Deux tailles de texte sur une même ligne,
+       * sans que la différence veuille dire quoi que ce soit.
+       *
+       * Le repère demandé est la colonne Priorité, donc `text-xs` partout.
+       * Posé sur la table plutôt que colonne par colonne : une largeur oubliée
+       * se voit, une taille de police oubliée beaucoup moins.
+       *
+       * Ce que ça ne touche pas, à dessein : les `font-medium` qui marquent une
+       * alerte — clôture dépassée, opportunité en sommeil — et les pastilles
+       * (produits, « manuel ») qui sont des marqueurs, pas du texte courant, au
+       * même titre que la pastille de priorité. Harmoniser la taille n'est pas
+       * effacer l'emphase qui porte un sens.
+       *
+       * Les en-têtes restent en `text-sm`, et c'est la seconde correction : une
+       * colonne triable rend son intitulé dans un `<Button>` qui porte son
+       * propre `text-sm`, tandis qu'une colonne sans tri — « Produit(s) » est
+       * la seule — hérite de la table et se retrouvait donc plus petite que ses
+       * voisines. La taille d'un en-tête ne doit pas dépendre de son caractère
+       * triable.
+       *
+       * Un en-tête légèrement plus grand que le corps est le rapport qu'avait
+       * déjà la colonne Priorité, prise ici pour repère : c'est son contenu qui
+       * fait 12 px, pas son titre.
+       */
+      className="[&_table]:table-fixed [&_table]:min-w-[1276px] [&_table]:text-xs [&_thead_th]:text-sm"
     >
-      <DataTable.Col
-        source="priority_rank"
-        label="Priorité"
-        headerClassName={COLUMN_WIDTHS.priority}
-      >
-        <DealPriorityField />
-      </DataTable.Col>
       <DataTable.Col
         source="entered_at"
         label="Date entrée"
@@ -137,19 +162,12 @@ export const DealListTable = () => {
         <DateField source="entered_at" />
       </DataTable.Col>
       <DataTable.Col
-        source="category"
-        label="Catégorie"
-        headerClassName={COLUMN_WIDTHS.category}
-        cellClassName="truncate"
+        source="priority_rank"
+        label="Priorité"
+        headerClassName={COLUMN_WIDTHS.priority}
       >
-        <ChoiceField choices={dealCategories} source="category" />
+        <DealPriorityField />
       </DataTable.Col>
-      {/*
-        Juste après « Catégorie » (NOS-1093) : depuis que choisir le type
-        « Partenariat » range l'opportunité en « Partenaire », les deux champs
-        sont liés — côte à côte, on vérifie d'un coup d'œil que l'automatisme
-        a bien joué.
-      */}
       <DataTable.Col
         source="opportunity_type"
         label="Type"
@@ -157,6 +175,14 @@ export const DealListTable = () => {
         cellClassName="truncate"
       >
         <OpportunityTypeField />
+      </DataTable.Col>
+      <DataTable.Col
+        source="category"
+        label="Catégorie"
+        headerClassName={COLUMN_WIDTHS.category}
+        cellClassName="truncate"
+      >
+        <ChoiceField choices={dealCategories} source="category" />
       </DataTable.Col>
       <DataTable.Col
         source="company_id"
@@ -315,7 +341,12 @@ const OpportunityTypeField = () => {
   const { dealOpportunityTypes } = useConfigurationContext();
   const value = record?.opportunity_type;
   if (!value) return <span className="text-muted-foreground">–</span>;
-  return <span>{findDealLabel(dealOpportunityTypes, value) ?? value}</span>;
+  return (
+    <DealOpportunityTypeBadge
+      type={value}
+      label={findDealLabel(dealOpportunityTypes, value) ?? value}
+    />
+  );
 };
 
 const StageField = ({

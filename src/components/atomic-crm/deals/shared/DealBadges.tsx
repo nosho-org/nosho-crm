@@ -262,3 +262,62 @@ export const TaskDueDate = ({
     </span>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+/* Opportunity type                                                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Un emoji par type d'opportunité (NOS-1094).
+ *
+ * Dans le code et non dans la configuration, comme `STAGE_COLORS` du funnel et
+ * les icônes du bandeau de KPI : c'est de la présentation attachée à un slug.
+ * Deux raisons de plus ici — les migrations de ce dépôt doivent rester en ASCII
+ * pur, `supabase-push.sh` détruisant tout caractère non-ASCII sous Git Bash, et
+ * un emoji stocké en base serait invisible à la relecture du code.
+ *
+ * Le choix des quatre : une pousse pour l'affaire qui démarre, une courbe qui
+ * monte pour l'extension d'un compte existant, une boucle pour l'échéance qui
+ * revient, une poignée de main pour le partenariat. Les silhouettes sont
+ * volontairement distinctes — dans une colonne dense, c'est la forme générale
+ * qu'on lit, pas le détail.
+ *
+ * Un type sans emoji configuré ne casse rien : seul le libellé s'affiche.
+ */
+const OPPORTUNITY_TYPE_EMOJI: Record<string, string> = {
+  "nouveau-client": "🌱",
+  // Le slug dit « extension », le libellé dit « Upsell » — même chose.
+  extension: "📈",
+  renouvellement: "🔄",
+  partenariat: "🤝",
+};
+
+/**
+ * Type d'opportunité, précédé de son emoji.
+ *
+ * L'emoji accompagne le libellé, il ne le remplace pas : un pictogramme seul
+ * demande d'apprendre un code, et n'est rien pour un lecteur d'écran. Il est
+ * donc marqué `aria-hidden` — c'est le mot qui porte le sens, l'image ne fait
+ * que le rendre repérable en balayant la colonne.
+ */
+export const DealOpportunityTypeBadge = ({
+  type,
+  label,
+  className = "",
+}: {
+  type: string | null | undefined;
+  label: string;
+  className?: string;
+}) => {
+  const emoji = type ? OPPORTUNITY_TYPE_EMOJI[type] : undefined;
+  return (
+    <span className={`inline-flex items-center gap-1 min-w-0 ${className}`}>
+      {emoji && (
+        <span aria-hidden="true" className="shrink-0">
+          {emoji}
+        </span>
+      )}
+      <span className="truncate">{label}</span>
+    </span>
+  );
+};
