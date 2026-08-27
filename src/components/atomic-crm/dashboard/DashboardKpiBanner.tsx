@@ -1,4 +1,5 @@
 import {
+  FileText,
   FlaskConical,
   PieChart,
   Target,
@@ -21,15 +22,19 @@ import { useDashboard } from "./DashboardContext";
 
 /**
  * ---------------------------------------------------------------------------
- * The KPI banner (NOS-955 §1, revu par NOS-1065)
+ * The KPI banner (NOS-955 §1, revu par NOS-1065 puis NOS-1082)
  * ---------------------------------------------------------------------------
- * Cinq cartes, dans l'ordre où une affaire avance :
+ * Six cartes, dans l'ordre où une affaire avance :
  *
- *     Pipeline brut → pondéré → Qualifié → Démo/POC → signé
+ *     Pipeline brut → pondéré → Qualifié → Démo/POC → Proposition → signé
  *
- * Trois viennent de `computeRevenueSnapshot`, deux de `computeStageBreakdown`,
+ * Trois viennent de `computeRevenueSnapshot`, trois de `computeStageBreakdown`,
  * la même ventilation que le funnel juste en dessous — jamais un second calcul
  * maison, sous peine de deux chiffres pour la même étape sur un même écran.
+ *
+ * La grille descend en trois colonnes avant d'en montrer six : six cartes sur
+ * un écran moyen donnent des montants illisibles, et deux rangées de trois se
+ * lisent mieux qu'une rangée écrasée.
  *
  * « ARR perdu » et « Objectif MRR » ont été retirés à la demande de Simon. Le
  * second était le seul indicateur comparé à une cible ; `computeMrrProgress`
@@ -86,7 +91,7 @@ const KpiCard = ({
  * pour la même étape.
  *
  * Couleur neutre, à dessein. La règle du bandeau est qu'une teinte porte un
- * sens — vert gagné, bleu potentiel, violet pondéré, rouge perdu. Ces deux
+ * sens — vert gagné, bleu potentiel, violet pondéré, rouge perdu. Ces trois
  * cartes ne sont pas une catégorie de plus : elles détaillent le pipeline brut
  * affiché à gauche. Leur emprunter une teinte déjà prise dirait autre chose que
  * ce qu'elles montrent.
@@ -153,7 +158,7 @@ export const DashboardKpiBanner = () => {
         </p>
       )}
 
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           label="Pipeline brut (potentiel)"
           icon={TrendingUp}
@@ -180,6 +185,7 @@ export const DashboardKpiBanner = () => {
 
         <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
         <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />
+        <StageKpiCard stage="proposal" icon={FileText} buckets={buckets} />
 
         <KpiCard
           label="ARR signé (won)"
