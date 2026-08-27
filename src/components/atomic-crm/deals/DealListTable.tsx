@@ -75,6 +75,10 @@ const COLUMN_WIDTHS = {
   priority: "w-[100px]",
   enteredAt: "w-[100px]",
   category: "w-[88px]",
+  // En-tête « Type » et non « Type d'opportunité » (NOS-1093) : l'intitulé
+  // complet réclamait 150 px pour trois valeurs qui en font 90. La colonne est
+  // adjacente à « Catégorie », le sens se lit dans le contexte.
+  opportunityType: "w-[112px]",
   /*
    * La plus large, et c'est nouveau (NOS-1091).
    *
@@ -110,11 +114,12 @@ export const DealListTable = () => {
       // <DataTable> puts its own className on the wrapper and renders <Table>
       // with no way through, so the layout lands on the nested table.
       //
-      // 1164px = la somme exacte de `COLUMN_WIDTHS` après NOS-1091 :
-      // 100 + 100 + 88 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce `min-w`
-      // doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière qu'#124
-      // avait fait disparaître « Dernière activité » du bout de la ligne.
-      className="[&_table]:table-fixed [&_table]:min-w-[1164px]"
+      // 1276px = la somme exacte de `COLUMN_WIDTHS` après NOS-1093 :
+      // 100 + 100 + 88 + 112 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce
+      // `min-w` doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière
+      // qu'#124 avait fait disparaître « Dernière activité » du bout de la
+      // ligne.
+      className="[&_table]:table-fixed [&_table]:min-w-[1276px]"
     >
       <DataTable.Col
         source="priority_rank"
@@ -138,6 +143,20 @@ export const DealListTable = () => {
         cellClassName="truncate"
       >
         <ChoiceField choices={dealCategories} source="category" />
+      </DataTable.Col>
+      {/*
+        Juste après « Catégorie » (NOS-1093) : depuis que choisir le type
+        « Partenariat » range l'opportunité en « Partenaire », les deux champs
+        sont liés — côte à côte, on vérifie d'un coup d'œil que l'automatisme
+        a bien joué.
+      */}
+      <DataTable.Col
+        source="opportunity_type"
+        label="Type"
+        headerClassName={COLUMN_WIDTHS.opportunityType}
+        cellClassName="truncate"
+      >
+        <OpportunityTypeField />
       </DataTable.Col>
       <DataTable.Col
         source="company_id"
@@ -281,6 +300,22 @@ const LastActivityField = () => {
       {daysSinceActivity} j
     </span>
   );
+};
+
+/**
+ * Type d'opportunité — nouveau client, upsell, renouvellement, partenariat
+ * (NOS-1093).
+ *
+ * Le tiret n'est pas rare : 109 opportunités sur 223 n'ont aucun type
+ * renseigné en production. C'est l'état de la donnée, pas un défaut
+ * d'affichage, et le montrer tel quel vaut mieux que d'inventer un défaut.
+ */
+const OpportunityTypeField = () => {
+  const record = useRecordContext<Deal>();
+  const { dealOpportunityTypes } = useConfigurationContext();
+  const value = record?.opportunity_type;
+  if (!value) return <span className="text-muted-foreground">–</span>;
+  return <span>{findDealLabel(dealOpportunityTypes, value) ?? value}</span>;
 };
 
 const StageField = ({
