@@ -247,6 +247,18 @@ export function resolvePrefilledArr({
 /** The stage that means "the contract is signed". */
 export const SIGNED_DEAL_STAGE = "closed-won";
 
+/**
+ * Le type d'opportunité « Partenariat » et la catégorie qu'il implique
+ * (NOS-1093).
+ *
+ * Les deux constantes vivent côte à côte parce que le lien entre elles est une
+ * règle métier, pas une coïncidence : choisir ce type range l'opportunité dans
+ * cette catégorie. Éparpiller les deux chaînes dans un `useEffect` rendrait la
+ * règle invisible au grep le jour où l'un des deux slugs bouge.
+ */
+export const PARTNERSHIP_OPPORTUNITY_TYPE = "partenariat";
+export const PARTNER_DEAL_CATEGORY = "partenaire";
+
 /** Today, in the `YYYY-MM-DD` form the date columns expect. */
 export function todayISODate(): string {
   return new Date().toISOString().split("T")[0];
@@ -406,7 +418,9 @@ export function formatDealMeetingDate(
  */
 export const DEAL_DEFAULT_CLOSING_WEEKS = 6;
 
-export function getDefaultExpectedClosingDate(today: Date = new Date()): string {
+export function getDefaultExpectedClosingDate(
+  today: Date = new Date(),
+): string {
   const target = new Date(today);
   target.setDate(target.getDate() + DEAL_DEFAULT_CLOSING_WEEKS * 7);
   // Champs de calendrier locaux, comme partout ailleurs : `toISOString()` lit

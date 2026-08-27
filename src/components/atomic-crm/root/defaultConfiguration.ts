@@ -309,6 +309,12 @@ export const defaultDealOpportunityTypes = [
   // PJ1 of NOS-957 labels this slug "Upsell". Label change only.
   { value: "extension", label: "Upsell" },
   { value: "renouvellement", label: "Renouvellement" },
+  /*
+   * NOS-1093. Le choisir range l'opportunité dans la catégorie « Partenaire » :
+   * la règle vit dans `DealOpportunityTypeInput`, et les deux slugs sont nommés
+   * dans `dealUtils` (`PARTNERSHIP_OPPORTUNITY_TYPE`, `PARTNER_DEAL_CATEGORY`).
+   */
+  { value: "partenariat", label: "Partenariat" },
 ];
 
 /**

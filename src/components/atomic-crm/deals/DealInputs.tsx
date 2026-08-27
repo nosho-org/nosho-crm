@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isEqual } from "lodash";
 import {
   required,
@@ -46,6 +46,8 @@ import {
   getDefaultDealStage,
   getSuggestedArr,
   resolvePrefilledArr,
+  PARTNERSHIP_OPPORTUNITY_TYPE,
+  PARTNER_DEAL_CATEGORY,
 } from "./dealUtils";
 import type { Company, Contact, DealContactRoles, Sale } from "../types";
 
@@ -350,15 +352,7 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
 
       {/* Issue #95 — growth source of this opportunity. Distinct from the
           "Vue" select above, which only routes the deal to a pipeline view. */}
-      <SelectInput
-        source="opportunity_type"
-        label="Type d'opportunité"
-        choices={dealOpportunityTypes}
-        optionText="label"
-        optionValue="value"
-        helperText={false}
-        validate={requiredOnCreate(mode)}
-      />
+      <DealOpportunityTypeInput choices={dealOpportunityTypes} mode={mode} />
       {/* Products (NOS-956). Multi-select: a deal can cover No-show, Entrant
           and Data at once. Stored in `deals.products` as a text[]. */}
       <AutocompleteArrayInput
@@ -465,6 +459,60 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
       <DealSalesInput mode={mode} />
       <DealReferrerInput />
     </div>
+  );
+};
+
+/**
+ * Type d'opportunité, qui range l'affaire en « Partenaire » quand on choisit
+ * « Partenariat » (NOS-1093).
+ *
+ * ---------------------------------------------------------------------------
+ * Pourquoi une référence plutôt qu'un simple `useEffect` sur la valeur
+ * ---------------------------------------------------------------------------
+ * Un effet dont la dépendance est `opportunity_type` se déclenche aussi au
+ * montage, donc à chaque ouverture d'une fiche existante. Une opportunité déjà
+ * typée « Partenariat » mais rangée délibérément ailleurs se ferait réécrire à
+ * chaque fois : l'utilisateur corrige la catégorie, rouvre la fiche, et
+ * retrouve sa correction effacée — sans jamais comprendre d'où ça vient.
+ *
+ * La référence retient la valeur précédente et fait donc la différence entre
+ * « c'était déjà ça » et « on vient de le choisir ». Seule la transition
+ * déclenche l'écriture.
+ *
+ * `shouldDirty: true`, contrairement au préremplissage de l'ARR juste en
+ * dessous : ici la catégorie est bien une conséquence d'un geste de
+ * l'utilisateur, pas une suggestion qu'une meilleure pourrait remplacer. Elle
+ * doit partir au prochain enregistrement.
+ */
+const DealOpportunityTypeInput = ({
+  choices,
+  mode,
+}: {
+  choices: { value: string; label: string }[];
+  mode: DealFormMode;
+}) => {
+  const { setValue } = useFormContext();
+  const opportunityType = useWatch({ name: "opportunity_type" });
+  const previousType = useRef(opportunityType);
+
+  useEffect(() => {
+    const previous = previousType.current;
+    previousType.current = opportunityType;
+    if (previous === opportunityType) return;
+    if (opportunityType !== PARTNERSHIP_OPPORTUNITY_TYPE) return;
+    setValue("category", PARTNER_DEAL_CATEGORY, { shouldDirty: true });
+  }, [opportunityType, setValue]);
+
+  return (
+    <SelectInput
+      source="opportunity_type"
+      label="Type d'opportunité"
+      choices={choices}
+      optionText="label"
+      optionValue="value"
+      helperText={false}
+      validate={requiredOnCreate(mode)}
+    />
   );
 };
 
