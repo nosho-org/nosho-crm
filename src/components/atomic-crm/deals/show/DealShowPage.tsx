@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CompanyAvatar } from "../../companies/CompanyAvatar";
 import type { Deal } from "../../types";
 import { GenerateProposalAction } from "../GenerateProposalAction";
+import { ContractAction } from "../../contracts/ContractAction";
 import { DealPriorityField } from "../DealPriorityField";
 import { DealStageBadge, DealProductBadges } from "../shared/DealBadges";
 import { DealActivityTimeline } from "./DealActivityTimeline";
@@ -80,6 +81,7 @@ const DealHeader = () => {
               <DealCreateTaskButton />
               <EditButton />
               <GenerateProposalAction />
+              <ContractAction />
               <DealArchiveButton record={record} />
             </>
           )}
