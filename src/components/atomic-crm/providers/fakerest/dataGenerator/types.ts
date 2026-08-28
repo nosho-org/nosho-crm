@@ -2,6 +2,7 @@ import type {
   Company,
   Contact,
   ContactNote,
+  Contract,
   Deal,
   DealNote,
   Sale,
@@ -16,6 +17,13 @@ export interface Db {
   contact_notes: ContactNote[];
   deals: Deal[];
   deal_notes: DealNote[];
+  /*
+   * Vide à la génération : un contrat se crée depuis une opportunité, il ne se
+   * fabrique pas au hasard. La collection doit néanmoins exister — FakeRest
+   * lève « Undefined collection » sur tout ce qui est absent, et
+   * l'enregistrement échouerait en démo (NOS-1156).
+   */
+  contracts: Contract[];
   sales: Sale[];
   tags: Tag[];
   tasks: Task[];
