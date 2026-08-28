@@ -35,6 +35,15 @@ export type Sale = {
   user_id: string;
 
   /**
+   * Fonction affichée sur les contrats — « Président » (NOS-1156).
+   *
+   * Attribut de la personne et non du contrat : la répéter à chaque saisie
+   * garantirait qu'un jour deux contrats donnent deux fonctions différentes au
+   * même signataire.
+   */
+  job_title?: string | null;
+
+  /**
    * This is a copy of the user's email, to make it easier to handle by react admin
    * DO NOT UPDATE this field directly, it should be updated by the backend
    */
@@ -90,6 +99,56 @@ export type Company = {
   context_links?: string[];
   nb_contacts?: number;
   nb_deals?: number;
+} & Pick<RaRecord, "id">;
+
+/**
+ * Un contrat POC ou cadre, edite depuis une opportunite (NOS-1156).
+ *
+ * Pas de date de fin, deliberement : l article 7 du contrat cadre pose une
+ * periode ferme comptee depuis la mise en production, puis une tacite
+ * reconduction. Stocker une fin donnerait un chiffre faux.
+ */
+export type Contract = {
+  created_at: string;
+  updated_at?: string;
+  deal_id: Identifier;
+  company_id?: Identifier | null;
+  sales_id?: Identifier | null;
+  /** `"poc"` ou `"cadre"`. */
+  kind: string;
+
+  signatory_first_name?: string | null;
+  signatory_last_name?: string | null;
+  signatory_job_title?: string | null;
+  /** Adresse a laquelle part la demande de signature. */
+  signatory_email?: string | null;
+  referent_email?: string | null;
+
+  nosho_signatory_id?: Identifier | null;
+  nosho_signatory_job_title?: string | null;
+
+  offer_label?: string | null;
+  offer_detail?: string | null;
+  /** En centimes : 0,25 EUR en flottant vaut 0,2500000000000001. */
+  unit_price_cents?: number | null;
+  price_unit?: string | null;
+
+  commitment_months?: number;
+  renewal_months?: number;
+  notice_days?: number;
+  /** Demarre la periode ferme. Inconnue a l edition. */
+  production_start_date?: string | null;
+
+  sepa_mandate_reference?: string | null;
+  /** Mandat B2B : renseignee a la main, sur retour du client. */
+  sepa_registered_at?: string | null;
+
+  /** draft | generated | sent | signed */
+  status: string;
+  document_url?: string | null;
+  signed_document_url?: string | null;
+  sent_at?: string | null;
+  signed_at?: string | null;
 } & Pick<RaRecord, "id">;
 
 export type EmailAndType = {
