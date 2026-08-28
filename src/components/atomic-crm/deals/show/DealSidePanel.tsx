@@ -9,6 +9,7 @@ import { UNKNOWN, formatPercent } from "../cockpit/dealFormat";
 import { getDealProbability } from "../cockpit/dealWeighting";
 import { formatISODateString } from "../dealUtils";
 import { DealProductBadges } from "../shared/DealBadges";
+import { DealClientCard } from "./DealClientCard";
 import { DealNextMeetingCard } from "./DealNextMeetingCard";
 
 /**
@@ -128,6 +129,12 @@ export const DealSidePanel = () => {
           appointment is the one date a rep looks for when opening the page.
           Renders nothing when there is no upcoming meeting task. */}
       <DealNextMeetingCard />
+
+      {/* Qui est ce client, et où (NOS-1122). Placé avant « Informations » :
+          on ouvre une affaire qu'on ne resitue pas toujours, et savoir à qui
+          on a affaire précède la probabilité de gain. Ne rend rien quand la
+          société n'a ni descriptif ni ville. */}
+      <DealClientCard />
 
       <Card className="p-4 flex flex-col gap-2.5">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

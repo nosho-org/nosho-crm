@@ -39,6 +39,7 @@ import {
   CompanyAside,
   CompanyInfo,
   ContextInfo,
+  DescriptionInfo,
 } from "./CompanyAside";
 import { CompanyAvatar } from "./CompanyAvatar";
 
@@ -77,6 +78,10 @@ const CompanyShowContentMobile = () => {
           </div>
         </div>
         <CompanyInfo record={record} />
+        {/* Même ordre que la colonne latérale (NOS-1122) : le descriptif
+            n'étant plus porté par « Informations complémentaires », il faut
+            le monter ici aussi, sans quoi la vue mobile le perdrait. */}
+        <DescriptionInfo record={record} />
         <AddressInfo record={record} />
         <ContextInfo record={record} />
         <AdditionalInfo record={record} />
