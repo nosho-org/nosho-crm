@@ -3,6 +3,7 @@ import { useGetOne, useRecordContext } from "ra-core";
 import { Card } from "@/components/ui/card";
 
 import type { Company, Deal } from "../../types";
+import { AiDescriptionNotice } from "../../companies/AiDescriptionNotice";
 
 /**
  * ---------------------------------------------------------------------------
@@ -53,6 +54,12 @@ export const DealClientCard = () => {
 
       {description && (
         <p className="text-sm whitespace-pre-line">{description}</p>
+      )}
+
+      {/* Même mention que sur la fiche société : le statut du texte ne doit
+          pas dépendre de l'écran où on le lit (NOS-1149). */}
+      {description && company?.description_source === "ai" && (
+        <AiDescriptionNotice />
       )}
 
       {city && (

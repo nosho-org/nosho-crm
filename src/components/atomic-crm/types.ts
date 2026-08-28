@@ -72,6 +72,15 @@ export type Company = {
   sales_id?: Identifier | null;
   created_at: string;
   description: string;
+  /**
+   * Origine du descriptif (NOS-1149). `"ai"` quand un modèle l'a rédigé,
+   * absent quand il vient d'un humain ou d'une source inconnue — les deux
+   * étant le même cas en pratique pour les descriptifs déjà en base.
+   *
+   * Sert à afficher la mention « Rédigé par IA » : un commercial doit savoir
+   * s'il lit une source ou une inférence avant de la répéter à un client.
+   */
+  description_source?: "ai" | null;
   revenue: string;
   tax_identifier: string;
   country: string;

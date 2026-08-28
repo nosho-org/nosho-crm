@@ -9,6 +9,7 @@ import { DateField } from "@/components/admin/date-field";
 import { UrlField } from "@/components/admin/url-field";
 import { SelectField } from "@/components/admin/select-field";
 
+import { AiDescriptionNotice } from "./AiDescriptionNotice";
 import { AsideSection } from "../misc/AsideSection";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { SaleName } from "../sales/SaleName";
@@ -157,6 +158,9 @@ export const DescriptionInfo = ({ record }: { record: Company }) => {
           copier-coller ou de l'enrichissement, et arrivent en plusieurs
           paragraphes. Les aplatir en un bloc les rend pénibles à lire. */}
       <p className="text-sm whitespace-pre-line">{description}</p>
+      {record.description_source === "ai" && (
+        <AiDescriptionNotice className="mt-1" />
+      )}
     </AsideSection>
   );
 };
