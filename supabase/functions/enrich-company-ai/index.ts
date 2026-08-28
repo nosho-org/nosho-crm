@@ -44,6 +44,25 @@ interface RequestBody {
   name?: string;
   sectors?: LabeledValue[];
   types?: LabeledValue[];
+  /**
+   * Second appel : l'etablissement choisi dans la liste (NOS-1152).
+   *
+   * Sa presence bascule la fonction en mode "registre seul" -- le qualitatif
+   * est deja a l'ecran, le regenerer couterait un appel pour reecrire la meme
+   * chose.
+   */
+  siren?: string;
+}
+
+/** Un etablissement propose a l'utilisateur quand le nom ne tranche pas. */
+interface LegalCandidate {
+  siren: string;
+  siret?: string;
+  name: string;
+  city?: string;
+  zipcode?: string;
+  forme_juridique?: string;
+  date_creation?: string;
 }
 
 interface Enrichment {
@@ -64,9 +83,13 @@ interface Enrichment {
   vat_number?: string;
   revenue?: string;
   not_found?: boolean;
-  /** Plusieurs etablissements homonymes : a l utilisateur de trancher. */
-  legal_ambiguous?: boolean;
-  legal_candidates?: number;
+  /**
+   * Etablissements proposes quand le nom ne tranche pas (NOS-1152).
+   *
+   * Message pour l'interface, jamais une donnee de societe : le formulaire le
+   * retire avant d'ecrire.
+   */
+  legal_candidates?: LegalCandidate[];
 }
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -107,6 +130,48 @@ function sizeFromHeadcount(max: unknown): 1 | 10 | 50 | 250 | 500 | undefined {
   if (max < 50) return 50;
   if (max < 250) return 250;
   return 500;
+}
+
+/**
+ * Fiche complete d'un etablissement choisi par l'utilisateur (NOS-1152).
+ *
+ * Appelee apres son clic, sur `/entreprise` : c'est la seule route qui porte
+ * le numero de TVA, et elle rend aussi les finances et l'effectif. Ici plus
+ * aucune heuristique -- un humain a designe l'entreprise, on lit sa fiche.
+ */
+async function fetchLegalBySiren(
+  siren: string,
+): Promise<Partial<Enrichment> | null> {
+  const token = Deno.env.get("PAPPERS_API_KEY");
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `${PAPPERS_BASE}/entreprise?siren=${encodeURIComponent(siren)}&api_token=${token}`,
+    );
+    if (!res.ok) {
+      console.warn(`[enrich-company-ai] Pappers detail HTTP ${res.status}`);
+      return null;
+    }
+    const d = await res.json();
+    const siege = (d["siege"] ?? {}) as Record<string, never>;
+    const finance = ((d["finances"] ?? []) as Record<string, never>[])[0];
+    const ca = finance?.["chiffre_affaires"] ?? d["chiffre_affaires"];
+
+    return {
+      name: str(d["denomination"]) ?? str(d["nom_entreprise"]),
+      tax_identifier: str(siege["siret"]) ?? str(d["siret_siege"]),
+      vat_number: str(d["numero_tva_intracommunautaire"]),
+      address: str(siege["adresse_ligne_1"]),
+      city: str(siege["ville"]),
+      zipcode: str(siege["code_postal"]),
+      country: str(siege["pays"]) ?? "France",
+      revenue: typeof ca === "number" && ca > 0 ? formatRevenue(ca) : undefined,
+      size: sizeFromHeadcount(d["effectif_max"]),
+    };
+  } catch (e) {
+    console.warn("[enrich-company-ai] Pappers detail indisponible:", e);
+    return null;
+  }
 }
 
 /** Normalisation pour comparer deux raisons sociales. */
@@ -151,18 +216,36 @@ async function fetchLegalIdentity(
     );
 
     /*
-     * Plusieurs etablissements portent ce nom : on ne choisit pas a la place
-     * de l'utilisateur. "Vitalia" en compte cinq, "Dentego" deux.
+     * Un seul homonyme exact : on remplit. Sinon on rend la liste et
+     * l'utilisateur tranche (NOS-1152).
      *
-     * Mais contrairement a la reprise en masse de NOS-1148, ici quelqu'un est
-     * devant son ecran. Se taire laisserait un SIRET vide sans raison
-     * apparente, et on chercherait le bug. On renvoie donc l'ambiguite pour
-     * que l'interface la nomme.
+     * C'est la difference avec la reprise en masse de NOS-1148, ou personne
+     * n'etait la pour arbitrer et ou le silence etait la seule option sure.
+     * Ici quelqu'un est devant son ecran : lui montrer les candidats vaut
+     * mieux que de decider a sa place, et mieux encore que de ne rien dire.
+     *
+     * Les candidats ne sont pas restreints aux correspondances exactes.
+     * "Hopital Saint Joseph Marseille" n'a aucun homonyme strict mais cinq
+     * voisins plausibles, et c'est exactement le cas des 89 societes que la
+     * reprise n'avait pas su rattacher : les montrer, c'est les rendre
+     * rattachables a la main.
      */
-    if (exacts.length > 1) {
-      return { legal_ambiguous: true, legal_candidates: exacts.length };
+    if (exacts.length !== 1) {
+      return {
+        legal_candidates: results.slice(0, 5).map((c) => {
+          const s = (c["siege"] ?? {}) as Record<string, never>;
+          return {
+            siren: str(c["siren"]) ?? "",
+            siret: str(s["siret"]),
+            name: str(c["nom_entreprise"]) ?? "",
+            city: str(s["ville"]),
+            zipcode: str(s["code_postal"]),
+            forme_juridique: str(c["forme_juridique"]),
+            date_creation: str(c["date_creation"]),
+          };
+        }),
+      };
     }
-    if (exacts.length === 0) return null;
 
     const r = exacts[0] as Record<string, never>;
     const siege = (r["siege"] ?? {}) as Record<string, never>;
@@ -351,6 +434,26 @@ async function handler(req: Request): Promise<Response> {
   const name = str(body.name);
   if (!name) return jsonResponse(400, { error: "name is required" });
 
+  /*
+   * Second temps : l'utilisateur a choisi son etablissement dans la liste
+   * (NOS-1152). On ne rappelle QUE Pappers -- le qualitatif est deja dans son
+   * ecran, et relancer le modele couterait un appel pour reecrire la meme
+   * chose.
+   */
+  const siren = str(body.siren);
+  if (siren) {
+    const legalOnly = await fetchLegalBySiren(siren);
+    if (!legalOnly) {
+      return jsonResponse(502, {
+        error: "Etablissement introuvable au registre",
+      });
+    }
+    for (const key of Object.keys(legalOnly) as (keyof Enrichment)[]) {
+      if (legalOnly[key] === undefined) delete legalOnly[key];
+    }
+    return jsonResponse(200, legalOnly);
+  }
+
   const sectors = Array.isArray(body.sectors) ? body.sectors : [];
   const types = Array.isArray(body.types) ? body.types : [];
 
@@ -361,19 +464,15 @@ async function handler(req: Request): Promise<Response> {
     fetchQualitative(name, sectors, types),
   ]);
 
-  // L'ambiguite est un message pour l'interface, pas une donnee de societe :
-  // on la met de cote avant toute fusion.
-  const ambiguous = legal?.legal_ambiguous === true;
+  // La liste de candidats est un message pour l'interface, pas une donnee de
+  // societe : on la met de cote avant toute fusion.
   const candidates = legal?.legal_candidates;
-  const legalData = ambiguous ? null : legal;
+  const legalData = candidates ? null : legal;
 
   // Inconnue des deux cotes : le dire, plutot que de rendre une fiche vide qui
   // ressemblerait a une panne.
-  if (qualitative?.not_found && !legalData) {
-    return jsonResponse(200, {
-      not_found: true,
-      ...(ambiguous ? { legal_ambiguous: true, legal_candidates: candidates } : {}),
-    });
+  if (qualitative?.not_found && !legalData && !candidates?.length) {
+    return jsonResponse(200, { not_found: true });
   }
   if (!legal && !qualitative) {
     return jsonResponse(502, {
@@ -385,14 +484,9 @@ async function handler(req: Request): Promise<Response> {
   const merged: Enrichment = {
     ...(qualitative?.not_found ? {} : (qualitative ?? {})),
     ...(legalData ?? {}),
-    ...(ambiguous
-      ? { legal_ambiguous: true, legal_candidates: candidates }
-      : {}),
+    ...(candidates?.length ? { legal_candidates: candidates } : {}),
   };
   delete merged.not_found;
-  //  traverse volontairement : c est un message pour
-  // l interface, pas un champ de la societe. Le formulaire le retire avant
-  // d ecrire.
 
   for (const key of Object.keys(merged) as (keyof Enrichment)[]) {
     if (merged[key] === undefined) delete merged[key];
