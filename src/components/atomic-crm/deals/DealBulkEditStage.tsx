@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRightLeft } from "lucide-react";
 import {
+  useDataProvider,
   useListContext,
   useNotify,
   useRefresh,
@@ -25,7 +26,13 @@ import {
 } from "@/components/ui/select";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
+import type { Deal } from "../types";
 import { pluralize } from "./cockpit/dealFormat";
+import {
+  countDealsMissingSiret,
+  siretRequiredMessage,
+  stageRequiresSiret,
+} from "./dealStageGuard";
 
 /**
  * Move several opportunities to a stage in one go (NOS-956 §6).
@@ -41,7 +48,8 @@ import { pluralize } from "./cockpit/dealFormat";
  * renders fine.
  */
 export const DealBulkEditStage = () => {
-  const { selectedIds } = useListContext();
+  const { selectedIds, data } = useListContext<Deal>();
+  const dataProvider = useDataProvider();
   const { dealStages } = useConfigurationContext();
   const [updateMany, { isPending }] = useUpdateMany();
   const unselectAll = useUnselectAll("deals");
@@ -54,8 +62,40 @@ export const DealBulkEditStage = () => {
   const count = selectedIds?.length ?? 0;
   if (count === 0) return null;
 
-  const apply = () => {
+  const apply = async () => {
     if (!stage) return;
+
+    /*
+     * Contrôle SIRET avant l'écriture en lot (NOS-1150).
+     *
+     * Tout ou rien, délibérément : `updateMany` n'a pas de demi-mesure, et
+     * appliquer sur la moitié de la sélection laisserait l'utilisateur devant
+     * un écran dont il ne saurait pas dire ce qui est passé. Mieux vaut refuser
+     * en nommant le nombre d'opportunités en cause.
+     */
+    if (stageRequiresSiret(stage)) {
+      const deals = selectedIds.map((id) => {
+        const record = data?.find((deal) => String(deal.id) === String(id));
+        return { id, company_id: record?.company_id ?? null };
+      });
+      let blocked = 0;
+      try {
+        blocked = await countDealsMissingSiret(dataProvider, deals, stage);
+      } catch {
+        // Contrôle indisponible : on laisse passer plutôt que de bloquer une
+        // opération légitime sur une panne de lecture.
+        blocked = 0;
+      }
+      if (blocked > 0) {
+        const label = dealStages.find((s) => s.value === stage)?.label ?? stage;
+        notify(siretRequiredMessage(label, blocked), {
+          type: "warning",
+          autoHideDuration: 8000,
+        });
+        return;
+      }
+    }
+
     updateMany(
       "deals",
       { ids: selectedIds, data: { stage } },

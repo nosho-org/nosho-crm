@@ -11,6 +11,7 @@ import {
   useDataProvider,
   useGetIdentity,
   useListContext,
+  useNotify,
   type DataProvider,
 } from "ra-core";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -24,6 +25,12 @@ import { useOptionalDealCockpit } from "./cockpit/DealCockpitContext";
 import { DealColumn } from "./DealColumn";
 import { DealListTable } from "./DealListTable";
 import { toDealsLink } from "./dealFilterContract";
+import { findDealLabel } from "./deal";
+import {
+  countDealsMissingSiret,
+  siretRequiredMessage,
+  stageRequiresSiret,
+} from "./dealStageGuard";
 import { pluralize } from "./cockpit/dealFormat";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { getCustomViewCompanyType } from "./dealUtils";
@@ -77,6 +84,7 @@ export const DealListContent = () => {
   const unorderedDeals = (cockpit?.deals as Deal[] | undefined) ?? listDeals;
   const dataProvider = useDataProvider();
   const queryClient = useQueryClient();
+  const notify = useNotify();
   const location = useLocation();
   const { identity } = useGetIdentity();
   const { canAccess: isAdmin } = useCanAccess({
@@ -203,6 +211,10 @@ export const DealListContent = () => {
     }
 
     const destinationStage = destination.droppableId;
+    // Capturé ici : `moveDeal` est une déclaration de fonction, donc analysée
+    // hors du rétrécissement de type obtenu par le `if (!destination) return`
+    // plus haut — TypeScript y reverrait `destination` comme possiblement nul.
+    const destinationIndex = destination.index;
     const destinationDeal = dealsByStage[destinationStage][
       destination.index
     ] ?? {
@@ -210,24 +222,59 @@ export const DealListContent = () => {
       index: undefined, // undefined if dropped after the last item
     };
 
-    // compute local state change synchronously
-    setDealsByStage(
-      updateDealStageLocal(
-        sourceDeal,
-        { stage: sourceStage, index: source.index },
-        { stage: destinationStage, index: destination.index },
-        dealsByStage,
-      ),
-    );
+    /*
+     * Contrôle SIRET avant de bouger quoi que ce soit (NOS-1150).
+     *
+     * Volontairement placé AVANT la mise à jour optimiste : déplacer la carte
+     * puis la faire revenir donnerait l'impression d'un bug, là où un refus
+     * immédiat avec son motif se comprend. Le coût est une requête sur la
+     * société, uniquement quand l'étape visée l'exige.
+     */
+    if (stageRequiresSiret(destinationStage)) {
+      countDealsMissingSiret(dataProvider, [sourceDeal], destinationStage)
+        .then((blocked) => {
+          if (blocked > 0) {
+            notify(
+              siretRequiredMessage(
+                findDealLabel(dealStages, destinationStage) ?? destinationStage,
+              ),
+              { type: "warning", autoHideDuration: 8000 },
+            );
+            return;
+          }
+          moveDeal();
+        })
+        .catch(() => {
+          // Le contrôle n'a pas pu s'exécuter : on laisse passer plutôt que de
+          // bloquer un déplacement légitime sur une panne de lecture.
+          moveDeal();
+        });
+      return;
+    }
 
-    // persist the changes and invalidate all deal list caches (all views)
-    updateDealStage(sourceDeal, destinationDeal, dataProvider).then(() => {
-      // The whole resource, not just getList. `getOne` feeds the deal page and
-      // its edit form: left stale, reopening a deal after a drag & drop showed
-      // its previous stage, and saving wrote that stale value back — silently
-      // undoing the move and logging a bogus stage change in the history.
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-    });
+    moveDeal();
+
+    function moveDeal() {
+      // compute local state change synchronously
+      setDealsByStage(
+        updateDealStageLocal(
+          sourceDeal,
+          { stage: sourceStage, index: source.index },
+          { stage: destinationStage, index: destinationIndex },
+          dealsByStage,
+        ),
+      );
+
+      // persist the changes and invalidate all deal list caches (all views)
+      updateDealStage(sourceDeal, destinationDeal, dataProvider).then(() => {
+        // The whole resource, not just getList. `getOne` feeds the deal page
+        // and its edit form: left stale, reopening a deal after a drag & drop
+        // showed its previous stage, and saving wrote that stale value back —
+        // silently undoing the move and logging a bogus stage change in the
+        // history.
+        queryClient.invalidateQueries({ queryKey: ["deals"] });
+      });
+    }
   };
 
   const visibleDealStages = boardStages.filter((s) =>
