@@ -26,6 +26,10 @@ create table public.companies (
     context_links json,
     country text,
     description text,
+    -- Origine du descriptif : 'ai' quand il a été rédigé par un modèle, null
+    -- quand il vient d'un humain ou d'une source inconnue (NOS-1149). Effacé
+    -- dès que le descriptif est réécrit à la main.
+    description_source text,
     revenue text,
     tax_identifier text,
     logo jsonb,
