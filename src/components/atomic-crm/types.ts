@@ -82,7 +82,10 @@ export type Company = {
    */
   description_source?: "ai" | null;
   revenue: string;
+  /** SIRET de l etablissement, malgre le nom historique du champ. */
   tax_identifier: string;
+  /** TVA intracommunautaire, renseignee par Pappers (NOS-1151). */
+  vat_number?: string | null;
   country: string;
   context_links?: string[];
   nb_contacts?: number;

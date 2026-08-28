@@ -127,9 +127,18 @@ export const ContextInfo = ({ record }: { record: Company }) => {
           Revenu : <TextField source="revenue" />
         </span>
       )}
+      {/* « SIRET » et non « N° fiscal » (NOS-1151) : c'est bien un SIRET que
+          Pappers écrit dans ce champ, et que le passage en Qualifié contrôle.
+          Un intitulé vague sur une donnée précise invite à y mettre autre
+          chose. */}
       {record.tax_identifier && (
         <span>
-          N° fiscal : <TextField source="tax_identifier" />
+          SIRET : <TextField source="tax_identifier" />
+        </span>
+      )}
+      {record.vat_number && (
+        <span>
+          TVA : <TextField source="vat_number" />
         </span>
       )}
     </AsideSection>
