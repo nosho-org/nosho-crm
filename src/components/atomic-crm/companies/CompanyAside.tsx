@@ -37,6 +37,10 @@ export const CompanyAside = ({ link = "edit" }: CompanyAsideProps) => {
 
       <CompanyInfo record={record} />
 
+      {/* Avant l'adresse (NOS-1122) : qui est ce client se lit avant où il
+          se trouve. */}
+      <DescriptionInfo record={record} />
+
       <AddressInfo record={record} />
 
       <ContextInfo record={record} />
@@ -131,6 +135,32 @@ export const ContextInfo = ({ record }: { record: Company }) => {
   );
 };
 
+/**
+ * Le descriptif de la société, dans sa propre section (NOS-1122).
+ *
+ * Il était rendu en tête d'« Informations complémentaires », c'est-à-dire sous
+ * l'adresse et sous un intitulé qui ne dit pas ce qu'il contient. Marc-Henri
+ * cherchait « le descriptif de qui est le client » et ne le trouvait pas —
+ * l'information était pourtant là, mais rangée avec la date de création et le
+ * commercial qui suit le compte.
+ *
+ * Remonté juste après le nom : c'est la première chose qu'on veut lire d'une
+ * société qu'on ne connaît pas.
+ */
+export const DescriptionInfo = ({ record }: { record: Company }) => {
+  const description = record.description?.trim();
+  if (!description) return null;
+
+  return (
+    <AsideSection title="Descriptif">
+      {/* `whitespace-pre-line` : ces descriptifs viennent souvent d'un
+          copier-coller ou de l'enrichissement, et arrivent en plusieurs
+          paragraphes. Les aplatir en un bloc les rend pénibles à lire. */}
+      <p className="text-sm whitespace-pre-line">{description}</p>
+    </AsideSection>
+  );
+};
+
 export const AddressInfo = ({ record }: { record: Company }) => {
   if (
     !record.address &&
@@ -153,12 +183,10 @@ export const AddressInfo = ({ record }: { record: Company }) => {
 };
 
 export const AdditionalInfo = ({ record }: { record: Company }) => {
-  if (
-    !record.created_at &&
-    !record.sales_id &&
-    !record.description &&
-    !record.context_links
-  ) {
+  // `description` a quitté cette section pour la sienne (NOS-1122) : elle ne
+  // doit donc plus la maintenir en vie, sinon une société n'ayant qu'un
+  // descriptif afficherait ici un titre sans contenu.
+  if (!record.created_at && !record.sales_id && !record.context_links) {
     return null;
   }
   const getBaseURL = (url: string) => {
@@ -168,9 +196,6 @@ export const AdditionalInfo = ({ record }: { record: Company }) => {
 
   return (
     <AsideSection title="Informations complémentaires">
-      {record.description && (
-        <p className="text-sm  mb-1">{record.description}</p>
-      )}
       {record.context_links && (
         <div className="flex flex-col">
           {record.context_links.map((link, index) =>
