@@ -25,13 +25,24 @@ import { sizes } from "./sizes";
 type Enrichment = Partial<Company> & {
   not_found?: boolean;
   /**
-   * Plusieurs etablissements portent ce nom chez Pappers (NOS-1151).
+   * Établissements proposés par le registre quand le nom ne tranche pas
+   * (NOS-1152).
    *
-   * Message pour l affichage, jamais une donnee de societe : retire du
-   * payload avant la creation, comme not_found.
+   * Message pour l'affichage, jamais une donnée de société : retiré du payload
+   * avant la création, comme `not_found`.
    */
-  legal_ambiguous?: boolean;
-  legal_candidates?: number;
+  legal_candidates?: LegalCandidate[];
+};
+
+/** Un établissement du registre, proposé au choix. */
+type LegalCandidate = {
+  siren: string;
+  siret?: string;
+  name: string;
+  city?: string;
+  zipcode?: string;
+  forme_juridique?: string;
+  date_creation?: string;
 };
 
 const transform = (values: Record<string, unknown>) => {
@@ -82,6 +93,8 @@ const QuickCreate = ({
   const [loading, setLoading] = useState(false);
   const [enrichment, setEnrichment] = useState<Enrichment | null>(null);
   const [notFound, setNotFound] = useState(false);
+  // SIREN en cours de resolution, pour n activer qu une ligne a la fois.
+  const [pickingSiren, setPickingSiren] = useState<string | null>(null);
 
   const handleEnrich = async () => {
     if (!name.trim()) return;
@@ -120,6 +133,41 @@ const QuickCreate = ({
     }
   };
 
+  /**
+   * L'utilisateur a désigné son établissement (NOS-1152).
+   *
+   * Second appel, sur le registre seul : le qualitatif est déjà à l'écran, et
+   * relancer le modèle coûterait un appel pour réécrire la même chose.
+   *
+   * Le résultat écrase ce que le modèle avait pu deviner d'adresse ou de
+   * ville — un registre prime sur une inférence, et l'utilisateur vient
+   * précisément de dire lequel fait foi.
+   */
+  const handlePickEstablishment = async (candidate: LegalCandidate) => {
+    setPickingSiren(candidate.siren);
+    try {
+      const { data, error } = await getSupabaseClient().functions.invoke(
+        "enrich-company-ai",
+        { body: { name: name.trim(), siren: candidate.siren } },
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setEnrichment((previous) => {
+        const { legal_candidates: _resolu, ...reste } = previous ?? {};
+        return { ...reste, ...(data as Partial<Company>) };
+      });
+    } catch (e) {
+      notify(
+        `Impossible de récupérer cet établissement : ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+        { type: "error" },
+      );
+    } finally {
+      setPickingSiren(null);
+    }
+  };
+
   const handleCreate = async (extra?: Partial<Company>) => {
     const payload: Partial<Company> = {
       name: name.trim(),
@@ -129,11 +177,9 @@ const QuickCreate = ({
     };
     const drapeaux = payload as {
       not_found?: boolean;
-      legal_ambiguous?: boolean;
-      legal_candidates?: number;
+      legal_candidates?: unknown;
     };
     delete drapeaux.not_found;
-    delete drapeaux.legal_ambiguous;
     delete drapeaux.legal_candidates;
 
     create(
@@ -243,17 +289,50 @@ const QuickCreate = ({
               <Field label="SIRET" value={enrichment.tax_identifier} />
               <Field label="N° de TVA" value={enrichment.vat_number ?? ""} />
               {/*
-                Plusieurs établissements homonymes chez Pappers : on ne choisit
-                pas à la place de l'utilisateur, mais on lui dit pourquoi le
-                SIRET est vide (NOS-1151). Sans ce message, il chercherait une
-                panne là où il n'y a qu'une ambiguïté.
+                Le nom ne tranche pas : on montre le registre et l'utilisateur
+                choisit (NOS-1152). Un seul clic suffit ensuite à remplir
+                SIRET, TVA, adresse, CA et effectif.
               */}
-              {enrichment.legal_ambiguous && (
-                <p className="text-xs text-[var(--deal-status-warning)] mt-1">
-                  {enrichment.legal_candidates} établissements portent ce nom au
-                  registre : le SIRET et la TVA sont à renseigner à la main,
-                  depuis la fiche société.
-                </p>
+              {!!enrichment.legal_candidates?.length && (
+                <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    {enrichment.legal_candidates.length} établissements portent
+                    ce nom au registre. Choisissez le bon pour compléter SIRET,
+                    TVA, adresse et finances :
+                  </p>
+                  {enrichment.legal_candidates.map((candidate) => (
+                    <button
+                      key={candidate.siren}
+                      type="button"
+                      onClick={() => handlePickEstablishment(candidate)}
+                      disabled={pickingSiren !== null || isCreating}
+                      className="text-left rounded-md border bg-background px-2.5 py-2 hover:border-primary hover:bg-accent/40 disabled:opacity-60 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">
+                          {candidate.name}
+                        </span>
+                        {pickingSiren === candidate.siren && (
+                          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                        )}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {[
+                          candidate.forme_juridique,
+                          [candidate.zipcode, candidate.city]
+                            .filter(Boolean)
+                            .join(" "),
+                          candidate.siret ? `SIRET ${candidate.siret}` : null,
+                          candidate.date_creation
+                            ? `créée en ${candidate.date_creation.slice(0, 4)}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-2 italic">
                 Vérifiez puis créez. Les champs manquants pourront être ajoutés
