@@ -22,7 +22,17 @@ import type { Company } from "../types";
 import { CompanyInputs } from "./CompanyInputs";
 import { sizes } from "./sizes";
 
-type Enrichment = Partial<Company> & { not_found?: boolean };
+type Enrichment = Partial<Company> & {
+  not_found?: boolean;
+  /**
+   * Plusieurs etablissements portent ce nom chez Pappers (NOS-1151).
+   *
+   * Message pour l affichage, jamais une donnee de societe : retire du
+   * payload avant la creation, comme not_found.
+   */
+  legal_ambiguous?: boolean;
+  legal_candidates?: number;
+};
 
 const transform = (values: Record<string, unknown>) => {
   const website = values.website;
@@ -80,7 +90,9 @@ const QuickCreate = ({
     setNotFound(false);
     try {
       const { data, error } = await getSupabaseClient().functions.invoke(
-        "enrich-mistral-company",
+        // Remplace `enrich-mistral-company`, jamais deployee et lisant une
+        // cle absente : ce bouton n a jamais fonctionne (NOS-1151).
+        "enrich-company-ai",
         {
           body: {
             name: name.trim(),
@@ -97,9 +109,12 @@ const QuickCreate = ({
       }
       setEnrichment(data as Enrichment);
     } catch (e) {
-      notify(`Erreur Mistral : ${e instanceof Error ? e.message : String(e)}`, {
-        type: "error",
-      });
+      notify(
+        `Erreur d'enrichissement : ${e instanceof Error ? e.message : String(e)}`,
+        {
+          type: "error",
+        },
+      );
     } finally {
       setLoading(false);
     }
@@ -112,7 +127,14 @@ const QuickCreate = ({
       ...(enrichment ?? {}),
       ...(extra ?? {}),
     };
-    delete (payload as { not_found?: boolean }).not_found;
+    const drapeaux = payload as {
+      not_found?: boolean;
+      legal_ambiguous?: boolean;
+      legal_candidates?: number;
+    };
+    delete drapeaux.not_found;
+    delete drapeaux.legal_ambiguous;
+    delete drapeaux.legal_candidates;
 
     create(
       "companies",
@@ -214,9 +236,29 @@ const QuickCreate = ({
                   .join(" ")}
               />
               <Field label="Pays" value={enrichment.country} />
+              {/* Identifiants légaux : ils viennent de Pappers, pas du modèle
+                  (NOS-1151). Les montrer ici permet de les vérifier avant
+                  qu'ils n'entrent en base — un SIRET faux ne se signale
+                  jamais. */}
+              <Field label="SIRET" value={enrichment.tax_identifier} />
+              <Field label="N° de TVA" value={enrichment.vat_number ?? ""} />
+              {/*
+                Plusieurs établissements homonymes chez Pappers : on ne choisit
+                pas à la place de l'utilisateur, mais on lui dit pourquoi le
+                SIRET est vide (NOS-1151). Sans ce message, il chercherait une
+                panne là où il n'y a qu'une ambiguïté.
+              */}
+              {enrichment.legal_ambiguous && (
+                <p className="text-xs text-[var(--deal-status-warning)] mt-1">
+                  {enrichment.legal_candidates} établissements portent ce nom au
+                  registre : le SIRET et la TVA sont à renseigner à la main,
+                  depuis la fiche société.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-2 italic">
                 Vérifiez puis créez. Les champs manquants pourront être ajoutés
-                plus tard.
+                plus tard. Le descriptif est rédigé par IA ; SIRET, TVA et
+                adresse viennent du registre Pappers.
               </p>
             </div>
           )}

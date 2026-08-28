@@ -154,7 +154,15 @@ const CompanyContextInputs = () => {
       />
       <SelectInput source="size" choices={sizes} helperText={false} />
       <TextInput source="revenue" helperText={false} />
-      <TextInput source="tax_identifier" helperText={false} />
+      {/* Libellés explicites (NOS-1151). `tax_identifier` porte le SIRET
+          depuis toujours ; le nommer ainsi évite qu'on y saisisse un numéro
+          de TVA, lequel a maintenant son propre champ. */}
+      <TextInput source="tax_identifier" label="SIRET" helperText={false} />
+      <TextInput
+        source="vat_number"
+        label="N° de TVA intracommunautaire"
+        helperText={false}
+      />
     </div>
   );
 };
