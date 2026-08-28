@@ -49,6 +49,7 @@ import {
   PARTNERSHIP_OPPORTUNITY_TYPE,
   PARTNER_DEAL_CATEGORY,
 } from "./dealUtils";
+import { companyIsIdentified, stageRequiresSiret } from "./dealStageGuard";
 import type { Company, Contact, DealContactRoles, Sale } from "../types";
 
 export type DealFormMode = "create" | "edit";
@@ -446,16 +447,7 @@ const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
         label="Début du POC"
         helperText={false}
       />
-      <SelectInput
-        source="stage"
-        label="Étape"
-        choices={dealStages}
-        optionText="label"
-        optionValue="value"
-        defaultValue={defaultStage}
-        helperText={false}
-        validate={required()}
-      />
+      <DealStageInput choices={dealStages} defaultStage={defaultStage} />
       <DealSalesInput mode={mode} />
       <DealReferrerInput />
     </div>
@@ -512,6 +504,54 @@ const DealOpportunityTypeInput = ({
       optionValue="value"
       helperText={false}
       validate={requiredOnCreate(mode)}
+    />
+  );
+};
+
+/**
+ * L'étape, avec le contrôle SIRET à partir de Qualifié (NOS-1150).
+ *
+ * La validation vit sur ce champ plutôt que sur le formulaire entier : c'est
+ * le champ fautif, et c'est là que l'utilisateur regarde. Un message global
+ * l'obligerait à deviner lequel des quinze champs le refuse.
+ *
+ * Le SIRET est lu sur la société liée. Le champ `company_id` est surveillé,
+ * pas seulement lu au montage : on peut changer de société dans le même
+ * formulaire, et le contrôle doit suivre.
+ */
+const DealStageInput = ({
+  choices,
+  defaultStage,
+}: {
+  choices: { value: string; label: string }[];
+  defaultStage?: string;
+}) => {
+  const companyId = useWatch({ name: "company_id" });
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: companyId },
+    { enabled: companyId != null },
+  );
+
+  const validateStage = (value: string) => {
+    if (!stageRequiresSiret(value)) return undefined;
+    if (companyIsIdentified(company)) return undefined;
+    // La société n'est peut-être pas encore chargée : ne pas refuser sur une
+    // absence de donnée qu'on n'a pas fini de lire.
+    if (companyId != null && company === undefined) return undefined;
+    return "SIRET de la société manquant — renseignez-le sur sa fiche (bouton « Enrichir ») avant de passer à cette étape.";
+  };
+
+  return (
+    <SelectInput
+      source="stage"
+      label="Étape"
+      choices={choices}
+      optionText="label"
+      optionValue="value"
+      defaultValue={defaultStage}
+      helperText={false}
+      validate={[required(), validateStage]}
     />
   );
 };
