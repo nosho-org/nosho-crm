@@ -6,6 +6,7 @@ import {
   useGetList,
   useGetOne,
   useNotify,
+  useUpdate,
 } from "ra-core";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,17 +70,22 @@ const euros = (cents: number | null) =>
 export const ContractDialog = ({
   deal,
   kind,
+  contract,
   open,
   onClose,
 }: {
   deal: Deal;
   kind: "poc" | "cadre";
+  /** Présent = édition d'un contrat existant ; absent = création. */
+  contract?: Contract;
   open: boolean;
   onClose: () => void;
 }) => {
   const { establishmentTypes } = useConfigurationContext();
   const { identity } = useGetIdentity();
-  const [create, { isPending }] = useCreate();
+  const [create, { isPending: isCreating }] = useCreate();
+  const [update, { isPending: isUpdating }] = useUpdate();
+  const isPending = isCreating || isUpdating;
   const notify = useNotify();
 
   const { data: company } = useGetOne<Company>(
@@ -115,6 +121,31 @@ export const ContractDialog = ({
    */
   useEffect(() => {
     if (!open) return;
+
+    /*
+     * Édition : on recharge ce qui a été saisi, et on ne suggère rien.
+     *
+     * Laisser la grille tarifaire écraser un prix négocié parce qu'on rouvre
+     * la fenêtre pour corriger une faute de frappe dans un e-mail serait le
+     * pire des services.
+     */
+    if (contract) {
+      setSignatoryFirstName(contract.signatory_first_name ?? "");
+      setSignatoryLastName(contract.signatory_last_name ?? "");
+      setSignatoryJobTitle(contract.signatory_job_title ?? "");
+      setSignatoryEmail(contract.signatory_email ?? "");
+      setNoshoSignatoryId(
+        contract.nosho_signatory_id != null
+          ? String(contract.nosho_signatory_id)
+          : "",
+      );
+      setOfferLabel(contract.offer_label ?? "");
+      setOfferDetail(contract.offer_detail ?? "");
+      setUnitPrice(euros(contract.unit_price_cents ?? null));
+      setPriceUnit(contract.price_unit ?? "confirmation");
+      return;
+    }
+
     const me = sales?.find((s) => String(s.id) === String(identity?.id));
     if (me && me.job_title) setNoshoSignatoryId(String(me.id));
 
@@ -129,7 +160,7 @@ export const ContractDialog = ({
       setPriceUnit(preset.unit);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, sales, company]);
+  }, [open, sales, company, contract]);
 
   const applyPreset = (value: string) => {
     const preset = CONTRACT_OFFER_PRESETS.find((p) => p.value === value);
@@ -175,23 +206,41 @@ export const ContractDialog = ({
           : null,
     };
 
-    create(
-      "contracts",
-      { data: payload },
-      {
-        onSuccess: () => {
-          notify(`${KIND_LABELS[kind]} enregistré`, { type: "success" });
-          onClose();
-        },
-        onError: (error) =>
-          notify(
-            `Enregistrement impossible : ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-            { type: "error" },
-          ),
-      },
-    );
+    const onSuccess = () => {
+      notify(`${KIND_LABELS[kind]} enregistré`, { type: "success" });
+      onClose();
+    };
+    const onError = (error: unknown) =>
+      notify(
+        `Enregistrement impossible : ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { type: "error" },
+      );
+
+    if (contract) {
+      /*
+       * `status` et la RUM sont volontairement absents de la mise à jour.
+       *
+       * Le statut suit le cycle du document, pas la saisie : le remettre à
+       * « brouillon » parce qu'on corrige un e-mail effacerait le fait qu'il a
+       * été envoyé. Et la RUM, une fois enregistrée par la banque du débiteur,
+       * ne doit plus bouger — la réécrire casserait le mandat.
+       */
+      const {
+        status: _ignore,
+        sepa_mandate_reference: _rum,
+        ...editable
+      } = payload;
+      update(
+        "contracts",
+        { id: contract.id, data: editable, previousData: contract },
+        { onSuccess, onError },
+      );
+      return;
+    }
+
+    create("contracts", { data: payload }, { onSuccess, onError });
   };
 
   const field = (
