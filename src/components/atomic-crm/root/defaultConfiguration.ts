@@ -42,7 +42,10 @@ export const defaultCompanySectors = [
  * production, so most rows were never rewritten.
  */
 export const defaultDealStages = [
-  { value: "a-reclasser", label: "À reclasser" },
+  // « À reclasser » a quitté le pipeline le 29/08/2026, à la demande de Simon,
+  // et rejoint `archivedDealStages` ci-dessous. C'était la file d'attente de la
+  // refonte v2 ; elle a été vidée, et la production n'y comptait plus aucune
+  // opportunité au moment du retrait.
   { value: "lead", label: "Lead" },
   { value: "qualified", label: "Qualifié" },
   { value: "demo-poc", label: "Démo / POC" },
@@ -67,6 +70,10 @@ export const defaultDealStages = [
  * "Démo booked", `poc-lanc` really is "POC lancé").
  */
 export const archivedDealStages = [
+  // Retirée du pipeline le 29/08/2026 : conservée ici pour que son libellé
+  // reste résoluble si un enregistrement égaré la porte encore, plutôt que
+  // d'afficher son slug brut.
+  { value: "a-reclasser", label: "À reclasser" },
   { value: "logiciels-brique", label: "Logiciels (brique)" },
   { value: "declined", label: "Décliné" },
   { value: "follow-up", label: "Follow up" },

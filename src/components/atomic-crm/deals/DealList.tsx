@@ -126,6 +126,22 @@ const DealList = () => {
        * « Mes opportunités » ni à aucun commercial, et le sélecteur s'afficherait
        * vide en contredisant le filtre réellement appliqué.
        */
+      /*
+       * `storeKey={false}` : l'écran s'ouvre toujours sur ses défauts.
+       *
+       * Sans ça, ra-core mémorise les filtres dans le store du navigateur, et
+       * ce souvenir prime sur `filterDefaultValues` — définitivement. Il
+       * suffit d'avoir basculé une fois sur « Toutes les opportunités » pour
+       * ne plus jamais revoir « Mes opportunités » à l'ouverture, sans que
+       * rien à l'écran n'explique pourquoi. C'est ce que Simon a constaté, et
+       * c'est le même piège que les filtres fantômes de NOS-1058.
+       *
+       * Les filtres ne sont pas perdus pour autant : ra-core les écrit aussi
+       * dans l'URL. Ouvrir une opportunité puis revenir en arrière les
+       * conserve — seule une arrivée franche sur l'écran repart des défauts,
+       * ce qui est précisément le comportement demandé.
+       */
+      storeKey={false}
       filterDefaultValues={toListFilter({
         stage: defaultStages,
         salesId: identity.id,
