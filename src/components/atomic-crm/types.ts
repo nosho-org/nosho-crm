@@ -102,6 +102,28 @@ export type Company = {
 } & Pick<RaRecord, "id">;
 
 /**
+ * Encaisse reelle d un mois, pour une source (NOS-1179).
+ *
+ * Deux sources aujourd hui : les reversements Mollie, et les virements directs
+ * de societes du CRM -- Hopital Europeen paie ainsi. Deux lignes par mois
+ * plutot qu une : les deux ne se collectent pas de la meme facon, et les
+ * fondre donnerait un total qu on ne saurait plus verifier.
+ */
+export type RevenueActual = {
+  created_at?: string;
+  updated_at?: string;
+  /** Premier jour du mois couvert. */
+  month: string;
+  /** `mollie` ou `virement`. */
+  source: string;
+  /** En euros. */
+  amount: number;
+  /** Nombre d encaissements. Sert a reperer une collecte partielle. */
+  transaction_count?: number | null;
+  fetched_at?: string;
+} & Pick<RaRecord, "id">;
+
+/**
  * Objectif commercial (NOS-1173).
  *
  * `sales_id` nul = objectif COMMUN a l equipe. Des bornes de date plutot qu un

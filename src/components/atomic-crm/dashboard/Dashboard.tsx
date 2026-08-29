@@ -154,7 +154,7 @@ export const Dashboard = () => {
           Le fond opaque n'est pas décoratif : sans lui, les cartes du cockpit
           transparaîtraient à travers.
         */}
-        <div className="sticky top-16 z-30 -mx-[50px] px-[50px] py-2 bg-background border-b">
+        <div className="sticky top-16 z-30 -mx-[50px] px-[50px] py-2 bg-background">
           <DashboardKpiBanner />
         </div>
 

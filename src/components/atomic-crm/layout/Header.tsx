@@ -270,12 +270,27 @@ const NavigationTab = ({
   to: string;
   isActive: boolean;
 }) => (
+  /*
+   * L'onglet survolé grossit et s'épaissit (NOS-1180, demandé par Simon).
+   *
+   * `inline-block` est indispensable : `transform` n'a aucun effet sur un
+   * élément `inline`, et un `<a>` l'est par défaut. C'est le genre de détail
+   * qui fait conclure que « l'effet ne marche pas ».
+   *
+   * L'agrandissement porte sur l'échelle et non sur la taille de police : une
+   * police qui change de taille repousse ses voisins, et toute la barre de
+   * navigation danserait au passage de la souris. `scale` ne déplace rien.
+   *
+   * `motion-safe:` — le grossissement est une animation, donc soumis au
+   * réglage système comme le reste (voir `ui/motion/`). Le passage en gras,
+   * lui, reste : ce n'est pas du mouvement.
+   */
   <Link
     to={to}
-    className={`px-6 py-3.5 text-sm font-medium transition-all duration-200 border-b-[2.5px] ${
+    className={`inline-block px-6 py-3.5 text-sm font-medium origin-bottom transition-all duration-200 border-b-[2.5px] hover:font-semibold motion-safe:hover:scale-110 ${
       isActive
         ? "text-header-foreground border-[var(--nosho-orange)]"
-        : "text-header-foreground/60 border-transparent hover:text-header-foreground/80 hover:border-header-foreground/20"
+        : "text-header-foreground/60 border-transparent hover:text-header-foreground hover:border-header-foreground/30"
     }`}
   >
     {label}

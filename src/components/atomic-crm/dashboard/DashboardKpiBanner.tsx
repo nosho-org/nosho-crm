@@ -6,6 +6,7 @@ import {
   TrendingUp,
   Trophy,
   UserPlus,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { useGetList } from "ra-core";
@@ -13,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { MagicCard, NumberTicker } from "@/components/ui/motion";
 
 import { formatCurrencyCompact } from "../misc/formatCurrency";
-import type { Deal } from "../types";
+import type { Deal, RevenueActual } from "../types";
 import { computeRevenueSnapshot } from "../deals/cockpit/dealRevenue";
 import {
   computeStageBreakdown,
@@ -24,6 +25,7 @@ import { formatPercent } from "../deals/cockpit/dealFormat";
 import { pluralize } from "../deals/cockpit/dealFormat";
 import { useDashboard } from "./DashboardContext";
 import { computeNewLeadsTrend, describeLeadsTrend } from "./newLeads";
+import { formatMonth, monthOverMonth } from "./revenueActuals";
 
 /**
  * ---------------------------------------------------------------------------
@@ -126,6 +128,73 @@ const KpiCard = ({
     </Card>
   </MagicCard>
 );
+
+/**
+ * Le MRR réellement encaissé (NOS-1179).
+ *
+ * Le seul chiffre du bandeau qui ne vienne pas d'une saisie. Tous les autres
+ * additionnent des ARR tapés dans des opportunités ; celui-ci somme ce qui a
+ * atterri sur le compte Qonto — reversements Mollie et virements directs de
+ * clients.
+ *
+ * ## Il affiche le dernier mois COMPLET, et le nomme
+ *
+ * Un mois entamé au tiers afficherait un tiers du chiffre, et se lirait comme
+ * une chute de 66 % tous les 10 du mois. Le mois est donc écrit à côté :
+ * un montant sans son mois se lit comme « maintenant », ce qu'il n'est pas.
+ *
+ * ## Il ne suit aucun filtre
+ *
+ * Ni la période, ni le responsable. Un encaissement bancaire n'a pas de
+ * commercial, et le restreindre à une période choisie plus haut donnerait un
+ * total qui n'a plus de sens comptable.
+ */
+const CashKpiCard = () => {
+  const { data: rows } = useGetList<RevenueActual>("revenue_actuals", {
+    pagination: { page: 1, perPage: 60 },
+    sort: { field: "month", order: "DESC" },
+  });
+
+  const trend = monthOverMonth(rows ?? []);
+
+  if (!trend) {
+    return (
+      <KpiCard
+        label="Encaissé"
+        icon={Wallet}
+        color="var(--deal-status-won)"
+        value="—"
+        context="aucun mois complet relevé"
+      />
+    );
+  }
+
+  const up = (trend.deltaPercent ?? 0) > 0;
+
+  return (
+    <KpiCard
+      label="Encaissé"
+      icon={Wallet}
+      color="var(--deal-status-won)"
+      value={formatCurrencyCompact(trend.current.amount)}
+      context={[
+        formatMonth(trend.current.month),
+        trend.deltaPercent != null
+          ? `${trend.deltaPercent > 0 ? "+" : ""}${trend.deltaPercent} %`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      contextClassName={
+        trend.deltaPercent == null
+          ? undefined
+          : up
+            ? "text-[var(--deal-status-won)]"
+            : "text-[var(--deal-status-serious)]"
+      }
+    />
+  );
+};
 
 /**
  * L'ARR d'une étape précise (NOS-1065).
@@ -269,7 +338,7 @@ export const DashboardKpiBanner = () => {
         </p>
       )}
 
-      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         {/*
           Les nouveaux leads en tête (NOS-1178, demandé par Simon).
 
@@ -311,6 +380,8 @@ export const DashboardKpiBanner = () => {
         <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
         <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />
         <StageKpiCard stage="proposal" icon={FileText} buckets={buckets} />
+
+        <CashKpiCard />
 
         <KpiCard
           label="ARR signé (won)"
