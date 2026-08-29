@@ -10,6 +10,7 @@ import { CompanyAvatar } from "../../companies/CompanyAvatar";
 import type { Deal } from "../../types";
 import { GenerateProposalAction } from "../GenerateProposalAction";
 import { ContractAction } from "../../contracts/ContractAction";
+import { ContractsBlock } from "../../contracts/ContractsBlock";
 import { DealPriorityField } from "../DealPriorityField";
 import { DealStageBadge, DealProductBadges } from "../shared/DealBadges";
 import { DealActivityTimeline } from "./DealActivityTimeline";
@@ -120,6 +121,7 @@ const DealShowLayout = () => (
         <DealNextTaskBlock />
         <DealTasksBlock />
         <DealSynthesis />
+        <ContractsBlock />
         <DealCompanyGroup />
         <DealKeyContacts />
         <DealEmailHistory />
