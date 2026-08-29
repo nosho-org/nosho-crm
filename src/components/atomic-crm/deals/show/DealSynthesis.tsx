@@ -136,6 +136,11 @@ export const DealSynthesis = () => {
       </SubBlock>
 
       <SubBlock title="Nature du deal">
+        {/* L'intitulé a quitté le titre de la page, qui ne porte plus que le
+            nom de la société (NOS-1163). Il descend ici plutôt que de
+            disparaître : il reste le seul endroit où se lit « Extension 3
+            sites » quand le deal en porte un qui ne redit pas la société. */}
+        <Field label="Intitulé">{record.name || UNKNOWN}</Field>
         <Field label="Type d'opportunité">
           {labelOf(dealOpportunityTypes, record.opportunity_type) ?? UNKNOWN}
         </Field>

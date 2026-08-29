@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGetMany, useNotify, useRecordContext } from "ra-core";
 import { ExternalLink, FileText, RotateCw } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -88,7 +87,13 @@ const ProposalUrlsDisplay = ({ deal }: { deal: Deal }) => {
   const [regenOpen, setRegenOpen] = useState(false);
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="secondary">Proposition</Badge>
+      {/*
+        « Édition » disait quel geste, jamais sur quoi. À côté d'« Éditer un
+        contrat », qui ouvre un tout autre document, les deux se confondaient.
+        Le badge « Proposition » était censé porter cette portée, mais un badge
+        qui qualifie les deux boutons voisins ne se lit pas comme tel : le sujet
+        appartient au libellé du bouton.
+      */}
       <Button size="sm" variant="outline" className="h-9" asChild>
         <a
           href={deal.proposal_edit_url ?? "#"}
@@ -96,7 +101,7 @@ const ProposalUrlsDisplay = ({ deal }: { deal: Deal }) => {
           rel="noreferrer"
         >
           <ExternalLink className="w-4 h-4 mr-1" />
-          Édition
+          Éditer la proposition
         </a>
       </Button>
       <Button size="sm" variant="outline" className="h-9" asChild>
