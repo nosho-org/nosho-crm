@@ -81,6 +81,12 @@
 
   <section>
     <h2>Article 1 — Objet</h2>
+    <!--
+      Le mot « gratuite » apparaît deux fois dans cette phrase. Il suit donc
+      `isFree` comme l'article 5 : un contrat facturé dont l'objet se déclare
+      gratuit se contredirait dès sa première page.
+    -->
+    {{#isFree}}
     <p>
       Le présent contrat définit les modalités d'utilisation gratuite du service
       Nosho, agent conversationnel (appels, SMS et messages) dédié à la
@@ -88,14 +94,39 @@
       justifiées, dans le cadre d'une période d'essai gratuite (ci-après la
       « Période d'essai »).
     </p>
+    {{/isFree}}
+    {{^isFree}}
+    <p>
+      Le présent contrat définit les modalités d'utilisation du service Nosho,
+      agent conversationnel (appels, SMS et messages) dédié à la confirmation
+      des rendez-vous et à la réduction des absences non justifiées, dans le
+      cadre d'une période d'essai (ci-après la « Période d'essai »).
+    </p>
+    {{/isFree}}
   </section>
 
   <section>
     <h2>Article 2 — Durée</h2>
+    <!--
+      Deux formulations, selon que la durée est ronde ou non.
+
+      `trial.weeks` est absent quand elle est personnalisée : dix jours ne font
+      pas un nombre entier de semaines, et écrire « pour une durée de 1
+      semaines » suivi d'une date au dixième jour donnerait une phrase en
+      désaccord avec elle-même.
+    -->
+    {{#trial.weeks}}
     <p>
       La Période d'essai prend effet le {{trial.startDate}} pour une durée de
       {{trial.weeks}} semaines, soit jusqu'au {{trial.endDate}} inclus.
     </p>
+    {{/trial.weeks}}
+    {{^trial.weeks}}
+    <p>
+      La Période d'essai prend effet le {{trial.startDate}} et court jusqu'au
+      {{trial.endDate}} inclus.
+    </p>
+    {{/trial.weeks}}
     <p>
       À son terme, le Service est automatiquement suspendu. Sa poursuite suppose
       la conclusion d'un contrat distinct.
@@ -161,6 +192,19 @@
     </ul>
   </section>
 
+  <!--
+    ── Article 5 : deux versions, et une seule est validée ────────────────────
+
+    La branche GRATUITE est le texte du contrat Aboulker, mot pour mot.
+
+    La branche PAYANTE n'a jamais été signée par personne. Elle est reprise de
+    la logique de l'article 3 du contrat cadre, mais aucun avocat ne l'a relue
+    et aucun client ne l'a acceptée. Décocher « Gratuit » dans le CRM produit
+    donc un contrat dont l'article tarifaire est à faire valider avant le
+    premier envoi. Ne pas la supprimer pour autant : sans elle, décocher la
+    case produirait un contrat gratuit malgré la saisie, ce qui est pire.
+  -->
+  {{#isFree}}
   <section>
     <h2>Article 5 — Gratuité et suites de la Période d'essai</h2>
     <p>
@@ -176,16 +220,58 @@
       <li>
         Aucun abonnement, aucun frais de mise en service, aucun minimum mensuel.
       </li>
+      <!-- Indicatif, et le contrat le dit deux fois. Les lignes viennent des
+           prestations saisies dans le CRM ; à défaut, le gabarit n'en invente
+           aucune. -->
+      {{#services}}
       <li>
-        <!-- Indicatif, et le contrat le dit deux fois. Le prix vient de l'offre
-             saisie dans le CRM ; à défaut le gabarit ne l'invente pas. -->
-        {{#offer.unitPrice}}{{offer.unitPrice}} HT par
-        {{offer.unit}}{{/offer.unitPrice}}, un rendez-vous étant réputé confirmé
-        lorsque le patient a expressément confirmé, annulé ou reprogrammé son
-        rendez-vous à la suite d'une sollicitation de l'agent.
+        {{label}}{{#unitPrice}} — {{unitPrice}} HT par {{unit}}{{/unitPrice}}.
+        {{#comment}}{{comment}}{{/comment}}
       </li>
+      {{/services}}
     </ul>
+    <p>
+      Un rendez-vous est réputé confirmé lorsque le patient a expressément
+      confirmé, annulé ou reprogrammé son rendez-vous à la suite d'une
+      sollicitation de l'agent.
+    </p>
   </section>
+  {{/isFree}}
+
+  {{^isFree}}
+  <section>
+    <!-- TEXTE À FAIRE VALIDER — voir le commentaire ci-dessus. -->
+    <h2>Article 5 — Conditions financières</h2>
+    <p>
+      Les prestations réalisées au titre du présent contrat sont facturées aux
+      conditions suivantes :
+    </p>
+    <table class="tarifs">
+      <thead>
+        <tr>
+          <th>Prestation</th>
+          <th>Prix unitaire HT</th>
+          <th>Unité</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#services}}
+        <tr>
+          <td>{{label}}{{#comment}}<br /><small>{{comment}}</small>{{/comment}}</td>
+          <td>{{unitPrice}}</td>
+          <td>{{unit}}</td>
+        </tr>
+        {{/services}}
+      </tbody>
+    </table>
+    <p>
+      Aucun abonnement, aucun frais de mise en service, aucun minimum mensuel.
+      Un rendez-vous est réputé confirmé lorsque le patient a expressément
+      confirmé, annulé ou reprogrammé son rendez-vous à la suite d'une
+      sollicitation de l'agent.
+    </p>
+  </section>
+  {{/isFree}}
 
   <section>
     <h2>Article 6 — Données à caractère personnel</h2>

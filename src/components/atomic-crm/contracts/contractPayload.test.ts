@@ -3,6 +3,7 @@ import {
   buildContractRef,
   buildSepaMandateReference,
   formatFrenchDate,
+  formatFrenchDateWithWeekday,
   formatUnitPrice,
 } from "./contractPayload";
 import type { Company, Contract, Sale } from "../types";
@@ -30,10 +31,21 @@ const base = {
   signatory_last_name: "Roger",
   signatory_job_title: "Directrice de la Transition Numérique",
   signatory_email: "v.roger@hopital-europeen.fr",
-  offer_label: "Forfait confirmation",
-  offer_detail: "Appel sortant de confirmation, par rendez-vous traité",
-  unit_price_cents: 25,
-  price_unit: "confirmation",
+  services: [
+    {
+      service: "confirmation-rdv",
+      label: "Agent de confirmation de rendez-vous",
+      unitPriceCents: 25,
+      unit: "rendez-vous traité",
+      comment: "Reprise des créneaux annulés incluse.",
+    },
+    {
+      service: "secretariat",
+      label: "Agent de secrétariat",
+      unitPriceCents: 90,
+      unit: "appel entrant",
+    },
+  ],
   commitment_months: 12,
   renewal_months: 12,
   notice_days: 30,
@@ -110,8 +122,24 @@ describe("buildContractPayload", () => {
   });
 
   it("formate le prix, le gabarit n'a rien à calculer", () => {
-    expect(payload.offer?.unitPrice).toBe("0,25 €");
-    expect(payload.offer?.unit).toBe("confirmation");
+    expect(payload.services[0].unitPrice).toBe("0,25 €");
+    expect(payload.services[0].unit).toBe("rendez-vous traité");
+  });
+
+  it("porte toutes les lignes de prestation, pas seulement la première", () => {
+    // Un client peut prendre l'agent de confirmation ET l'agent de
+    // secrétariat, à deux prix et deux unités. Le modèle initial n'en
+    // portait qu'une, reprise du contrat HEM qui ne vend qu'un service.
+    expect(payload.services).toHaveLength(2);
+    expect(payload.services[1].label).toBe("Agent de secrétariat");
+    expect(payload.services[1].unitPrice).toBe("0,90 €");
+  });
+
+  it("garde le commentaire de la ligne, et ne l'invente pas quand il manque", () => {
+    expect(payload.services[0].comment).toBe(
+      "Reprise des créneaux annulés incluse.",
+    );
+    expect(payload.services[1].comment).toBeUndefined();
   });
 
   it("n'expose aucune date de fin", () => {
@@ -152,5 +180,96 @@ describe("buildContractPayload", () => {
       now: NOW,
     });
     expect(existing.sepaMandateReference).toBe("NOSHO-2025-CST002");
+  });
+});
+
+describe("formatFrenchDateWithWeekday", () => {
+  it("écrit le jour de la semaine, comme le contrat le fait", () => {
+    // « prend effet le lundi 31 août 2026 […] jusqu'au dimanche
+    // 13 septembre 2026 inclus » : le contrat POC de référence.
+    expect(formatFrenchDateWithWeekday("2026-08-31")).toBe(
+      "lundi 31 août 2026",
+    );
+    expect(formatFrenchDateWithWeekday("2026-09-13")).toBe(
+      "dimanche 13 septembre 2026",
+    );
+  });
+
+  it("lit la date en UTC, sans décalage de fuseau", () => {
+    // Une colonne `date` n'a pas d'heure. La lire dans le fuseau du
+    // navigateur ferait basculer la veille au soir tout utilisateur à
+    // l'ouest de Greenwich, et le contrat afficherait un jour de décalage.
+    expect(formatFrenchDateWithWeekday("2026-01-01")).toBe(
+      "jeudi 1 janvier 2026",
+    );
+  });
+});
+
+describe("période d'essai", () => {
+  it("n'en expose aucune quand le contrat n'en a pas", () => {
+    const cadre = buildContractPayload({
+      contract: base,
+      company,
+      noshoSignatory: nosho,
+      dealId: 42,
+      now: NOW,
+    });
+    expect(cadre.trial).toBeUndefined();
+  });
+
+  it("porte les deux bornes et la durée en toutes lettres", () => {
+    const poc = buildContractPayload({
+      contract: {
+        ...base,
+        kind: "poc",
+        trial_start_date: "2026-08-31",
+        trial_end_date: "2026-09-13",
+        trial_weeks: 2,
+      },
+      company,
+      noshoSignatory: nosho,
+      dealId: 42,
+      now: NOW,
+    });
+    expect(poc.trial?.startDate).toBe("lundi 31 août 2026");
+    expect(poc.trial?.endDate).toBe("dimanche 13 septembre 2026");
+    expect(poc.trial?.weeks).toBe("deux (2)");
+  });
+
+  it("omet la durée quand elle est personnalisée", () => {
+    // Dix jours ne font pas un nombre entier de semaines. Arrondir écrirait
+    // « pour une durée de 1 semaines » suivi d'une date en désaccord.
+    const poc = buildContractPayload({
+      contract: {
+        ...base,
+        kind: "poc",
+        trial_start_date: "2026-08-31",
+        trial_end_date: "2026-09-09",
+        trial_weeks: null,
+      },
+      company,
+      noshoSignatory: nosho,
+      dealId: 42,
+      now: NOW,
+    });
+    expect(poc.trial?.weeks).toBeUndefined();
+    expect(poc.trial?.endDate).toBe("mercredi 9 septembre 2026");
+  });
+});
+
+describe("gratuité", () => {
+  it("garde les lignes tarifaires, que l'article 5 imprime à titre indicatif", () => {
+    // « À titre purement indicatif et sans valeur d'engagement, les
+    // conditions applicables en cas de poursuite seraient les suivantes ».
+    // Le prix a un rôle sur un contrat gratuit : annoncer la suite.
+    const poc = buildContractPayload({
+      contract: { ...base, kind: "poc", is_free: true },
+      company,
+      noshoSignatory: nosho,
+      dealId: 42,
+      now: NOW,
+    });
+    expect(poc.isFree).toBe(true);
+    expect(poc.services).toHaveLength(2);
   });
 });

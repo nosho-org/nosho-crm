@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FileSignature, Loader2 } from "lucide-react";
+import { FileSignature, Loader2, Plus, Trash2 } from "lucide-react";
 import {
   useCreate,
   useGetIdentity,
@@ -9,6 +9,7 @@ import {
   useUpdate,
 } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -27,12 +28,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { Company, Contract, Deal, Sale } from "../types";
+import type { Company, Contract, ContractService, Deal, Sale } from "../types";
 import {
-  CONTRACT_OFFER_PRESETS,
   CONTRACT_PRICE_UNITS,
-  suggestOffer,
+  CONTRACT_SERVICES,
+  CONTRACT_TRIAL_DURATIONS,
+  trialEndDate,
 } from "./contractOffers";
 import { buildSepaMandateReference } from "./contractPayload";
 
@@ -45,10 +46,11 @@ import { buildSepaMandateReference } from "./contractPayload";
  *
  * ## Ce qui n'est pas demandé, et pourquoi
  *
- * **Aucune date de fin.** L'article 7 du contrat cadre pose une période ferme
- * comptée depuis la mise en production, puis une tacite reconduction par
+ * **Aucune date de fin sur le contrat cadre.** L'article 7 pose une période
+ * ferme comptée depuis la mise en production, puis une tacite reconduction par
  * périodes de 12 mois. Demander une date de fin produirait un contrat qui se
- * contredit lui-même.
+ * contredit lui-même. Le POC, lui, en a une — deux semaines fermes — d'où le
+ * bloc « Durée » qui n'apparaît que pour lui.
  *
  * **Aucune donnée Nosho** hors le signataire : raison sociale, capital, RCS,
  * adresse et ICS appartiennent au gabarit.
@@ -64,8 +66,36 @@ const KIND_LABELS: Record<string, string> = {
   cadre: "Contrat cadre",
 };
 
-const euros = (cents: number | null) =>
+const euros = (cents: number | null | undefined) =>
   cents == null ? "" : String(cents / 100).replace(".", ",");
+
+/**
+ * La virgule française autant que le point : personne ne tape « 0.25 » en
+ * France, et refuser la virgule ferait saisir un prix faux.
+ */
+const toCents = (value: string): number | null => {
+  const parsed = Number(value.replace(",", "."));
+  return value.trim() && Number.isFinite(parsed)
+    ? Math.round(parsed * 100)
+    : null;
+};
+
+/** Une ligne en cours de saisie. Les prix y restent du texte jusqu'au submit. */
+type ServiceRow = {
+  service: string;
+  label: string;
+  price: string;
+  unit: string;
+  comment: string;
+};
+
+const emptyRow = (): ServiceRow => ({
+  service: CONTRACT_SERVICES[0].value,
+  label: CONTRACT_SERVICES[0].label,
+  price: "",
+  unit: CONTRACT_SERVICES[0].defaultUnit,
+  comment: "",
+});
 
 export const ContractDialog = ({
   deal,
@@ -81,7 +111,6 @@ export const ContractDialog = ({
   open: boolean;
   onClose: () => void;
 }) => {
-  const { establishmentTypes } = useConfigurationContext();
   const { identity } = useGetIdentity();
   const [create, { isPending: isCreating }] = useCreate();
   const [update, { isPending: isUpdating }] = useUpdate();
@@ -107,10 +136,25 @@ export const ContractDialog = ({
   const [signatoryJobTitle, setSignatoryJobTitle] = useState("");
   const [signatoryEmail, setSignatoryEmail] = useState("");
   const [noshoSignatoryId, setNoshoSignatoryId] = useState<string>("");
-  const [offerLabel, setOfferLabel] = useState("");
-  const [offerDetail, setOfferDetail] = useState("");
-  const [unitPrice, setUnitPrice] = useState("");
-  const [priceUnit, setPriceUnit] = useState("confirmation");
+  const [rows, setRows] = useState<ServiceRow[]>([emptyRow()]);
+  const [isFree, setIsFree] = useState(kind === "poc");
+  const [duration, setDuration] = useState("2");
+  const [trialStart, setTrialStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  /*
+   * Fin calculée tant que la durée est un nombre de semaines, saisie sinon.
+   *
+   * Bornes incluses, comme le contrat les écrit : « prend effet le lundi
+   * 31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus » — deux
+   * semaines font 13 jours d'écart, pas 14.
+   */
+  const weeks = CONTRACT_TRIAL_DURATIONS.find(
+    (d) => d.value === duration,
+  )?.weeks;
+  const computedEnd =
+    weeks != null && trialStart ? trialEndDate(trialStart, weeks) : null;
+  const effectiveEnd = weeks != null ? computedEnd : customEnd || null;
 
   /*
    * Pré-remplissage à l'ouverture.
@@ -125,9 +169,8 @@ export const ContractDialog = ({
     /*
      * Édition : on recharge ce qui a été saisi, et on ne suggère rien.
      *
-     * Laisser la grille tarifaire écraser un prix négocié parce qu'on rouvre
-     * la fenêtre pour corriger une faute de frappe dans un e-mail serait le
-     * pire des services.
+     * Réappliquer un défaut parce qu'on rouvre la fenêtre pour corriger une
+     * faute de frappe dans un e-mail écraserait un prix négocié.
      */
     if (contract) {
       setSignatoryFirstName(contract.signatory_first_name ?? "");
@@ -139,48 +182,69 @@ export const ContractDialog = ({
           ? String(contract.nosho_signatory_id)
           : "",
       );
-      setOfferLabel(contract.offer_label ?? "");
-      setOfferDetail(contract.offer_detail ?? "");
-      setUnitPrice(euros(contract.unit_price_cents ?? null));
-      setPriceUnit(contract.price_unit ?? "confirmation");
+      const saved = contract.services ?? [];
+      setRows(
+        saved.length
+          ? saved.map((line) => ({
+              service: line.service,
+              label: line.label,
+              price: euros(line.unitPriceCents),
+              unit: line.unit ?? "",
+              comment: line.comment ?? "",
+            }))
+          : [emptyRow()],
+      );
+      setIsFree(!!contract.is_free);
+      setTrialStart(contract.trial_start_date ?? "");
+      setDuration(
+        contract.trial_weeks != null ? String(contract.trial_weeks) : "custom",
+      );
+      setCustomEnd(contract.trial_end_date ?? "");
       return;
     }
 
     const me = sales?.find((s) => String(s.id) === String(identity?.id));
     if (me && me.job_title) setNoshoSignatoryId(String(me.id));
-
-    const typeLabel = establishmentTypes.find(
-      (t) => t.value === company?.establishment_type,
-    )?.label;
-    const preset = suggestOffer(typeLabel);
-    if (preset && !offerLabel) {
-      setOfferLabel(preset.label);
-      setOfferDetail(preset.detail);
-      setUnitPrice(euros(preset.unitPriceCents));
-      setPriceUnit(preset.unit);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, sales, company, contract]);
+  }, [open, sales, contract]);
 
-  const applyPreset = (value: string) => {
-    const preset = CONTRACT_OFFER_PRESETS.find((p) => p.value === value);
-    if (!preset) return;
-    setOfferLabel(preset.label);
-    setOfferDetail(preset.detail);
-    setUnitPrice(euros(preset.unitPriceCents));
-    setPriceUnit(preset.unit);
+  const patchRow = (index: number, patch: Partial<ServiceRow>) =>
+    setRows((current) =>
+      current.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+
+  /*
+   * Changer de service réécrit le libellé et l'unité, sauf pour « Autre ».
+   *
+   * Le libellé reste modifiable ensuite : c'est lui qui s'imprime au contrat,
+   * et « Agent de confirmation de rendez-vous — site de Marseille » est une
+   * précision légitime qu'aucune liste fermée ne contiendra jamais.
+   */
+  const changeService = (index: number, value: string) => {
+    const choice = CONTRACT_SERVICES.find((s) => s.value === value);
+    if (!choice) return;
+    patchRow(index, {
+      service: value,
+      unit: choice.defaultUnit,
+      label: value === "autre" ? "" : choice.label,
+    });
   };
 
   const noshoSignatory = sales?.find((s) => String(s.id) === noshoSignatoryId);
 
   const handleSubmit = () => {
-    // La virgule française autant que le point : personne ne tape « 0.25 » en
-    // France, et refuser la virgule ferait saisir un prix faux.
-    const parsed = Number(unitPrice.replace(",", "."));
-    const cents =
-      unitPrice.trim() && Number.isFinite(parsed)
-        ? Math.round(parsed * 100)
-        : null;
+    const services: ContractService[] = rows
+      // Une ligne sans libellé n'est pas une prestation : c'est une ligne
+      // qu'on a ajoutée puis laissée vide. L'imprimer serait pire que
+      // l'oublier.
+      .filter((row) => row.label.trim())
+      .map((row) => ({
+        service: row.service,
+        label: row.label.trim(),
+        unitPriceCents: toCents(row.price),
+        unit: row.unit || null,
+        comment: row.comment.trim() || null,
+      }));
 
     const payload: Partial<Contract> = {
       deal_id: deal.id,
@@ -194,12 +258,15 @@ export const ContractDialog = ({
       // Figée à l'édition : si quelqu'un change de fonction ensuite, un
       // contrat déjà signé ne doit pas changer de sens rétroactivement.
       nosho_signatory_job_title: noshoSignatory?.job_title ?? null,
-      offer_label: offerLabel.trim() || null,
-      offer_detail: offerDetail.trim() || null,
-      unit_price_cents: cents,
-      price_unit: priceUnit || null,
+      services,
+      is_free: isFree,
+      // Le contrat cadre n'a pas de période d'essai : lui en écrire une
+      // contredirait son article 7.
+      trial_start_date: kind === "poc" ? trialStart || null : null,
+      trial_end_date: kind === "poc" ? effectiveEnd : null,
+      trial_weeks: kind === "poc" ? (weeks ?? null) : null,
       status: "draft",
-      // Le POC est gratuit : rien à prélever, donc pas de mandat.
+      // Rien à prélever sur un POC : pas de mandat.
       sepa_mandate_reference:
         kind === "cadre"
           ? buildSepaMandateReference(Number(deal.id), new Date().getFullYear())
@@ -340,60 +407,175 @@ export const ContractDialog = ({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Offre de référence</Label>
-            <Select onValueChange={applyPreset}>
-              <SelectTrigger aria-label="Offre de référence">
-                <SelectValue placeholder="Pré-remplir depuis la grille" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTRACT_OFFER_PRESETS.map((preset) => (
-                  <SelectItem key={preset.value} value={preset.value}>
-                    {preset.label} — {euros(preset.unitPriceCents)} € /{" "}
-                    {preset.unit}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground">
-              {/* L'article 3 le dit : « le tarif contractuel est celui figurant
-                  dans le tableau ci-dessus ». La grille pré-remplit, elle
-                  n'engage pas. */}
-              Grille indicative — l'intitulé et le prix restent modifiables.
+        {kind === "poc" && (
+          <div className="flex flex-col gap-3 rounded-md border p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Durée de la période d'essai
             </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {field("Intitulé de l'offre", offerLabel, setOfferLabel)}
-            <div className="grid grid-cols-2 gap-2">
-              {field("Prix HT", unitPrice, setUnitPrice, "0,25")}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Unité</Label>
-                <Select value={priceUnit} onValueChange={setPriceUnit}>
-                  <SelectTrigger aria-label="Unité">
+                <Label className="text-xs">Durée</Label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger aria-label="Durée">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTRACT_PRICE_UNITS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>
-                        {u.label}
+                    {CONTRACT_TRIAL_DURATIONS.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>
+                        {d.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              {field("Début", trialStart, setTrialStart, undefined, "date")}
+              {weeks != null ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">Fin (calculée)</Label>
+                  <Input value={computedEnd ?? ""} readOnly disabled />
+                </div>
+              ) : (
+                field("Fin", customEnd, setCustomEnd, undefined, "date")
+              )}
             </div>
+            <span className="text-xs text-muted-foreground">
+              Bornes incluses, comme le contrat les écrit : deux semaines
+              démarrées un lundi finissent le dimanche de la semaine suivante.
+            </span>
           </div>
-          {field("Détail de la prestation", offerDetail, setOfferDetail)}
+        )}
+
+        <div className="flex flex-col gap-3 rounded-md border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Prestations
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setRows((current) => [...current, emptyRow()])}
+            >
+              <Plus className="w-3.5 h-3.5" aria-hidden />
+              Ajouter une prestation
+            </Button>
+          </div>
+
+          {kind === "poc" && (
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox
+                checked={isFree}
+                onCheckedChange={(next) => setIsFree(next === true)}
+                aria-label="Contrat gratuit"
+                className="mt-0.5"
+              />
+              <span>
+                Gratuit — aucune facturation
+                <span className="block text-xs text-muted-foreground">
+                  {/* Ce n'est pas un affichage : l'article 5 écrit « Aucun
+                      montant, à quelque titre que ce soit, ne pourra être
+                      facturé ». Les lignes restent utiles pour autant — le même
+                      article annonce le tarif de la suite, à titre indicatif. */}
+                  Les prestations ci-dessous s'impriment alors à titre indicatif
+                  et sans valeur d'engagement, comme le prévoit l'article 5.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {rows.map((row, index) => (
+            <div
+              key={index}
+              className="flex flex-col gap-2 rounded-md border bg-muted/20 p-2.5"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">Service</Label>
+                  <Select
+                    value={row.service}
+                    onValueChange={(value) => changeService(index, value)}
+                  >
+                    <SelectTrigger aria-label={`Service ${index + 1}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTRACT_SERVICES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  // La dernière ligne ne se supprime pas : un contrat sans
+                  // aucune ligne n'a rien à dire, et le bouton « Ajouter »
+                  // serait alors le seul chemin de retour.
+                  disabled={rows.length === 1}
+                  onClick={() =>
+                    setRows((current) => current.filter((_, i) => i !== index))
+                  }
+                  aria-label={`Supprimer la prestation ${index + 1}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-2">
+                {field(
+                  "Libellé au contrat",
+                  row.label,
+                  (value) => patchRow(index, { label: value }),
+                  "Agent de confirmation de rendez-vous",
+                )}
+                {field(
+                  "Prix HT",
+                  row.price,
+                  (value) => patchRow(index, { price: value }),
+                  "0,25",
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">Unité</Label>
+                  <Select
+                    value={row.unit}
+                    onValueChange={(value) => patchRow(index, { unit: value })}
+                  >
+                    <SelectTrigger aria-label={`Unité ${index + 1}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTRACT_PRICE_UNITS.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {field(
+                "Commentaire",
+                row.comment,
+                (value) => patchRow(index, { comment: value }),
+                "Reprise des créneaux annulés incluse.",
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Ce que le contrat dit de la durée, rappelé plutôt que redemandé. */}
-        <p className="text-xs text-muted-foreground">
-          {kind === "cadre"
-            ? "Période ferme de 12 mois à compter de la mise en production, puis tacite reconduction par périodes de 12 mois, préavis de 30 jours. Il n'y a pas de date de fin à saisir."
-            : "Période d'essai gratuite de deux semaines, sans engagement ni facturation."}
-        </p>
+        {/* Ce que le contrat dit de la durée d'engagement, rappelé plutôt que
+            redemandé. */}
+        {kind === "cadre" && (
+          <p className="text-xs text-muted-foreground">
+            Période ferme de 12 mois à compter de la mise en production, puis
+            tacite reconduction par périodes de 12 mois, préavis de 30 jours. Il
+            n'y a pas de date de fin à saisir.
+          </p>
+        )}
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>

@@ -118,23 +118,31 @@
       ci-dessous ; la grille de référence figure en fin d'article.
     </p>
 
+    <!--
+      Une ligne par prestation. Le contrat HEM n'en avait qu'une, mais un
+      client peut prendre l'agent de confirmation ET l'agent de secrétariat, à
+      deux prix et deux unités : n'en imprimer qu'une donnerait un contrat
+      incomplet, et additionner deux unités différentes n'a pas de sens.
+    -->
     <table class="tarif">
       <thead>
-        <tr><th>Offre</th><th>Détail</th><th>Prix HT</th></tr>
+        <tr><th>Prestation</th><th>Détail</th><th>Prix HT</th></tr>
       </thead>
       <tbody>
+        {{#services}}
         <tr>
           <td>
-            {{offer.label}}
+            {{label}}
             <span class="engagement">Engagement {{commitmentMonths}} mois</span>
           </td>
-          <td>{{offer.detail}}</td>
+          <td>{{comment}}</td>
           <td>
             <!-- Déjà formaté par le CRM : le gabarit n'a rien à calculer. -->
-            {{offer.unitPrice}} / {{offer.unit}}
+            {{unitPrice}} / {{unit}}
             <span class="mention">Facturation sur volume réel</span>
           </td>
         </tr>
+        {{/services}}
       </tbody>
     </table>
 
