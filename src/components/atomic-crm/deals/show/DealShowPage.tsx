@@ -18,11 +18,12 @@ import { GenerateProposalAction } from "../GenerateProposalAction";
 import { ContractAction } from "../../contracts/ContractAction";
 import { ContractsBlock } from "../../contracts/ContractsBlock";
 import { DealPriorityField } from "../DealPriorityField";
-import { DealStageBadge, DealProductBadges } from "../shared/DealBadges";
+import { DealProductBadges } from "../shared/DealBadges";
 import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
+import { DealStageStepper, useCelebrateWin } from "./DealStageStepper";
 import { getDealPrimaryAction } from "./dealPrimaryAction";
 import { DealEmailHistory } from "./DealEmailHistory";
 import { DealKeyContacts } from "./DealKeyContacts";
@@ -64,6 +65,15 @@ import { DealTasksBlock } from "./DealTasksBlock";
  */
 const DealHeader = () => {
   const record = useRecordContext<Deal>();
+  /*
+   * Les confettis suivent l'étape d'où qu'elle change : le stepper, le
+   * formulaire d'édition, ou un glissement de carte dans un autre onglet.
+   *
+   * Appelé avant le `return null`, comme tout hook : le sortir sous la garde
+   * le ferait disparaître pendant le chargement, et React refuserait le rendu
+   * suivant.
+   */
+  useCelebrateWin(record?.stage);
   if (!record) return null;
 
   return (
@@ -112,8 +122,16 @@ const DealHeader = () => {
         l'emporte sur le `text-xs` interne par spécificité, sans toucher au
         composant partagé.
       */}
+      {/*
+        L'étape n'est plus un badge mais un rail cliquable (NOS-1168).
+
+        Elle était en lecture seule ici, et la seule façon de faire avancer une
+        opportunité était de retourner au Kanban glisser sa carte — depuis la
+        page où l'on vient précisément de lire de quoi décider.
+      */}
+      <DealStageStepper />
+
       <div className="flex items-center gap-3 flex-wrap [&>span]:text-sm [&>span>span]:text-sm">
-        <DealStageBadge stage={record.stage} />
         <DealPriorityField />
         <DealProductBadges products={record.products} />
       </div>

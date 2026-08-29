@@ -6,6 +6,7 @@ import { AssistProvider } from "../assist/assistStore";
 import { NoshoAssistChat } from "../assist/NoshoAssistChat";
 import { NoshoAssistFAB } from "../assist/NoshoAssistFAB";
 import { useConfigurationLoader } from "../root/useConfigurationLoader";
+import { CommandPalette } from "./CommandPalette";
 import Header from "./Header";
 import { SentryErrorBoundary } from "./SentryErrorBoundary";
 import { VersionUpdateToast } from "./VersionUpdateToast";
@@ -22,6 +23,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           </Suspense>
         </SentryErrorBoundary>
       </main>
+      <CommandPalette />
       <NoshoAssistFAB />
       <NoshoAssistChat />
       <VersionUpdateToast />
