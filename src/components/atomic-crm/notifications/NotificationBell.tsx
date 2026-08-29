@@ -19,7 +19,7 @@ import { useAppNotifications } from "./useAppNotifications";
 
 /**
  * ---------------------------------------------------------------------------
- * La cloche de notifications (NOS-1172)
+ * La cloche de notifications (NOS-1178)
  * ---------------------------------------------------------------------------
  * Remplace la pile de cartes du tableau de bord. Celle-ci prenait la moitié de
  * l'écran pour trois phrases — et, plus bêtement, rendait de travers : le

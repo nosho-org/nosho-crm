@@ -107,7 +107,7 @@ describe("DealShowPage", () => {
    */
   it("offers task creation from the actions bar", async () => {
     // Les actions ont quitté le <header> pour le haut de la colonne droite
-    // (NOS-1163). Elles ne sont donc plus dans le banner — mais elles doivent
+    // (NOS-1169). Elles ne sont donc plus dans le banner — mais elles doivent
     // toujours exister, ce que ce test garde de #112.
     const screen = await renderPage();
     await expect

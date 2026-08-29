@@ -67,7 +67,7 @@ const KpiCard = ({
   color: string;
   value: string;
   /**
-   * Le montant brut, pour le compteur qui monte (NOS-1170).
+   * Le montant brut, pour le compteur qui monte (NOS-1177).
    *
    * L'audit : « À réserver au **chiffre héros, une seule fois par écran** ».
    * Une seule carte le passe — le pipeline pondéré, la seule métrique
@@ -86,7 +86,7 @@ const KpiCard = ({
   children?: React.ReactNode;
 }) => (
   /*
-   * `MagicCard` : le halo suit le curseur au survol (NOS-1170).
+   * `MagicCard` : le halo suit le curseur au survol (NOS-1177).
    *
    * L'audit le place ici précisément : « Utile sur une grille dense où la
    * bordure coûte cher visuellement. » Six cartes côte à côte, où épaissir une
@@ -144,7 +144,7 @@ const KpiCard = ({
  */
 
 /**
- * Nouveaux leads du mois, et la tendance (NOS-1171).
+ * Nouveaux leads du mois, et la tendance (NOS-1178).
  *
  * Le seul indicateur du bandeau qui mesure une **entrée** et non un stock. Les
  * six autres disent ce que le pipeline contient ; celui-ci dit ce qu'on y met.
@@ -218,7 +218,7 @@ const StageKpiCard = ({
       context={[
         pluralize(bucket.count, "opportunité", "opportunités"),
         // Le pondéré à côté du brut, comme les deux cartes de tête
-        // (NOS-1171). Absent plutôt qu'à zéro quand rien n'est pondérable :
+        // (NOS-1178). Absent plutôt qu'à zéro quand rien n'est pondérable :
         // « 0 € pondéré » se lirait comme une prévision nulle.
         bucket.weightedAvailable
           ? `${formatCurrencyCompact(bucket.weightedAmount)} pondéré`
@@ -249,7 +249,7 @@ export const DashboardKpiBanner = () => {
     deals,
     dealStages,
     weighting.pipelineStatuses,
-    // La ponderation traverse jusqu aux cartes d etape (NOS-1171) : le
+    // La ponderation traverse jusqu aux cartes d etape (NOS-1178) : le
     // bandeau montrait brut ET pondere en tete, puis trois etapes en brut
     // seulement -- on ne pouvait pas rapprocher les cartes entre elles.
     { openOnly: true, includeEmpty: true, weighting },
@@ -271,7 +271,7 @@ export const DashboardKpiBanner = () => {
 
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {/*
-          Les nouveaux leads en tête (NOS-1171, demandé par Simon).
+          Les nouveaux leads en tête (NOS-1178, demandé par Simon).
 
           L'ordre du bandeau suit le chemin d'une affaire, et une affaire
           commence par entrer. Les six autres cartes disent ensuite ce que le

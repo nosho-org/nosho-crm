@@ -3,7 +3,7 @@ import type { DataProvider, Identifier } from "ra-core";
 import type { Company } from "../../types";
 
 /**
- * Fusion de sociétés pour le fournisseur FakeRest (NOS-1169).
+ * Fusion de sociétés pour le fournisseur FakeRest (NOS-1176).
  *
  * Reprend ce que fait `supabase/functions/merge_companies` — réaffecter les
  * références, fusionner les champs, supprimer la perdante — sans la

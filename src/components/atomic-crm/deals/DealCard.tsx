@@ -78,7 +78,7 @@ export const DealCardContent = ({
               <DealStaleBadge deal={deal} />
             </div>
             {/*
-              L'intitulé, puis la société en sous-ligne (NOS-1165).
+              L'intitulé, puis la société en sous-ligne (NOS-1172).
 
               La carte écrivait « société - intitulé », ce qui donnait
               « KERSANTE - Kersanté » et, pire, « C.M.C.O. CENTRE MEDITERRANEEN

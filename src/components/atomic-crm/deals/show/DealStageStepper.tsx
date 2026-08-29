@@ -15,7 +15,7 @@ import { celebrateWin } from "./celebrateWin";
 
 /**
  * ---------------------------------------------------------------------------
- * Faire avancer l'opportunité depuis sa fiche (NOS-1168)
+ * Faire avancer l'opportunité depuis sa fiche (NOS-1175)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « l'étape ne peut pas être changée depuis la
  * fiche : il faut retourner sur le Kanban et glisser la carte. »

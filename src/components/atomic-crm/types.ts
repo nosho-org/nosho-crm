@@ -102,7 +102,7 @@ export type Company = {
 } & Pick<RaRecord, "id">;
 
 /**
- * Objectif commercial (NOS-1166).
+ * Objectif commercial (NOS-1173).
  *
  * `sales_id` nul = objectif COMMUN a l equipe. Des bornes de date plutot qu un
  * trimestre : « 25 k EUR de MRR d ici la fin de l annee » n en est pas un.

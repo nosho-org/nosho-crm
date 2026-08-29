@@ -43,7 +43,7 @@ import { DealTasksBlock } from "./DealTasksBlock";
  *     Header → Prochaine action → Synthèse → Société & Groupe
  *            → Contacts clés → Activité
  *
- * « Prochaine action » et « Tâches » ne font plus qu'un bloc (NOS-1164) : la
+ * « Prochaine action » et « Tâches » ne font plus qu'un bloc (NOS-1171) : la
  * première carte répétait mot pour mot la première ligne de la seconde, la
  * prochaine action étant littéralement la première tâche.
  *
@@ -123,7 +123,7 @@ const DealHeader = () => {
         composant partagé.
       */}
       {/*
-        L'étape n'est plus un badge mais un rail cliquable (NOS-1168).
+        L'étape n'est plus un badge mais un rail cliquable (NOS-1175).
 
         Elle était en lecture seule ici, et la seule façon de faire avancer une
         opportunité était de retourner au Kanban glisser sa carte — depuis la
@@ -147,7 +147,7 @@ const DealHeader = () => {
  * client, dans la colonne qui a la place de les recevoir.
  *
  * ---------------------------------------------------------------------------
- * Une seule action pleine, et « Archiver » n'en est jamais une (NOS-1165)
+ * Une seule action pleine, et « Archiver » n'en est jamais une (NOS-1172)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Cinq boutons de même poids, aucun principal.
  * L'action qui fait avancer le deal et celle qui l'enterre ont la même

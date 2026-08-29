@@ -2,7 +2,7 @@ import confetti from "canvas-confetti";
 
 /**
  * ---------------------------------------------------------------------------
- * Le seul effet purement émotionnel du CRM (NOS-1168)
+ * Le seul effet purement émotionnel du CRM (NOS-1175)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026, sur les composants animés : « Confetti — passage en
  * Close Won, uniquement. Le seul effet purement émotionnel qui se justifie

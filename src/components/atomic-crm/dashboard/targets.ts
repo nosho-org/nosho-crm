@@ -2,7 +2,7 @@ import type { Deal, Target } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * Où en est-on de l'objectif (NOS-1166)
+ * Où en est-on de l'objectif (NOS-1173)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « 912 k€ de pipeline, mais contre quel objectif ?
  * Un chiffre sans référentiel n'est pas un instrument de pilotage, c'est une

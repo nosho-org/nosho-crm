@@ -1,7 +1,7 @@
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Entrée décalée d'une liste (Magic UI « Animated List », NOS-1170).
+ * Entrée décalée d'une liste (Magic UI « Animated List », NOS-1177).
  *
  * L'audit : « L'entrée décalée aide à percevoir l'ordre de priorité. **À
  * limiter à 6-8 lignes et à couper au-delà**, sinon la liste devient plus lente

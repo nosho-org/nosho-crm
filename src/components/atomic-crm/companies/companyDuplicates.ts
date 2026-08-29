@@ -2,7 +2,7 @@ import type { Company } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * Détecter les sociétés en double (NOS-1169)
+ * Détecter les sociétés en double (NOS-1176)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 relevait six doublons sur les dix-huit premières
  * cartes. La mesure en production est bien pire : **85 groupes, 172 fiches** —

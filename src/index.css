@@ -58,7 +58,7 @@
   --nosho-red: #ed7c3e;
 
   /*
-   * Le bandeau de navigation (NOS-1175, demandé par Simon).
+   * Le bandeau de navigation (NOS-1178, demandé par Simon).
    *
    * Un jeton dédié plutôt que de réutiliser `--secondary`, qui habille aussi
    * des boutons et des pastilles : les colorer en bleu parce que la barre du
@@ -331,7 +331,7 @@ input[type="time"] {
 }
 
 /* ---------------------------------------------------------------------------
- * Animations reprises de Magic UI (NOS-1170)
+ * Animations reprises de Magic UI (NOS-1177)
  * ---------------------------------------------------------------------------
  * Écrites en CSS plutôt qu'installées avec `framer-motion` : cette dépendance
  * pèse une cinquantaine de kilo-octets pour ce qu'on lui demanderait ici — un

@@ -1,7 +1,7 @@
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Le reflet du bouton principal (Magic UI « Shimmer Button », NOS-1170).
+ * Le reflet du bouton principal (Magic UI « Shimmer Button », NOS-1177).
  *
  * L'audit : « Résout FICHE-01 : le reflet distingue l'action principale des
  * quatre autres **sans ajouter de couleur**. Discipline absolue : jamais deux

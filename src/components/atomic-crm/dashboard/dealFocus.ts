@@ -10,7 +10,7 @@ import { getDealProbability } from "../deals/cockpit/dealWeighting";
 
 /**
  * ---------------------------------------------------------------------------
- * Qu'est-ce que je fais maintenant (NOS-1167)
+ * Qu'est-ce que je fais maintenant (NOS-1174)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Un rappel à 3 k€ et une relance CHU à 50 k€ ont
  * exactement la même apparence. Le tri se fait donc dans la tête du

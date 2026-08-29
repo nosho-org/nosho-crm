@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Un nombre qui monte jusqu'à sa valeur (Magic UI « Number Ticker », NOS-1170).
+ * Un nombre qui monte jusqu'à sa valeur (Magic UI « Number Ticker », NOS-1177).
  *
  * L'audit : « Le compteur qui monte fait lire le chiffre. À réserver au chiffre
  * héros, une seule fois par écran, et uniquement au premier chargement — pas à

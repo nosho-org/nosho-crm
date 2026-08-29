@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * L'anneau d'objectif (Magic UI « Animated Circular Progress Bar », NOS-1170).
+ * L'anneau d'objectif (Magic UI « Animated Circular Progress Bar », NOS-1177).
  *
  * L'audit : « Donne enfin un référentiel aux 912 k€. **L'animation ne joue
  * qu'à l'arrivée sur la page.** »

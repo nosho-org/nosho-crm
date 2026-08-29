@@ -11,7 +11,7 @@ import type { Deal } from "../../types";
 import { DealTasksBlock } from "./DealTasksBlock";
 
 /**
- * Couvre les deux blocs fusionnés par NOS-1164, et les régressions que
+ * Couvre les deux blocs fusionnés par NOS-1171, et les régressions que
  * chacun portait.
  *
  * #114, moitié « Tâches » : `AddTask` — le composant qu'on réutiliserait
@@ -26,7 +26,7 @@ import { DealTasksBlock } from "./DealTasksBlock";
  * fait » créait une *seconde* tâche déjà terminée en laissant l'originale en
  * cours, si bien que le bloc se redessinait à l'identique.
  *
- * NOS-1164 : la prochaine action est `tasks[0]`. Les deux cartes montraient
+ * NOS-1171 : la prochaine action est `tasks[0]`. Les deux cartes montraient
  * donc la même tâche, l'une au-dessus de l'autre.
  */
 
@@ -165,7 +165,7 @@ describe("DealTasksBlock", () => {
     const screen = await renderBlock(dataProvider);
 
     // Le CTA de l'état vide. Le bouton « Ajouter une tâche » de l'en-tête a
-    // été retiré (NOS-1164) : « Créer une tâche » de la barre d'actions faisait
+    // été retiré (NOS-1171) : « Créer une tâche » de la barre d'actions faisait
     // déjà le même geste, à trente pixels de là.
     await screen.getByRole("button", { name: /Définir l'action/ }).click();
     await screen.getByLabelText(/description/i).fill("Envoyer la proposition");

@@ -58,7 +58,7 @@ function errorToMessage(err: GenerateProposalError): string {
 export const GenerateProposalAction = ({
   variant = "outline",
 }: {
-  /** `default` quand c'est l'action principale de l'étape (NOS-1165). */
+  /** `default` quand c'est l'action principale de l'étape (NOS-1172). */
   variant?: "outline" | "default";
 } = {}) => {
   const record = useRecordContext<Deal>();
@@ -106,7 +106,7 @@ const ProposalUrlsDisplay = ({ deal }: { deal: Deal }) => {
     <div className="flex items-center gap-2">
       {/*
         ---------------------------------------------------------------------
-        Un seul bouton « Proposition », comme « Éditer un contrat » (NOS-1173)
+        Un seul bouton « Proposition », comme « Éditer un contrat » (NOS-1178)
         ---------------------------------------------------------------------
         Trois boutons côte à côte pour un même document — éditer, version
         client, régénérer — et l'un d'eux se lisait comme le jumeau d'« Éditer

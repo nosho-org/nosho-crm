@@ -26,7 +26,7 @@ import { ContractDialog } from "./ContractDialog";
 export const ContractAction = ({
   variant = "outline",
 }: {
-  /** `default` quand c'est l'action principale de l'etape (NOS-1165). */
+  /** `default` quand c'est l'action principale de l'etape (NOS-1172). */
   variant?: "outline" | "default";
 } = {}) => {
   const record = useRecordContext<Deal>();

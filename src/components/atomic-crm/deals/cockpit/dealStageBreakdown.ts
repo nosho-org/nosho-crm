@@ -26,7 +26,7 @@ export interface DealStageBucket {
   /** True when at least one deal in the bucket has no amount recorded. */
   hasUnvaluedDeals: boolean;
   /**
-   * ARR pondéré de l'étape (NOS-1171, demandé par Simon).
+   * ARR pondéré de l'étape (NOS-1178, demandé par Simon).
    *
    * Le bandeau affichait « Pipeline brut » ET « Pipeline pondéré », puis trois
    * étapes en brut seulement : on ne pouvait pas rapprocher les cartes entre

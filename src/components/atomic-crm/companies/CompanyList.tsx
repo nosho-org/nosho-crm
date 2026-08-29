@@ -39,7 +39,7 @@ const CompanyListLayout = () => {
       <CompanyListFilter />
       <div className="flex flex-col flex-1 gap-4">
         {/* En tête de liste : c'est là que le doublon se voit, donc là qu'on
-            doit pouvoir le résoudre (NOS-1169). */}
+            doit pouvoir le résoudre (NOS-1176). */}
         <CompanyDuplicatesBanner />
         <ImageList />
       </div>

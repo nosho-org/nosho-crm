@@ -24,7 +24,7 @@ import {
 
 /**
  * ---------------------------------------------------------------------------
- * Fusionner les sociétés en double (NOS-1169)
+ * Fusionner les sociétés en double (NOS-1176)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « La grille de cartes rend le doublon évident mais
  * n'offre aucun moyen de le résoudre. » En production : 85 groupes, 172 fiches.

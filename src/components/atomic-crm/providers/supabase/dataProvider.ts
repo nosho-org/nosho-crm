@@ -318,7 +318,7 @@ const getDataProviderWithCustomMethods = () => {
       return data;
     },
     /**
-     * Fusionne deux sociétés (NOS-1169).
+     * Fusionne deux sociétés (NOS-1176).
      *
      * `targetId` gagne, `sourceId` disparaît. Tout se joue dans une
      * transaction côté serveur : cinq tables référencent `companies`, et une

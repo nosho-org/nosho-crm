@@ -102,7 +102,7 @@ const Header = () => {
                     alt="Nosho"
                   />
                   {/*
-                    « CRM » et non « Nosho CRM » (NOS-1175).
+                    « CRM » et non « Nosho CRM » (NOS-1178).
 
                     Le logo porte déjà le mot « nosho » : l'écrire à côté le
                     disait deux fois. Le titre reste configurable — c'est sa
@@ -116,7 +116,7 @@ const Header = () => {
                   <h1 className="text-xl font-semibold">{title}</h1>
                 </Link>
                 {/* Le numéro de version est descendu dans le menu profil
-                    (NOS-1174) : il occupait la place la plus lisible de
+                    (NOS-1178) : il occupait la place la plus lisible de
                     l'application pour une information consultée quelques fois
                     par mois, quand on remonte un bug. */}
               </div>
@@ -167,7 +167,7 @@ const Header = () => {
               </div>
               <div className="flex items-center">
                 {/* La cloche avant les réglages : c'est ce qu'on vient
-                    consulter, pas ce qu'on vient régler (NOS-1172). */}
+                    consulter, pas ce qu'on vient régler (NOS-1178). */}
                 <NotificationBell />
                 <ThemeModeToggle />
                 <RefreshButton />
@@ -312,7 +312,7 @@ const ProfileMenu = () => {
 };
 
 /**
- * Le numéro de version, dans le menu profil (NOS-1174).
+ * Le numéro de version, dans le menu profil (NOS-1178).
  *
  * L'audit du 29 août : « Le numéro de version v1.9.163 occupe par ailleurs la
  * place la plus lisible de l'application. » Il était collé au nom du produit,

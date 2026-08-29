@@ -1,7 +1,7 @@
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Un faisceau qui parcourt la bordure (Magic UI « Border Beam », NOS-1170).
+ * Un faisceau qui parcourt la bordure (Magic UI « Border Beam », NOS-1177).
  *
  * L'audit : « Le seul élément animé en permanence de l'écran. C'est
  * précisément ce qui en fait un point focal : **si deux éléments l'ont, l'effet

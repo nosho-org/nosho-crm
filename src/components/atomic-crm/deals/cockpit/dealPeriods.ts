@@ -256,7 +256,7 @@ export interface PeriodBucket {
   key: string;
   label: string;
   /**
-   * L'étiquette de l'axe horizontal (NOS-1176, demandé par Simon).
+   * L'étiquette de l'axe horizontal (NOS-1178, demandé par Simon).
    *
    * « Août » plutôt que « Août 2026 » : douze colonnes qui répètent la même
    * année douze fois usent la largeur pour ne rien dire, et forcent les

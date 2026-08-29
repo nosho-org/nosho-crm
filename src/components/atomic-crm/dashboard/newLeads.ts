@@ -2,7 +2,7 @@ import type { Deal } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * Les nouveaux leads du mois, et la tendance (NOS-1171)
+ * Les nouveaux leads du mois, et la tendance (NOS-1178)
  * ---------------------------------------------------------------------------
  * Le seul indicateur du bandeau qui mesure une **entrée** et non un stock. Les
  * six autres disent ce que le pipeline contient ; celui-ci dit ce qu'on y met.

@@ -11,7 +11,7 @@ import type { AppNotification } from "./notifications";
 
 /**
  * ---------------------------------------------------------------------------
- * Les notifications, calculées pour toute l'application (NOS-1172)
+ * Les notifications, calculées pour toute l'application (NOS-1178)
  * ---------------------------------------------------------------------------
  * Ce hook a d'abord vécu dans le tableau de bord, et lisait son contexte. La
  * cloche est dans l'en-tête, donc présente sur toutes les pages : il fallait

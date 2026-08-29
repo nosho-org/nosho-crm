@@ -17,7 +17,7 @@ import { useDealTasks } from "./useDealTasks";
 
 /**
  * ---------------------------------------------------------------------------
- * Prochaine action et tâches, en un seul bloc (issue #114, NOS-1038, NOS-1164)
+ * Prochaine action et tâches, en un seul bloc (issue #114, NOS-1038, NOS-1171)
  * ---------------------------------------------------------------------------
  * Deux cartes se suivaient, et la première répétait mot pour mot la première
  * ligne de la seconde : `nextTask` **est** `tasks[0]`, littéralement. Le
@@ -125,7 +125,7 @@ export const DealTasksBlock = () => {
         Pas de bouton d'ajout ici : « Créer une tâche » est déjà dans la barre
         d'actions, en haut de la colonne droite. Deux boutons pour le même
         geste, à trente pixels l'un de l'autre, laissaient croire à deux gestes
-        différents (NOS-1164).
+        différents (NOS-1171).
 
         Le CTA de l'état vide, lui, reste : il n'est pas un doublon mais le
         seul contenu de la carte quand il n'y a rien à montrer.

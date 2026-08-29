@@ -209,7 +209,7 @@ export const RevenueForecastChart = () => {
               format: (value: number) => formatCurrencyCompact(Math.abs(value)),
             }}
             /*
-             * L'axe écrit « Août », le survol écrit « Août 2026 » (NOS-1176).
+             * L'axe écrit « Août », le survol écrit « Août 2026 » (NOS-1178).
              *
              * L'index des barres reste le libellé complet : c'est lui qui sert
              * de clé au relevé des effectifs et à l'infobulle. Seul l'affichage
