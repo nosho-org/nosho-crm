@@ -38,6 +38,21 @@ export const Task = ({
   const isMobile = useIsMobile();
   const { taskTypes } = useConfigurationContext();
   const notify = useNotify();
+
+  /*
+   * « None » s'affichait comme un type de tâche (NOS-1165).
+   *
+   * Le garde-fou existait — `task.type !== "none"` — mais il était sensible à
+   * la casse, et la production porte six tâches typées `"None"` avec une
+   * majuscule, laissées par un import. Le mot s'imprimait donc en gras devant
+   * l'intitulé, comme une catégorie.
+   *
+   * Corrigé ici plutôt qu'en base : une migration nettoierait les six lignes
+   * d'aujourd'hui et pas la prochaine importation. Les deux valent la peine,
+   * mais c'est l'affichage qui doit être robuste.
+   */
+  const normalizedType = (task.type ?? "").trim().toLowerCase();
+  const hasType = normalizedType !== "" && normalizedType !== "none";
   const queryClient = useQueryClient();
 
   const [openEdit, setOpenEdit] = useState(false);
@@ -103,7 +118,7 @@ export const Task = ({
           />
           <div className={`flex-grow ${task.done_date ? "line-through" : ""}`}>
             <div className="text-sm">
-              {task.type && task.type !== "none" && (
+              {hasType && (
                 <>
                   <span className="font-semibold text-sm">
                     {taskTypes.find((t) => t.value === task.type)?.label ??

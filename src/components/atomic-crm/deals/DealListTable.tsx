@@ -184,18 +184,23 @@ export const DealListTable = () => {
       >
         <ChoiceField choices={dealCategories} source="category" />
       </DataTable.Col>
+      {/*
+        Le nom vient de la vue, pas d'une référence (NOS-1165).
+
+        La colonne s'affichait vide alors que les 147 opportunités ouvertes ont
+        toutes une société : le `ReferenceField` déclenchait un `getMany` sur
+        `companies` dont le résultat n'arrivait pas jusqu'à la cellule.
+        `deals_summary` expose déjà `company_name` — chaque ligne le porte
+        donc, sans requête supplémentaire, et la colonne devient triable sur le
+        nom au lieu de l'identifiant.
+      */}
       <DataTable.Col
-        source="company_id"
+        source="company_name"
         label="Société"
         headerClassName={COLUMN_WIDTHS.company}
         cellClassName="truncate"
-      >
-        <ReferenceField
-          source="company_id"
-          reference="companies"
-          link={false}
-        />
-      </DataTable.Col>
+      />
+
       <DataTable.Col
         label="Produit(s)"
         headerClassName={COLUMN_WIDTHS.products}
@@ -393,7 +398,7 @@ const ArrField = ({ currency }: { currency: string }) => {
   return (
     <span className="inline-flex items-center gap-1">
       {formatCurrency(record.amount, currency)}
-      <ManualArrIndicator />
+      <SuggestedArrIndicator />
     </span>
   );
 };
@@ -409,20 +414,34 @@ const DateField = ({
   return <span>{formatISODateString(value)}</span>;
 };
 
-/** Small marker telling apart a typed ARR from one suggested by the ARR grid. */
-export const ManualArrIndicator = ({
+/**
+ * Marque l'ARR qui n'a PAS été saisi — l'inverse de ce que ce marqueur faisait.
+ *
+ * Il portait « manuel » sur les ARR saisis à la main. En production, 125 des
+ * 147 opportunités ouvertes le sont : le badge apparaissait donc sur 85 % des
+ * lignes, ce qui n'est plus un signal mais une texture. L'audit l'a relevé
+ * comme du bruit, à juste titre.
+ *
+ * L'information intéressante est la minorité inverse : les 22 dont le montant
+ * vient de la grille de préremplissage et que personne n'a confirmé. C'est
+ * celle-là qu'un commercial doit repérer avant de bâtir un prévisionnel
+ * dessus.
+ */
+export const SuggestedArrIndicator = ({
   className = "",
 }: {
   className?: string;
 }) => {
   const record = useRecordContext<Deal>();
-  if (!record?.arr_is_manual) return null;
+  // Pas de montant, rien à qualifier : une case vide n'est ni saisie ni
+  // estimée.
+  if (record?.arr_is_manual || record?.amount == null) return null;
   return (
     <span
-      title="Valeur saisie manuellement — le préremplissage ne l'écrasera pas"
+      title="Montant proposé par la grille de préremplissage — personne ne l'a confirmé"
       className={`text-[10px] font-medium leading-none text-muted-foreground border rounded px-1 py-0.5 ${className}`}
     >
-      manuel
+      estimé
     </span>
   );
 };

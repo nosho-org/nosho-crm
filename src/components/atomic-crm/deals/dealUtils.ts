@@ -1,5 +1,6 @@
-import { format } from "date-fns";
 import { toSlug } from "@/lib/toSlug";
+
+import { formatDate, formatDateTime } from "../misc/formatDate";
 
 import type { ConfigurationContextValue } from "../root/ConfigurationContext";
 import type { CustomView } from "../root/ConfigurationContext";
@@ -357,50 +358,35 @@ function ucFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-const isoDateStringRegex = /^\d{4}-\d{2}-\d{2}$/;
-
+/**
+ * Une date de calendrier, sans heure.
+ *
+ * Ne fait plus que déléguer à `misc/formatDate` (NOS-1165). Elle portait sa
+ * propre logique de fuseau — construire un `Date` local depuis les composants
+ * — qui donnait le bon jour à Paris comme à New York, mais le jour précédent à
+ * Tokyo. Le module central ancre les dates nues à midi UTC, où aucun fuseau
+ * réel ne franchit de frontière de jour.
+ *
+ * Elle levait aussi sur un format inattendu. Une exception pour une date mal
+ * formée fait tomber la page entière : le module rend un tiret.
+ */
 export function formatISODateString(dateString: string | null | undefined) {
-  if (!dateString) {
-    return "–";
-  }
-  // Handle both YYYY-MM-DD and full ISO timestamps (e.g. 2025-03-15T00:00:00.000Z)
-  const normalizedDate = dateString.split("T")[0];
-  if (!isoDateStringRegex.test(normalizedDate)) {
-    throw new Error("Invalid date format. Expected YYYY-MM-DD.");
-  }
-  // Some browsers will consider a date in the format YYYY-MM-DD as UTC, which can cause off-by-one-day issues depending on the user's timezone.
-  // To avoid this, we can parse the date components manually and create a date object in the local timezone.
-  const [year, month, day] = normalizedDate.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return format(date, "PP");
+  return formatDate(dateString);
 }
 
 /**
- * Format a task `due_date` for the read-only "Prochain meeting" line.
+ * L'échéance d'une tâche, avec son heure quand elle en a une.
  *
- * Task due dates come in two shapes: a full `timestamptz` when the task was
- * created with a time, and a bare `YYYY-MM-DD` when it was postponed from the
- * task list. Only the first carries a meaningful time of day, so only the first
- * gets one displayed — showing "12:00 AM" for a date-only value would be a
- * fabricated detail.
+ * Les échéances arrivent sous deux formes : un `timestamptz` complet quand la
+ * tâche a été créée avec une heure, et un `YYYY-MM-DD` nu quand elle a été
+ * reportée depuis la liste. `formatDateTime` distingue les deux — et reconnaît
+ * aussi le troisième cas, celui que l'audit a relevé : un horodatage à minuit
+ * UTC, écrit par un sélecteur de jour, qui s'affichait « 2:00 AM » à Paris.
  */
 export function formatDealMeetingDate(
   dueDate: string | null | undefined,
 ): string {
-  if (!dueDate) {
-    return "–";
-  }
-  if (isoDateStringRegex.test(dueDate)) {
-    return formatISODateString(dueDate);
-  }
-
-  const date = new Date(dueDate);
-  if (Number.isNaN(date.getTime())) {
-    return "–";
-  }
-
-  return format(date, "PP · p");
+  return formatDateTime(dueDate);
 }
 
 /**
