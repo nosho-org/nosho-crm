@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 import { useGetMany, useNotify, useRecordContext } from "ra-core";
-import { ExternalLink, FileText, RotateCw } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -99,41 +105,69 @@ const ProposalUrlsDisplay = ({ deal }: { deal: Deal }) => {
   return (
     <div className="flex items-center gap-2">
       {/*
-        « Édition » disait quel geste, jamais sur quoi. À côté d'« Éditer un
-        contrat », qui ouvre un tout autre document, les deux se confondaient.
-        Le badge « Proposition » était censé porter cette portée, mais un badge
-        qui qualifie les deux boutons voisins ne se lit pas comme tel : le sujet
-        appartient au libellé du bouton.
+        ---------------------------------------------------------------------
+        Un seul bouton « Proposition », comme « Éditer un contrat » (NOS-1173)
+        ---------------------------------------------------------------------
+        Trois boutons côte à côte pour un même document — éditer, version
+        client, régénérer — et l'un d'eux se lisait comme le jumeau d'« Éditer
+        un contrat ». La confusion a été signalée deux fois.
+
+        Ce ne sont pourtant PAS le même document. La **proposition** est un
+        document d'avant-vente : elle chiffre une offre pour convaincre. Le
+        **contrat** est l'engagement qu'on signe ensuite. Supprimer la
+        proposition supprimerait l'étape qui précède la signature.
+
+        La correction n'est donc pas de retirer, c'est de rendre la distinction
+        visible : deux menus parallèles, « Proposition » et « Éditer un
+        contrat », un par document. Deux objets, deux boutons, plus aucune
+        raison de croire qu'ils font la même chose.
       */}
-      <Button size="sm" variant="outline" className="h-9" asChild>
-        <a
-          href={deal.proposal_edit_url ?? "#"}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <ExternalLink className="w-4 h-4 mr-1" />
-          Éditer la proposition
-        </a>
-      </Button>
-      <Button size="sm" variant="outline" className="h-9" asChild>
-        <a
-          href={deal.proposal_public_url ?? "#"}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <ExternalLink className="w-4 h-4 mr-1" />
-          Version client
-        </a>
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-9"
-        onClick={() => setConfirmOpen(true)}
-        aria-label="Régénérer la proposition"
-      >
-        <RotateCw className="w-4 h-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" size="sm" variant="outline" className="h-9">
+            <FileText className="w-4 h-4" aria-hidden />
+            Proposition
+            <ChevronDown className="w-3.5 h-3.5 opacity-50" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <a
+              href={deal.proposal_public_url ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink className="w-4 h-4" aria-hidden />
+              Version client
+              <span className="ml-2 text-xs text-muted-foreground">
+                ce que le client voit
+              </span>
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a
+              href={deal.proposal_edit_url ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink className="w-4 h-4" aria-hidden />
+              Modifier le document
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setConfirmOpen(true);
+            }}
+          >
+            <RotateCw className="w-4 h-4" aria-hidden />
+            Régénérer
+            <span className="ml-2 text-xs text-muted-foreground">
+              écrase le document
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {confirmOpen && (
         <RegenerateConfirmDialog
           onCancel={() => setConfirmOpen(false)}

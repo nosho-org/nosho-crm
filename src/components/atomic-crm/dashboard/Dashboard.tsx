@@ -7,8 +7,7 @@ import { DashboardFilters } from "./DashboardFilters";
 import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
 import { BlurFade } from "@/components/ui/motion";
-import { CockpitDayBar } from "./CockpitDayBar";
-import { CockpitFocus } from "./CockpitFocus";
+import { CockpitNotifications } from "./CockpitNotifications";
 import { CockpitQueue } from "./CockpitQueue";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
@@ -64,14 +63,17 @@ import { Welcome } from "./Welcome";
  */
 const Cockpit = () => (
   <div className="flex flex-col gap-4">
+    {/*
+      « À faire maintenant » et « Ma journée » sont devenues des notifications
+      fermables (NOS-1172). Elles prenaient chacune une pleine largeur pour une
+      phrase, et l'une des deux annonçait souvent « Rien à traiter
+      aujourd'hui » — une carte entière pour dire qu'il n'y a rien à dire.
+    */}
     <BlurFade>
-      <CockpitDayBar />
-    </BlurFade>
-    <BlurFade delayMs={60}>
-      <CockpitFocus />
+      <CockpitNotifications />
     </BlurFade>
 
-    <BlurFade delayMs={120}>
+    <BlurFade delayMs={60}>
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
         <CockpitQueue />
         <div className="flex flex-col gap-4">
@@ -83,8 +85,16 @@ const Cockpit = () => (
   </div>
 );
 
-const Reporting = () => (
-  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+/**
+ * Prévision et funnel, juste sous les KPI (NOS-1171, demandé par Simon).
+ *
+ * Ils étaient en pied de page. Ils y étaient cohérents — du pilotage, pas de
+ * l'action — mais si loin qu'on ne les voyait jamais. Placés sous la bande de
+ * KPI, ils en sont la lecture détaillée : les six chiffres, puis ce qu'ils
+ * deviennent dans le temps et où ils se bloquent.
+ */
+const Pilotage = () => (
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
     <RevenueForecastChart />
     <PipelineFunnel />
   </div>
@@ -155,6 +165,8 @@ export const Dashboard = () => {
           <DashboardKpiBanner />
         </div>
 
+        <Pilotage />
+
         <Cockpit />
 
         {/*
@@ -169,13 +181,6 @@ export const Dashboard = () => {
             <UpcomingCalendarEvents />
           </section>
         )}
-
-        <section className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-muted-foreground">
-            Pilotage
-          </h2>
-          <Reporting />
-        </section>
       </div>
     </DashboardProvider>
   );

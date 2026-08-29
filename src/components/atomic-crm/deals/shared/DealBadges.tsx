@@ -41,14 +41,36 @@ export { DealPriorityBadge, DealOwner } from "../cockpit/DealFieldBadges";
  */
 const STAGE_STYLES: Record<string, string> = {
   "a-reclasser": "bg-muted text-muted-foreground border-border",
+  /*
+   * Un dégradé monochrome, et non six teintes (NOS-1174).
+   *
+   * L'audit du 29 août : « Bleu, violet, vert, rouge, orange et jaune
+   * coexistent au même niveau sur les étapes, les produits, les statuts, les
+   * priorités et le graphique. Sans couleur d'accent réservée, plus rien ne
+   * dit "c'est ici qu'il faut agir". »
+   *
+   * Les étapes sont un **rang**, pas des catégories : lead vient avant
+   * qualifié, qui vient avant démo. Six teintes traitaient cet ordre comme six
+   * familles sans lien, et obligeaient à apprendre un code. Une seule teinte
+   * qui fonce à mesure qu'on avance se lit d'un coup d'œil, y compris de loin
+   * sur un kanban.
+   *
+   * Le bleu est choisi parce qu'il ne veut rien dire d'autre. L'orange est
+   * désormais réservé à l'action à faire ; le vert et le rouge restent aux
+   * deux issues, ci-dessous, où ils portent une sémantique stricte —
+   * acquis / perdu.
+   */
   lead: "bg-sky-50 text-sky-700 border-sky-200",
-  qualified: "bg-blue-50 text-blue-700 border-blue-200",
-  "demo-poc": "bg-violet-50 text-violet-700 border-violet-200",
-  proposal: "bg-orange-50 text-orange-700 border-orange-200",
-  negociation: "bg-amber-50 text-amber-700 border-amber-200",
+  qualified: "bg-sky-100 text-sky-800 border-sky-300",
+  "demo-poc": "bg-blue-100 text-blue-800 border-blue-300",
+  proposal: "bg-blue-200 text-blue-900 border-blue-400",
+  negociation: "bg-indigo-200 text-indigo-900 border-indigo-400",
+  // Les deux issues gardent leur sémantique : vert = acquis, rouge = perdu.
   "closed-won":
     "bg-[color-mix(in_oklch,var(--deal-status-won)_12%,transparent)] text-[var(--deal-status-won)] border-[color-mix(in_oklch,var(--deal-status-won)_35%,transparent)]",
   lost: "bg-[color-mix(in_oklch,var(--deal-status-lost)_12%,transparent)] text-[var(--deal-status-lost)] border-[color-mix(in_oklch,var(--deal-status-lost)_35%,transparent)]",
+  // Churn est une perte, mais une perte après signature : neutre plutôt que
+  // rouge, pour ne pas la confondre avec une affaire jamais gagnée.
   churn: "bg-muted text-muted-foreground border-border",
 };
 

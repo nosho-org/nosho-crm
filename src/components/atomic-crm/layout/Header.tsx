@@ -1,4 +1,5 @@
 import {
+  History,
   Import,
   Plus,
   Plug,
@@ -81,13 +82,13 @@ const Header = () => {
         onClose={() => setChangelogOpen(false)}
       />
       <nav className="sticky top-0 z-50 grow">
-        <header className="bg-secondary shadow-sm">
+        <header className="bg-header shadow-sm">
           <div className="px-4">
             <div className="flex justify-between items-center flex-1">
               <div className="flex items-center gap-2">
                 <Link
                   to="/"
-                  className="flex items-center gap-2 text-secondary-foreground no-underline"
+                  className="flex items-center gap-2 text-header-foreground no-underline"
                 >
                   <img
                     className="[.light_&]:hidden h-6"
@@ -101,12 +102,10 @@ const Header = () => {
                   />
                   <h1 className="text-xl font-semibold">{title}</h1>
                 </Link>
-                <button
-                  onClick={() => setChangelogOpen(true)}
-                  className="text-xs text-muted-foreground font-mono hover:text-secondary-foreground transition-colors cursor-pointer"
-                >
-                  {APP_VERSION}
-                </button>
+                {/* Le numéro de version est descendu dans le menu profil
+                    (NOS-1174) : il occupait la place la plus lisible de
+                    l'application pour une information consultée quelques fois
+                    par mois, quand on remonte un bug. */}
               </div>
               <div>
                 <nav className="flex items-center">
@@ -166,6 +165,7 @@ const Header = () => {
                     <SettingsMenu />
                   </CanAccess>
                   <ImportFromJsonMenuItem />
+                  <VersionMenuItem onOpen={() => setChangelogOpen(true)} />
                 </UserMenu>
               </div>
             </div>
@@ -199,7 +199,7 @@ const QuickCreateMenu = ({
       <DropdownMenuTrigger asChild>
         <button
           title="Créer..."
-          className="flex items-center justify-center w-7 h-7 ml-1 rounded-full text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all"
+          className="flex items-center justify-center w-7 h-7 ml-1 rounded-full text-header-foreground/50 hover:text-header-foreground hover:bg-header-foreground/10 transition-all"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -258,8 +258,8 @@ const NavigationTab = ({
     to={to}
     className={`px-6 py-3.5 text-sm font-medium transition-all duration-200 border-b-[2.5px] ${
       isActive
-        ? "text-secondary-foreground border-[var(--nosho-green)]"
-        : "text-secondary-foreground/60 border-transparent hover:text-secondary-foreground/80 hover:border-secondary-foreground/20"
+        ? "text-header-foreground border-[var(--nosho-orange)]"
+        : "text-header-foreground/60 border-transparent hover:text-header-foreground/80 hover:border-header-foreground/20"
     }`}
   >
     {label}
@@ -291,6 +291,37 @@ const ProfileMenu = () => {
         <User />
         Profil
       </Link>
+    </DropdownMenuItem>
+  );
+};
+
+/**
+ * Le numéro de version, dans le menu profil (NOS-1174).
+ *
+ * L'audit du 29 août : « Le numéro de version v1.9.163 occupe par ailleurs la
+ * place la plus lisible de l'application. » Il était collé au nom du produit,
+ * là où l'œil se pose en arrivant — pour une information qu'on consulte
+ * lorsqu'on remonte un bug, soit quelques fois par mois.
+ *
+ * Il garde son rôle : cliquer ouvre le journal des changements. C'est le
+ * placement qui change, pas la fonction.
+ */
+const VersionMenuItem = ({ onOpen }: { onOpen: () => void }) => {
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<VersionMenuItem> must be used inside <UserMenu>");
+  }
+  return (
+    <DropdownMenuItem
+      onClick={() => {
+        userMenuContext.onClose();
+        onOpen();
+      }}
+      className="flex items-center gap-2 text-muted-foreground"
+    >
+      <History />
+      <span className="font-mono text-xs">{APP_VERSION}</span>
+      <span className="ml-auto text-xs">Nouveautés</span>
     </DropdownMenuItem>
   );
 };

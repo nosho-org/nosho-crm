@@ -5,12 +5,15 @@ import {
   Target,
   TrendingUp,
   Trophy,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
+import { useGetList } from "ra-core";
 import { Card } from "@/components/ui/card";
 import { MagicCard, NumberTicker } from "@/components/ui/motion";
 
 import { formatCurrencyCompact } from "../misc/formatCurrency";
+import type { Deal } from "../types";
 import { computeRevenueSnapshot } from "../deals/cockpit/dealRevenue";
 import {
   computeStageBreakdown,
@@ -20,6 +23,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatPercent } from "../deals/cockpit/dealFormat";
 import { pluralize } from "../deals/cockpit/dealFormat";
 import { useDashboard } from "./DashboardContext";
+import { computeNewLeadsTrend, describeLeadsTrend } from "./newLeads";
 
 /**
  * ---------------------------------------------------------------------------
@@ -55,6 +59,7 @@ const KpiCard = ({
   value,
   tickerValue,
   context,
+  contextClassName,
   children,
 }: {
   label: string;
@@ -71,6 +76,13 @@ const KpiCard = ({
    */
   tickerValue?: number;
   context?: string;
+  /**
+   * Colore la ligne de contexte seule.
+   *
+   * C'est la tendance qui est bonne ou mauvaise, pas le chiffre : « 12
+   * nouveaux leads » n'est ni vert ni rouge, « −40 % » l'est.
+   */
+  contextClassName?: string;
   children?: React.ReactNode;
 }) => (
   /*
@@ -82,15 +94,15 @@ const KpiCard = ({
    * plus depuis que la bande est collante.
    */
   <MagicCard className="rounded-xl">
-    <Card className="p-4 flex flex-col gap-1 min-w-0 bg-transparent">
+    <Card className="p-3 flex flex-col gap-0.5 min-w-0 bg-transparent">
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
-        <Icon className="w-4 h-4 shrink-0" style={{ color }} aria-hidden />
+        <Icon className="w-3.5 h-3.5 shrink-0" style={{ color }} aria-hidden />
       </div>
       <span
-        className="text-3xl font-semibold leading-tight truncate"
+        className="text-xl font-semibold leading-tight truncate"
         style={{ color }}
         title={value}
       >
@@ -104,7 +116,11 @@ const KpiCard = ({
         )}
       </span>
       {context && (
-        <span className="text-xs text-muted-foreground">{context}</span>
+        <span
+          className={`text-xs ${contextClassName ?? "text-muted-foreground"}`}
+        >
+          {context}
+        </span>
       )}
       {children}
     </Card>
@@ -123,7 +139,64 @@ const KpiCard = ({
  * cartes ne sont pas une catégorie de plus : elles détaillent le pipeline brut
  * affiché à gauche. Leur emprunter une teinte déjà prise dirait autre chose que
  * ce qu'elles montrent.
+ *
+ * (Ce commentaire décrit `StageKpiCard`, plus bas.)
  */
+
+/**
+ * Nouveaux leads du mois, et la tendance (NOS-1171).
+ *
+ * Le seul indicateur du bandeau qui mesure une **entrée** et non un stock. Les
+ * six autres disent ce que le pipeline contient ; celui-ci dit ce qu'on y met.
+ * Un pipeline qui ne se remplit plus se voit ici des semaines avant de se voir
+ * ailleurs.
+ *
+ * ## Sa propre requête, et son propre périmètre
+ *
+ * Il ne lit pas `deals` du contexte : celui-ci est filtré sur la période
+ * choisie en haut de l'écran, alors que « par rapport au mois passé » désigne
+ * deux mois calendaires. Croiser les deux donnerait « le mois en cours, dans
+ * les 90 derniers jours » — une phrase qui ne veut rien dire.
+ *
+ * Il suit en revanche le **responsable** sélectionné : « mes nouveaux leads »
+ * est une question qu'on se pose, contrairement à « mes leads des 90 derniers
+ * jours du mois en cours ».
+ */
+const NewLeadsKpiCard = () => {
+  const { selection, today } = useDashboard();
+
+  const { data: deals } = useGetList<Deal>("deals", {
+    pagination: { page: 1, perPage: 1000 },
+    sort: { field: "entered_at", order: "DESC" },
+    filter: {
+      ...(selection.salesId != null ? { sales_id: selection.salesId } : {}),
+    },
+  });
+
+  const trend = computeNewLeadsTrend(deals ?? [], today);
+  const up = (trend.deltaPercent ?? 0) > 0;
+
+  return (
+    <KpiCard
+      label="Nouveaux leads"
+      icon={UserPlus}
+      color="var(--deal-series-potential)"
+      value={String(trend.current)}
+      context={describeLeadsTrend(trend)}
+      // La couleur de la variation est portée par le contexte, pas par le
+      // chiffre : c'est la tendance qui est bonne ou mauvaise, pas le nombre
+      // de leads.
+      contextClassName={
+        trend.deltaPercent == null
+          ? undefined
+          : up
+            ? "text-[var(--deal-status-won)]"
+            : "text-[var(--deal-status-serious)]"
+      }
+    />
+  );
+};
+
 const StageKpiCard = ({
   stage,
   icon,
@@ -186,7 +259,7 @@ export const DashboardKpiBanner = () => {
         </p>
       )}
 
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <KpiCard
           label="Pipeline brut (potentiel)"
           icon={TrendingUp}
@@ -215,6 +288,8 @@ export const DashboardKpiBanner = () => {
             snapshot.weighted.available ? snapshot.weighted.amount : undefined
           }
         />
+
+        <NewLeadsKpiCard />
 
         <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
         <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />
