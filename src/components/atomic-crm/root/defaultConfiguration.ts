@@ -11,7 +11,7 @@ export const defaultLightModeLogo = "./appIcon/512.png";
 
 export const defaultCurrency = "EUR";
 
-export const defaultTitle = "Nosho CRM";
+export const defaultTitle = "CRM";
 
 export const defaultCompanySectors = [
   { value: "cabinet-liberal", label: "Cabinet libéral" },

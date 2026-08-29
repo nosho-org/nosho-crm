@@ -93,13 +93,25 @@ const Header = () => {
                   <img
                     className="[.light_&]:hidden h-6"
                     src={darkModeLogo}
-                    alt={title}
+                    alt="Nosho"
                   />
                   <img
                     className="[.dark_&]:hidden h-6"
                     src={lightModeLogo}
-                    alt={title}
+                    alt="Nosho"
                   />
+                  {/*
+                    « CRM » et non « Nosho CRM » (NOS-1175).
+
+                    Le logo porte déjà le mot « nosho » : l'écrire à côté le
+                    disait deux fois. Le titre reste configurable — c'est sa
+                    valeur en base qui a changé, pas ce composant.
+
+                    L'`alt` des deux images, lui, ne suit plus le titre : un
+                    logo dont le texte alternatif serait « CRM » ne dirait pas
+                    de quelle marque il s'agit, ce qui est précisément ce
+                    qu'attend un lecteur d'écran.
+                  */}
                   <h1 className="text-xl font-semibold">{title}</h1>
                 </Link>
                 {/* Le numéro de version est descendu dans le menu profil
