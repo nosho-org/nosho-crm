@@ -215,11 +215,18 @@ const StageKpiCard = ({
       icon={icon}
       color="var(--muted-foreground)"
       value={formatCurrencyCompact(bucket.amount)}
-      context={
-        bucket.hasUnvaluedDeals
-          ? `${pluralize(bucket.count, "opportunité", "opportunités")} — montant manquant sur certaines`
-          : `${pluralize(bucket.count, "opportunité", "opportunités")}`
-      }
+      context={[
+        pluralize(bucket.count, "opportunité", "opportunités"),
+        // Le pondéré à côté du brut, comme les deux cartes de tête
+        // (NOS-1171). Absent plutôt qu'à zéro quand rien n'est pondérable :
+        // « 0 € pondéré » se lirait comme une prévision nulle.
+        bucket.weightedAvailable
+          ? `${formatCurrencyCompact(bucket.weightedAmount)} pondéré`
+          : null,
+        bucket.hasUnvaluedDeals ? "montant manquant sur certaines" : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
     />
   );
 };
@@ -242,7 +249,10 @@ export const DashboardKpiBanner = () => {
     deals,
     dealStages,
     weighting.pipelineStatuses,
-    { openOnly: true, includeEmpty: true },
+    // La ponderation traverse jusqu aux cartes d etape (NOS-1171) : le
+    // bandeau montrait brut ET pondere en tete, puis trois etapes en brut
+    // seulement -- on ne pouvait pas rapprocher les cartes entre elles.
+    { openOnly: true, includeEmpty: true, weighting },
   );
 
   const won = "var(--deal-status-won)";
@@ -260,6 +270,15 @@ export const DashboardKpiBanner = () => {
       )}
 
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        {/*
+          Les nouveaux leads en tête (NOS-1171, demandé par Simon).
+
+          L'ordre du bandeau suit le chemin d'une affaire, et une affaire
+          commence par entrer. Les six autres cartes disent ensuite ce que le
+          pipeline en fait, jusqu'au signé.
+        */}
+        <NewLeadsKpiCard />
+
         <KpiCard
           label="Pipeline brut (potentiel)"
           icon={TrendingUp}
@@ -288,8 +307,6 @@ export const DashboardKpiBanner = () => {
             snapshot.weighted.available ? snapshot.weighted.amount : undefined
           }
         />
-
-        <NewLeadsKpiCard />
 
         <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
         <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />

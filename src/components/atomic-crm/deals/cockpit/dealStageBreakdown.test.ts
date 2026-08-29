@@ -164,3 +164,55 @@ describe("totalStageBreakdown", () => {
     });
   });
 });
+
+describe("computeStageBreakdown — la pondération par étape", () => {
+  const stages = [
+    { value: "qualified", label: "Qualifié" },
+    { value: "demo-poc", label: "Démo / POC" },
+  ];
+  const weighting = {
+    stageProbabilities: { qualified: 40, "demo-poc": 60 },
+    pipelineStatuses: ["closed-won", "lost", "churn"],
+  };
+  const deal = (over: Record<string, unknown>) =>
+    ({
+      id: Math.random(),
+      stage: "qualified",
+      amount: 10000,
+      ...over,
+    }) as never;
+
+  it("ne pondère rien tant qu'on ne le demande pas", () => {
+    // « pas de pondération demandée » et « pondération nulle » ne se lisent pas
+    // pareil : c'est ce que distingue `weightedAvailable`.
+    const [bucket] = computeStageBreakdown([deal({})], stages, [], {});
+    expect(bucket.weightedAmount).toBe(0);
+    expect(bucket.weightedAvailable).toBe(false);
+  });
+
+  it("somme deal par deal, en respectant les probabilités individuelles", () => {
+    // Multiplier le total par la probabilité de l'étape effacerait
+    // l'arbitrage porté par l'opportunité elle-même.
+    const [bucket] = computeStageBreakdown(
+      [deal({ amount: 10000 }), deal({ amount: 10000, probability: 90 })],
+      stages,
+      [],
+      { weighting },
+    );
+    // 10 000 × 40 % + 10 000 × 90 % = 13 000, et non 20 000 × 40 %.
+    expect(bucket.weightedAmount).toBe(13000);
+    expect(bucket.weightedAvailable).toBe(true);
+  });
+
+  it("écarte du pondéré l'affaire qu'on ne sait pas pondérer", () => {
+    // Elle ne vaut pas zéro : elle sort du total.
+    const [, demo] = computeStageBreakdown(
+      [deal({ stage: "demo-poc", amount: 10000 })],
+      stages,
+      [],
+      { weighting: { ...weighting, stageProbabilities: {} } },
+    );
+    expect(demo.amount).toBe(10000);
+    expect(demo.weightedAvailable).toBe(false);
+  });
+});

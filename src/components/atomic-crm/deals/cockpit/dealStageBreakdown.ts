@@ -1,6 +1,8 @@
 import type { DealStage } from "../../types";
 import type { DealRecord } from "./dealFields";
 import { isOpenStage } from "./dealFields";
+import type { WeightingConfig } from "./dealWeighting";
+import { getWeightedAmount } from "./dealWeighting";
 
 /**
  * ARR and deal count per pipeline stage.
@@ -23,6 +25,23 @@ export interface DealStageBucket {
   amount: number;
   /** True when at least one deal in the bucket has no amount recorded. */
   hasUnvaluedDeals: boolean;
+  /**
+   * ARR pondéré de l'étape (NOS-1171, demandé par Simon).
+   *
+   * Le bandeau affichait « Pipeline brut » ET « Pipeline pondéré », puis trois
+   * étapes en brut seulement : on ne pouvait pas rapprocher les cartes entre
+   * elles. Chaque étape porte donc les deux.
+   *
+   * Somme deal par deal, et non `amount × probabilité de l'étape` : une
+   * opportunité peut porter sa propre probabilité, qui prime sur celle de son
+   * étape. Multiplier le total effacerait ces arbitrages.
+   *
+   * Zéro quand aucune pondération n'est demandée — voir `weightedAvailable`,
+   * qui distingue « pas de pondération » de « pondération nulle ».
+   */
+  weightedAmount: number;
+  /** Au moins une affaire du lot a pu être pondérée. */
+  weightedAvailable: boolean;
 }
 
 export interface StageBreakdownOptions {
@@ -43,6 +62,14 @@ export interface StageBreakdownOptions {
    * two answers — the exact disagreement this module exists to prevent.
    */
   includeEmpty?: boolean;
+  /**
+   * Pondération à appliquer.
+   *
+   * Absente, `weightedAmount` reste à zéro et `weightedAvailable` à faux : le
+   * lecteur doit pouvoir distinguer « pas de pondération demandée » de
+   * « pondération nulle ».
+   */
+  weighting?: WeightingConfig;
 }
 
 /**
@@ -64,7 +91,7 @@ export function computeStageBreakdown(
   pipelineStatuses: string[],
   options: StageBreakdownOptions = {},
 ): DealStageBucket[] {
-  const { openOnly = false, includeEmpty = true } = options;
+  const { openOnly = false, includeEmpty = true, weighting } = options;
 
   const buckets = new Map<string, DealStageBucket>();
   for (const stage of stages) {
@@ -75,6 +102,8 @@ export function computeStageBreakdown(
       count: 0,
       amount: 0,
       hasUnvaluedDeals: false,
+      weightedAmount: 0,
+      weightedAvailable: false,
     });
   }
 
@@ -86,6 +115,16 @@ export function computeStageBreakdown(
       bucket.amount += deal.amount;
     } else {
       bucket.hasUnvaluedDeals = true;
+    }
+
+    if (weighting) {
+      // `null` — et non zéro — quand la probabilité est inconnue : une affaire
+      // qu'on ne sait pas pondérer ne vaut pas zéro, elle sort du total.
+      const weighted = getWeightedAmount(deal, weighting);
+      if (weighted !== null) {
+        bucket.weightedAmount += weighted;
+        bucket.weightedAvailable = true;
+      }
     }
   }
 
