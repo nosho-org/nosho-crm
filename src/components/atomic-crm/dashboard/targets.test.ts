@@ -162,3 +162,46 @@ describe("findActiveTarget", () => {
     expect(findActiveTarget([passe], null, now)).toBeNull();
   });
 });
+
+describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle", () => {
+  const now = new Date("2026-08-29T10:00:00Z");
+  const actuals = [
+    { month: "2026-06-01", amount: 3123.21, transactionCount: 5, bySource: [] },
+    { month: "2026-07-01", amount: 3874.31, transactionCount: 9, bySource: [] },
+  ];
+
+  it("mesure un objectif d'équipe sur ce qui est arrivé en banque", () => {
+    // Le motif du changement : « le montant dans objectif équipe n'est pas le
+    // même que dans encaissé ». Deux chiffres présentés comme du MRR, sur un
+    // même écran, qui ne concordaient pas.
+    const progress = computeTargetProgress(
+      target({ amount: 25000 }),
+      [deal({ mrr: 9999 })],
+      now,
+      actuals,
+    );
+    expect(progress.achieved).toBeCloseTo(6997.52, 2);
+  });
+
+  it("laisse un objectif personnel sur les affaires signées du CRM", () => {
+    // Un virement bancaire ne porte pas de commercial : il n'y a rien à
+    // attribuer.
+    const progress = computeTargetProgress(
+      target({ sales_id: 9, amount: 12000 }),
+      [deal({ sales_id: 9, mrr: 1500 })],
+      now,
+      actuals,
+    );
+    expect(progress.achieved).toBe(1500);
+  });
+
+  it("ne compte que les mois couverts par la période", () => {
+    const progress = computeTargetProgress(
+      target({ period_start: "2026-07-01", period_end: "2026-12-31" }),
+      [],
+      now,
+      actuals,
+    );
+    expect(progress.achieved).toBeCloseTo(3874.31, 2);
+  });
+});

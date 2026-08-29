@@ -29,7 +29,8 @@ import {
 
 import { AnimatedRing } from "@/components/ui/motion";
 import { formatCurrency } from "../misc/formatCurrency";
-import type { Deal, Sale, Target } from "../types";
+import type { Deal, RevenueActual, Sale, Target } from "../types";
+import { type MonthlyRevenue, groupByMonth } from "./revenueActuals";
 import {
   TARGET_METRIC_LABELS,
   type TargetMetric,
@@ -61,17 +62,38 @@ import {
 const TargetRow = ({
   target,
   deals,
+  actuals,
   owner,
   onEdit,
   emphasis = false,
 }: {
   target: Target;
   deals: Deal[];
+  /** Encaisse reelle. Seul l'objectif d'equipe s'en sert -- voir ci-dessous. */
+  actuals: MonthlyRevenue[];
   owner?: string;
   onEdit: () => void;
   emphasis?: boolean;
 }) => {
-  const progress = computeTargetProgress(target, deals);
+  /*
+   * L'objectif d'EQUIPE se mesure sur l'encaisse reelle, le personnel sur les
+   * affaires signees du CRM (NOS-1181).
+   *
+   * Simon a releve que l'objectif equipe et le KPI « Encaisse » n'affichaient
+   * pas le meme montant. Ils ne mesuraient pas la meme chose : la saisie d'un
+   * cote, la banque de l'autre.
+   *
+   * Un virement bancaire ne porte pas de commercial, un objectif personnel ne
+   * peut donc pas s'y mesurer -- d'ou la ligne « source » ecrite sous chaque
+   * objectif, faute de quoi on croirait comparer deux chiffres comparables.
+   */
+  const isTeam = target.sales_id == null;
+  const progress = computeTargetProgress(
+    target,
+    deals,
+    undefined,
+    isTeam ? actuals : undefined,
+  );
   const metric = (target.metric ?? "mrr") as TargetMetric;
   const percent = Math.round(progress.ratio * 100);
 
@@ -91,7 +113,10 @@ const TargetRow = ({
             {owner ?? "Équipe"}
           </span>
           <span className="text-xs text-muted-foreground">
-            {TARGET_METRIC_LABELS[metric]} · {formatTargetPeriod(target)}
+            {TARGET_METRIC_LABELS[metric]} · {formatTargetPeriod(target)} ·{" "}
+            {/* Nommer la source : sans elle, deux chiffres de MRR qui ne
+                concordent pas se lisent comme une erreur. */}
+            {isTeam ? "encaissé en banque" : "signé dans le CRM"}
           </span>
         </div>
 
@@ -367,6 +392,13 @@ export const TargetsCard = () => {
     filter: { "disabled@neq": true },
   });
 
+  // L'encaisse reelle, pour l'objectif d'equipe (NOS-1181).
+  const { data: revenueRows } = useGetList<RevenueActual>("revenue_actuals", {
+    pagination: { page: 1, perPage: 60 },
+    sort: { field: "month", order: "DESC" },
+  });
+  const actuals = groupByMonth(revenueRows ?? []);
+
   /*
    * Toutes les affaires signées, pas seulement celles de la période affichée.
    *
@@ -432,6 +464,7 @@ export const TargetsCard = () => {
                   key={target.id}
                   target={target}
                   deals={deals}
+                  actuals={actuals}
                   onEdit={() => setEditing(target)}
                   emphasis
                 />
@@ -449,6 +482,7 @@ export const TargetsCard = () => {
                   key={target.id}
                   target={target}
                   deals={deals}
+                  actuals={actuals}
                   owner={ownerName(target)}
                   onEdit={() => setEditing(target)}
                 />
