@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { FileSignature, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Download,
+  FileSignature,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   useCreate,
   useGetIdentity,
@@ -28,12 +35,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { getSupabaseClient } from "../providers/supabase/supabase";
 import type { Company, Contract, ContractService, Deal, Sale } from "../types";
 import {
   CONTRACT_PRICE_UNITS,
   CONTRACT_SERVICES,
-  CONTRACT_TRIAL_DURATIONS,
-  trialEndDate,
+  weeksBetween,
 } from "./contractOffers";
 import { buildSepaMandateReference } from "./contractPayload";
 
@@ -49,8 +56,21 @@ import { buildSepaMandateReference } from "./contractPayload";
  * **Aucune date de fin sur le contrat cadre.** L'article 7 pose une période
  * ferme comptée depuis la mise en production, puis une tacite reconduction par
  * périodes de 12 mois. Demander une date de fin produirait un contrat qui se
- * contredit lui-même. Le POC, lui, en a une — deux semaines fermes — d'où le
- * bloc « Durée » qui n'apparaît que pour lui.
+ * contredit lui-même. Le POC, lui, en a une — d'où le bloc « Période d'essai »
+ * qui n'apparaît que pour lui.
+ *
+ * **Aucune durée en semaines.** Elle se déduit des deux dates. La demander en
+ * plus les doublait, et ouvrait la porte à ce qu'elles se contredisent.
+ *
+ * ## Ce qui bloque l'enregistrement
+ *
+ * **SIRET et adresse de la société.** Le bloc « parties » les écrit dans une
+ * phrase — « immatriculée au RCS de … sous le numéro … (SIRET du siège : …),
+ * dont l'établissement est situé …, … … » — qui part chez le client avec ses
+ * trous si on la laisse passer. C'est exactement ce qui est arrivé au contrat
+ * HEM, dont la page 3 porte encore `[SIREN / FINESS HEM]`. Ni l'un ni l'autre
+ * ne se saisit ici : ils appartiennent à la fiche société, et les recopier
+ * dans le contrat ferait diverger les deux dès la première correction.
  *
  * **Aucune donnée Nosho** hors le signataire : raison sociale, capital, RCS,
  * adresse et ICS appartiennent au gabarit.
@@ -117,11 +137,82 @@ export const ContractDialog = ({
   const isPending = isCreating || isUpdating;
   const notify = useNotify();
 
-  const { data: company } = useGetOne<Company>(
+  const { data: company, refetch: refetchCompany } = useGetOne<Company>(
     "companies",
     { id: deal.company_id },
     { enabled: deal.company_id != null && open },
   );
+  const [updateCompany] = useUpdate();
+  const [filling, setFilling] = useState(false);
+
+  /*
+   * Ce que le contrat exige de la société, et qu'aucune saisie de cette
+   * fenêtre ne peut remplacer.
+   *
+   * Le bloc « parties » écrit « immatriculée au RCS de … sous le numéro …
+   * (SIRET du siège : …), dont l'établissement est situé …, … … ». Sans SIRET
+   * ni adresse, ces phrases partent chez le client avec des trous — ce qui est
+   * exactement arrivé au contrat HEM, dont la page 3 porte encore
+   * `[SIREN / FINESS HEM]`.
+   */
+  const siret = (company?.tax_identifier ?? "").replace(/\D/g, "");
+  const siren = siret.slice(0, 9);
+  const hasAddress = !!(company?.address && company?.zipcode && company?.city);
+  const missing = !siret || !hasAddress;
+
+  /**
+   * Reprend l'adresse au registre, depuis le SIREN déduit du SIRET.
+   *
+   * Second appel de `enrich-company-ai` sur le registre seul — le même que la
+   * création de société utilise après le choix d'un établissement. Aucun appel
+   * au modèle : il n'y a rien de qualitatif à écrire, seulement une adresse
+   * légale à recopier.
+   *
+   * La société est mise à jour, pas le contrat : l'adresse appartient à la
+   * fiche, et la recopier dans le contrat ferait diverger les deux dès la
+   * première correction.
+   */
+  const fillFromRegistry = async () => {
+    if (!company || siren.length !== 9) return;
+    setFilling(true);
+    try {
+      const { data, error } = await getSupabaseClient().functions.invoke(
+        "enrich-company-ai",
+        { body: { name: company.name, siren } },
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await updateCompany(
+        "companies",
+        {
+          id: company.id,
+          data: {
+            // Le registre prime sur ce que le CRM porte : c'est lui qui fait
+            // foi au bloc « parties ». Mais il ne vide rien — un champ absent
+            // de sa réponse laisse en place ce qui existe.
+            address: data.address || company.address,
+            zipcode: data.zipcode || company.zipcode,
+            city: data.city || company.city,
+            vat_number: company.vat_number || data.vat_number || null,
+          },
+          previousData: company,
+        },
+        { returnPromise: true },
+      );
+      notify("Adresse reprise du registre", { type: "success" });
+      refetchCompany();
+    } catch (e) {
+      notify(
+        `Le registre n'a rien renvoyé : ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+        { type: "error" },
+      );
+    } finally {
+      setFilling(false);
+    }
+  };
 
   // Les trois signataires possibles. `job_title` ne se saisit pas ici : c'est
   // un attribut de la personne, réglé une fois dans sa fiche.
@@ -138,23 +229,22 @@ export const ContractDialog = ({
   const [noshoSignatoryId, setNoshoSignatoryId] = useState<string>("");
   const [rows, setRows] = useState<ServiceRow[]>([emptyRow()]);
   const [isFree, setIsFree] = useState(kind === "poc");
-  const [duration, setDuration] = useState("2");
   const [trialStart, setTrialStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [trialEnd, setTrialEnd] = useState("");
 
   /*
-   * Fin calculée tant que la durée est un nombre de semaines, saisie sinon.
+   * La durée se déduit des deux dates, elle ne se demande plus.
    *
-   * Bornes incluses, comme le contrat les écrit : « prend effet le lundi
-   * 31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus » — deux
-   * semaines font 13 jours d'écart, pas 14.
+   * Le menu déroulant « une semaine / deux semaines / personnalisée » doublait
+   * ce que les dates disaient déjà, et ouvrait la porte à ce qu'ils se
+   * contredisent. Deux dates suffisent ; le nombre de semaines n'a qu'un seul
+   * rôle, la formulation de l'article 2 — « pour une durée de deux (2)
+   * semaines » — et se calcule pour lui.
+   *
+   * `null` dès que l'écart n'est pas un nombre entier de semaines : le gabarit
+   * omet alors la mention plutôt que d'arrondir.
    */
-  const weeks = CONTRACT_TRIAL_DURATIONS.find(
-    (d) => d.value === duration,
-  )?.weeks;
-  const computedEnd =
-    weeks != null && trialStart ? trialEndDate(trialStart, weeks) : null;
-  const effectiveEnd = weeks != null ? computedEnd : customEnd || null;
+  const weeks = weeksBetween(trialStart, trialEnd);
 
   /*
    * Pré-remplissage à l'ouverture.
@@ -196,10 +286,7 @@ export const ContractDialog = ({
       );
       setIsFree(!!contract.is_free);
       setTrialStart(contract.trial_start_date ?? "");
-      setDuration(
-        contract.trial_weeks != null ? String(contract.trial_weeks) : "custom",
-      );
-      setCustomEnd(contract.trial_end_date ?? "");
+      setTrialEnd(contract.trial_end_date ?? "");
       return;
     }
 
@@ -263,7 +350,7 @@ export const ContractDialog = ({
       // Le contrat cadre n'a pas de période d'essai : lui en écrire une
       // contredirait son article 7.
       trial_start_date: kind === "poc" ? trialStart || null : null,
-      trial_end_date: kind === "poc" ? effectiveEnd : null,
+      trial_end_date: kind === "poc" ? trialEnd || null : null,
       trial_weeks: kind === "poc" ? (weeks ?? null) : null,
       status: "draft",
       // Rien à prélever sur un POC : pas de mandat.
@@ -351,16 +438,62 @@ export const ContractDialog = ({
           <span className="font-medium">{company?.name ?? "—"}</span>
           <span className="text-xs text-muted-foreground">
             {[
-              company?.tax_identifier
-                ? `SIRET ${company.tax_identifier}`
-                : "SIRET manquant",
+              siret ? `SIRET ${siret}` : null,
               company?.vat_number ? `TVA ${company.vat_number}` : null,
-              [company?.zipcode, company?.city].filter(Boolean).join(" ") ||
-                null,
+              [company?.address, company?.zipcode, company?.city]
+                .filter(Boolean)
+                .join(" ") || null,
             ]
               .filter(Boolean)
-              .join(" · ")}
+              .join(" · ") || "Aucune donnée d'identification"}
           </span>
+
+          {/*
+            Le blocage, et la façon d'en sortir.
+
+            Ces deux champs ne se saisissent pas ici : ils appartiennent à la
+            fiche société, et les recopier dans le contrat ferait diverger les
+            deux dès la première correction. Le SIRET vient de la fiche ou de
+            l'enrichissement à la création ; l'adresse peut être reprise au
+            registre d'un clic, puisque le SIRET la désigne.
+          */}
+          {missing && (
+            <div className="mt-1 flex flex-col gap-2 rounded-md border border-[var(--deal-status-warning)] bg-[color-mix(in_oklch,var(--deal-status-warning)_8%,transparent)] p-2.5">
+              <span className="flex items-start gap-1.5 text-xs text-[var(--deal-status-warning)]">
+                <AlertTriangle
+                  className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                  aria-hidden
+                />
+                <span>
+                  {!siret
+                    ? "SIRET manquant. Le contrat écrit « immatriculée au RCS de … sous le numéro … (SIRET du siège : …) » : il ne peut pas être édité sans."
+                    : "Adresse incomplète. Le bloc « parties » écrit « dont l'établissement est situé …, … … »."}
+                </span>
+              </span>
+              {!siret ? (
+                <span className="text-xs text-muted-foreground">
+                  À renseigner sur la fiche société, avec « Compléter avec l'IA
+                  » ou à la main.
+                </span>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="self-start"
+                  onClick={fillFromRegistry}
+                  disabled={filling || siren.length !== 9}
+                >
+                  {filling ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" aria-hidden />
+                  )}
+                  Reprendre l'adresse du registre
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -410,37 +543,22 @@ export const ContractDialog = ({
         {kind === "poc" && (
           <div className="flex flex-col gap-3 rounded-md border p-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Durée de la période d'essai
+              Période d'essai
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Durée</Label>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger aria-label="Durée">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTRACT_TRIAL_DURATIONS.map((d) => (
-                      <SelectItem key={d.value} value={d.value}>
-                        {d.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {field("Début", trialStart, setTrialStart, undefined, "date")}
-              {weeks != null ? (
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs">Fin (calculée)</Label>
-                  <Input value={computedEnd ?? ""} readOnly disabled />
-                </div>
-              ) : (
-                field("Fin", customEnd, setCustomEnd, undefined, "date")
-              )}
+              {field("Fin", trialEnd, setTrialEnd, undefined, "date")}
             </div>
             <span className="text-xs text-muted-foreground">
-              Bornes incluses, comme le contrat les écrit : deux semaines
-              démarrées un lundi finissent le dimanche de la semaine suivante.
+              {/* Le contrat écrit ses bornes incluses : « prend effet le lundi
+                  31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus ».
+                  Le décompte suit cette convention. */}
+              Bornes incluses.
+              {weeks != null
+                ? ` Soit ${weeks} semaine${weeks > 1 ? "s" : ""} — le contrat l'écrira.`
+                : trialStart && trialEnd
+                  ? " La durée n'étant pas un nombre entier de semaines, le contrat n'écrira que les deux dates."
+                  : ""}
             </span>
           </div>
         )}
@@ -581,7 +699,24 @@ export const ContractDialog = ({
           <Button type="button" variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending}>
+          {/*
+            Enregistrer reste fermé tant que la société n'a pas de quoi
+            remplir le bloc « parties ».
+
+            Le défaut que cela évite est déjà arrivé : le contrat HEM est parti
+            chez le client avec `[SIREN / FINESS HEM]` page 3, jamais rempli.
+            Une fois signé, il n'y a plus rien à corriger.
+          */}
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isPending || missing}
+            title={
+              missing
+                ? "SIRET ou adresse manquants sur la fiche société"
+                : undefined
+            }
+          >
             {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             Enregistrer
           </Button>
