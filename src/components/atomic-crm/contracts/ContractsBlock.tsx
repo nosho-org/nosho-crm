@@ -124,7 +124,6 @@ export const ContractsBlock = () => {
           {contracts.map((contract) => {
             const status =
               STATUS[contract.status as keyof typeof STATUS] ?? STATUS.draft;
-            const price = formatUnitPrice(contract.unit_price_cents);
             const signatory = [
               contract.signatory_first_name,
               contract.signatory_last_name,
@@ -150,13 +149,28 @@ export const ContractsBlock = () => {
                     </span>
                   </span>
 
-                  {contract.offer_label && (
+                  {/* Une ligne par prestation : un contrat qui vend deux
+                      services à deux prix ne se résume pas en une phrase, et
+                      n'en montrer qu'un donnerait un montant faux. */}
+                  {(contract.services ?? []).map((line, index) => {
+                    const price = formatUnitPrice(line.unitPriceCents);
+                    return (
+                      <span
+                        key={`${line.service}-${index}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        {line.label}
+                        {price && ` — ${price}`}
+                        {price && line.unit && ` / ${line.unit}`}
+                      </span>
+                    );
+                  })}
+
+                  {contract.is_free && (
                     <span className="text-xs text-muted-foreground">
-                      {contract.offer_label}
-                      {price && ` — ${price}`}
-                      {price &&
-                        contract.price_unit &&
-                        ` / ${contract.price_unit}`}
+                      Gratuit — sans facturation
+                      {(contract.services?.length ?? 0) > 0 &&
+                        " (tarifs ci-dessus indicatifs)"}
                     </span>
                   )}
 

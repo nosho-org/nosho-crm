@@ -513,16 +513,23 @@ create table public.contracts (
     referent_email text,
     nosho_signatory_id bigint references public.sales (id),
     nosho_signatory_job_title text,
-    offer_label text,
-    offer_detail text,
-    -- En centimes : 0,25 € en flottant vaut 0,2500000000000001.
-    unit_price_cents integer,
-    price_unit text,
+    -- Lignes de prestation : un client peut prendre plusieurs services, chacun
+    -- avec son prix et son unité. jsonb et non table fille — ces lignes n'ont
+    -- pas de vie propre hors du contrat. Prix en centimes.
+    -- [{ service, label, unitPriceCents, unit, comment }]
+    services jsonb not null default '[]'::jsonb,
+    -- Change le texte de l'article 5 du POC, il ne masque pas un prix.
+    is_free boolean not null default false,
     commitment_months integer not null default 12,
     renewal_months integer not null default 12,
     notice_days integer not null default 30,
     -- Démarre la période ferme ; inconnue à l'édition.
     production_start_date date,
+    -- Période d'essai du POC. Le contrat cadre n'a pas de date de fin.
+    -- `trial_weeks` est nul quand la durée est personnalisée.
+    trial_start_date date,
+    trial_end_date date,
+    trial_weeks integer,
     -- Unique : la banque du débiteur l'enregistre, deux mandats qui la
     -- partagent se télescopent.
     sepa_mandate_reference text unique,

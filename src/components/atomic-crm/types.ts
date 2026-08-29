@@ -108,6 +108,18 @@ export type Company = {
  * periode ferme comptee depuis la mise en production, puis une tacite
  * reconduction. Stocker une fin donnerait un chiffre faux.
  */
+/** Une ligne de prestation d un contrat. Stockee en jsonb dans `services`. */
+export type ContractService = {
+  /** `confirmation-rdv` | `secretariat` | `autre` */
+  service: string;
+  label: string;
+  /** En centimes : 0,25 EUR en flottant vaut 0,2500000000000001. */
+  unitPriceCents?: number | null;
+  unit?: string | null;
+  /** Remplace l ancien « detail de la prestation ». */
+  comment?: string | null;
+};
+
 export type Contract = {
   created_at: string;
   updated_at?: string;
@@ -127,17 +139,28 @@ export type Contract = {
   nosho_signatory_id?: Identifier | null;
   nosho_signatory_job_title?: string | null;
 
-  offer_label?: string | null;
-  offer_detail?: string | null;
-  /** En centimes : 0,25 EUR en flottant vaut 0,2500000000000001. */
-  unit_price_cents?: number | null;
-  price_unit?: string | null;
+  /**
+   * Lignes de prestation. Un client peut prendre plusieurs services, chacun
+   * avec son prix et son unite.
+   */
+  services?: ContractService[] | null;
+  /**
+   * Sans facturation. Change le texte de l article 5 du POC, il ne masque pas
+   * un prix.
+   */
+  is_free?: boolean;
 
   commitment_months?: number;
   renewal_months?: number;
   notice_days?: number;
   /** Demarre la periode ferme. Inconnue a l edition. */
   production_start_date?: string | null;
+
+  /** Periode d essai du POC. Le contrat cadre n a pas de date de fin. */
+  trial_start_date?: string | null;
+  trial_end_date?: string | null;
+  /** Nul quand la duree est personnalisee. */
+  trial_weeks?: number | null;
 
   sepa_mandate_reference?: string | null;
   /** Mandat B2B : renseignee a la main, sur retour du client. */

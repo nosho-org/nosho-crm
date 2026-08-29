@@ -32,11 +32,29 @@ export const generateContracts = (db: Db): Contract[] => {
       signatory_email: "c.berger@example.fr",
       nosho_signatory_id: 0,
       nosho_signatory_job_title: "Présidente",
-      offer_label: "Forfait confirmation",
-      offer_detail:
-        "Appel sortant de confirmation, par rendez-vous traité, reprise des créneaux annulés incluse.",
-      unit_price_cents: 25,
-      price_unit: "confirmation",
+      // Deux lignes, parce qu'une seule ne montrerait pas ce que la fenêtre
+      // sait faire : c'est la seule façon de vérifier l'ajout et la
+      // suppression de prestations en local.
+      services: [
+        {
+          service: "confirmation-rdv",
+          label: "Agent de confirmation de rendez-vous",
+          unitPriceCents: 25,
+          unit: "rendez-vous traité",
+          comment: "Reprise des créneaux annulés incluse.",
+        },
+        {
+          service: "secretariat",
+          label: "Agent de secrétariat",
+          unitPriceCents: 90,
+          unit: "appel entrant",
+          comment: null,
+        },
+      ],
+      is_free: true,
+      trial_start_date: "2026-08-31",
+      trial_end_date: "2026-09-13",
+      trial_weeks: 2,
       commitment_months: 12,
       renewal_months: 12,
       notice_days: 30,

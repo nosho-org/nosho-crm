@@ -56,10 +56,12 @@ soit informé, et un contrat doit porter l'état du registre le jour où il est
 | `referentEmail` | | cadre |
 | `noshoSignatoryName` | `Thomas Guillaumin` | les deux |
 | `noshoSignatoryJobTitle` | `Président` | les deux |
-| `offer.label` | `Forfait confirmation` | les deux |
-| `offer.detail` | `Appel sortant de confirmation…` | les deux |
-| `offer.unitPrice` | `0,25 €` — **déjà formaté** | les deux |
-| `offer.unit` | `confirmation` | les deux |
+| `services[]` | **tableau** de lignes de prestation | les deux |
+| `services[].label` | `Agent de confirmation de rendez-vous` | les deux |
+| `services[].unitPrice` | `0,25 €` — **déjà formaté** | les deux |
+| `services[].unit` | `rendez-vous traité`, `appel entrant`, `mois` | les deux |
+| `services[].comment` | commentaire libre sous la ligne | les deux |
+| `isFree` | `true` \| `false` | poc |
 | `commitmentMonths` | `12` | cadre |
 | `renewalMonths` | `12` | cadre |
 | `noticeDays` | `30` | cadre |
@@ -67,6 +69,22 @@ soit informé, et un contrat doit porter l'état du registre le jour où il est
 | `trial.endDate` | `dimanche 13 septembre 2026` | poc |
 | `trial.weeks` | `deux (2)` | poc |
 | `sepaMandateReference` | `NOSHO-2026-042` | cadre |
+
+**`services` est un tableau, et il faut le parcourir** : `{{#services}}…{{/services}}`.
+Un client peut prendre l'agent de confirmation *et* l'agent de secrétariat, à
+deux prix et deux unités. N'imprimer que la première ligne donnerait un contrat
+incomplet, et additionner deux unités différentes n'aurait pas de sens.
+
+**`isFree` change le texte, il ne masque pas un prix.** L'article 5 du POC
+gratuit écrit « Aucun montant, à quelque titre que ce soit, ne pourra être
+facturé au Client au titre de celle-ci » — et son article 1 emploie deux fois le
+mot « gratuite ». Les deux branchent sur ce booléen.
+
+⚠️ **La branche payante du POC n'est validée par personne.** Elle est reprise de
+la logique de l'article 3 du contrat cadre, mais aucun avocat ne l'a relue et
+aucun client ne l'a signée. À faire valider avant le premier envoi d'un POC
+facturé. Un contrat gratuit garde ses lignes tarifaires : le même article 5 les
+annonce « à titre purement indicatif et sans valeur d'engagement ».
 
 `client.isIndividual` vaut vrai quand le client signe en nom propre — un
 praticien en entreprise individuelle, comme dans le contrat POC de référence.

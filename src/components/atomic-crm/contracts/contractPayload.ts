@@ -59,16 +59,23 @@ export interface ContractSignatoryPayload {
   email?: string;
 }
 
-/** Le triplet tarifaire de l'article 3. */
-export interface ContractOfferPayload {
-  /** « Forfait confirmation ». */
-  label?: string;
-  /** « Appel sortant de confirmation, par rendez-vous traité ». */
-  detail?: string;
+/**
+ * Une ligne du tableau tarifaire de l'article 3.
+ *
+ * Le modèle initial n'en portait qu'une, reprise du contrat HEM qui ne vend
+ * qu'un service. Un client peut prendre l'agent de confirmation **et** l'agent
+ * de secrétariat, à deux prix et deux unités : le gabarit reçoit donc un
+ * tableau, et non un triplet.
+ */
+export interface ContractServicePayload {
+  /** « Agent de confirmation de rendez-vous ». */
+  label: string;
   /** « 0,25 € » — déjà formaté, pour que le gabarit n'ait rien à calculer. */
   unitPrice?: string;
-  /** « confirmation », « mois », « rendez-vous confirmé ». */
+  /** « rendez-vous traité », « appel entrant », « mois ». */
   unit?: string;
+  /** Commentaire libre, sous la ligne. Remplace l'ancien « détail ». */
+  comment?: string;
 }
 
 /** Les bornes de la periode d essai. Le POC en a, le contrat cadre non. */
@@ -94,7 +101,17 @@ export interface ContractPayload {
   /** Nom et fonction du signataire Nosho — le reste est dans le gabarit. */
   noshoSignatoryName?: string;
   noshoSignatoryJobTitle?: string;
-  offer?: ContractOfferPayload;
+  /** Les lignes de prestation. Vide quand le contrat est gratuit. */
+  services: ContractServicePayload[];
+  /**
+   * Contrat sans facturation.
+   *
+   * Ce n'est pas un affichage : l'article 5 du POC écrit « Aucun montant, à
+   * quelque titre que ce soit, ne pourra être facturé au Client au titre de
+   * celle-ci ». Le gabarit branche sur ce booléen, il ne se contente pas de
+   * masquer un prix.
+   */
+  isFree?: boolean;
   commitmentMonths?: number;
   renewalMonths?: number;
   noticeDays?: number;
@@ -131,6 +148,72 @@ const FR_MONTHS = [
 /** « 28 août 2026 », comme les contrats existants l'écrivent. */
 export function formatFrenchDate(date: Date): string {
   return `${date.getDate()} ${FR_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+const FR_WEEKDAYS = [
+  "dimanche",
+  "lundi",
+  "mardi",
+  "mercredi",
+  "jeudi",
+  "vendredi",
+  "samedi",
+];
+
+/**
+ * « lundi 31 août 2026 » depuis un `date` PostgreSQL (`2026-08-31`).
+ *
+ * Le jour de la semaine figure au contrat, et il n'y est pas décoratif : sur
+ * une période d'essai de deux semaines, il rend visible qu'on démarre un lundi
+ * et qu'on finit un dimanche.
+ *
+ * Lecture en UTC de bout en bout. Une colonne `date` n'a pas d'heure ; la lire
+ * dans le fuseau du navigateur ferait basculer la veille au soir tout
+ * utilisateur à l'ouest de Greenwich, et le contrat afficherait un jour de
+ * décalage sans que rien ne le signale.
+ */
+export function formatFrenchDateWithWeekday(iso: string): string | undefined {
+  const date = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return `${FR_WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${
+    FR_MONTHS[date.getUTCMonth()]
+  } ${date.getUTCFullYear()}`;
+}
+
+/** « deux (2) » — lettres puis chiffre, la forme que le contrat emploie. */
+const WEEKS_IN_WORDS: Record<number, string> = {
+  1: "une (1)",
+  2: "deux (2)",
+  3: "trois (3)",
+  4: "quatre (4)",
+  6: "six (6)",
+  8: "huit (8)",
+};
+
+/**
+ * Les bornes de la période d'essai, ou `undefined` si le contrat n'en a pas.
+ *
+ * `weeks` reste absent quand la durée est personnalisée : le gabarit omet
+ * alors la mention « pour une durée de N semaines ». Dix jours ne font pas un
+ * nombre entier de semaines, et arrondir écrirait une phrase en désaccord avec
+ * la date qui la suit.
+ */
+function buildTrialPayload(
+  contract: Partial<Contract>,
+): ContractTrialPayload | undefined {
+  if (!contract.trial_start_date && !contract.trial_end_date) return undefined;
+  return {
+    startDate: contract.trial_start_date
+      ? formatFrenchDateWithWeekday(contract.trial_start_date)
+      : undefined,
+    endDate: contract.trial_end_date
+      ? formatFrenchDateWithWeekday(contract.trial_end_date)
+      : undefined,
+    weeks:
+      contract.trial_weeks != null
+        ? (WEEKS_IN_WORDS[contract.trial_weeks] ?? String(contract.trial_weeks))
+        : undefined,
+  };
 }
 
 /**
@@ -223,12 +306,22 @@ export function buildContractPayload(args: {
       `${noshoSignatory.first_name} ${noshoSignatory.last_name}`.trim() ||
       undefined,
     noshoSignatoryJobTitle: noshoSignatory.job_title ?? undefined,
-    offer: {
-      label: contract.offer_label ?? undefined,
-      detail: contract.offer_detail ?? undefined,
-      unitPrice: formatUnitPrice(contract.unit_price_cents),
-      unit: contract.price_unit ?? undefined,
-    },
+    /*
+     * Les lignes partent même quand le contrat est gratuit.
+     *
+     * L'article 5 du POC de référence le fait explicitement : « À titre
+     * purement indicatif et sans valeur d'engagement, les conditions
+     * applicables en cas de poursuite seraient les suivantes ». Le prix y a un
+     * rôle — annoncer la suite — que `isFree` qualifie sans le supprimer.
+     */
+    services: (contract.services ?? []).map((line) => ({
+      label: line.label,
+      unitPrice: formatUnitPrice(line.unitPriceCents),
+      unit: line.unit ?? undefined,
+      comment: line.comment ?? undefined,
+    })),
+    isFree: contract.is_free ?? false,
+    trial: buildTrialPayload(contract),
     commitmentMonths: contract.commitment_months ?? undefined,
     renewalMonths: contract.renewal_months ?? undefined,
     noticeDays: contract.notice_days ?? undefined,

@@ -1,88 +1,113 @@
 /**
- * La grille tarifaire de référence du contrat cadre (NOS-1156).
+ * ---------------------------------------------------------------------------
+ * Ce qui se vend, et à quelle unité (NOS-1156)
+ * ---------------------------------------------------------------------------
+ * Remplace la grille d'offres de référence (Essentiel / Avancé / Hôpital /
+ * Pay-per-use) reprise de l'article 3 du contrat cadre.
  *
- * Reprise telle qu'elle figure à l'article 3, où elle est explicitement
- * qualifiée d'indicative : « le tarif contractuel est celui figurant dans le
- * tableau ci-dessus ». Elle sert donc à **pré-remplir**, jamais à contraindre —
- * l'intitulé et le prix restent libres à la saisie.
+ * Cette grille décrivait des **paliers de prix**, là où un contrat se négocie
+ * par **prestation** : un client peut prendre l'agent de secrétariat et l'agent
+ * de confirmation, à deux prix et deux unités différentes. Un palier unique ne
+ * pouvait pas dire ça, et pré-remplir un prix depuis la typologie de
+ * l'établissement suggérait un tarif que personne n'avait négocié.
  *
- * Les cibles recoupent `establishment_type`, déjà présent dans le CRM et déjà
- * utilisé pour suggérer l'ARR d'une opportunité. On pré-remplit depuis la
- * typologie de la société plutôt que de faire deviner.
+ * Aucun prix n'est donc suggéré ici. Le catalogue nomme les services et les
+ * unités ; le montant se saisit.
  */
-export interface ContractOfferPreset {
+
+export interface ContractServiceChoice {
   value: string;
   label: string;
-  detail: string;
-  /** En centimes, comme la colonne. */
-  unitPriceCents: number;
-  unit: string;
+  /** Unité par défaut de ce service — modifiable à la saisie. */
+  defaultUnit: string;
 }
 
-export const CONTRACT_OFFER_PRESETS: ContractOfferPreset[] = [
+/**
+ * Les services au catalogue.
+ *
+ * `autre` n'est pas un trou dans la liste, c'est une entrée à part entière :
+ * une prestation hors catalogue se saisit sous son propre nom plutôt que de
+ * forcer un rangement approximatif dans l'un des deux autres.
+ */
+export const CONTRACT_SERVICES: ContractServiceChoice[] = [
   {
-    value: "essentiel",
-    label: "Essentiel",
-    detail:
-      "Agent de confirmation des rendez-vous — cabinet ou petite structure.",
-    unitPriceCents: 3000,
-    unit: "mois",
+    value: "confirmation-rdv",
+    label: "Agent de confirmation de rendez-vous",
+    defaultUnit: "rendez-vous traité",
   },
   {
-    value: "avance",
-    label: "Avancé",
-    detail: "Agent de confirmation des rendez-vous — centre ou groupe.",
-    unitPriceCents: 7000,
-    unit: "mois",
+    value: "secretariat",
+    label: "Agent de secrétariat",
+    defaultUnit: "appel entrant",
   },
   {
-    value: "etablissement",
-    label: "Hôpital / Établissement",
-    detail: "Agent de confirmation des rendez-vous — hôpital, clinique ou GHT.",
-    unitPriceCents: 40000,
-    unit: "mois",
-  },
-  {
-    value: "pay-per-use",
-    label: "Forfait confirmation",
-    detail:
-      "Appel sortant de confirmation, par rendez-vous traité, reprise des créneaux annulés incluse.",
-    // Le tarif du contrat HEM.
-    unitPriceCents: 25,
-    unit: "confirmation",
+    value: "autre",
+    label: "Autre prestation",
+    defaultUnit: "mois",
   },
 ];
 
 /**
- * Offre suggérée d'après la typologie d'établissement de la société.
+ * Unités de facturation.
  *
- * Volontairement tolérante : la correspondance se fait sur ce que le libellé
- * contient, parce que `establishment_type` est configurable en base et que ses
- * valeurs ont déjà changé une fois. Une typologie inconnue ne suggère rien
- * plutôt que de proposer au hasard — un prix erroné pré-rempli est plus
- * dangereux qu'un champ vide.
+ * Les deux premières sont celles que Simon a nommées, et elles distinguent
+ * bien deux modèles : on facture le rendez-vous qu'on traite en sortant, on
+ * facture l'appel qu'on reçoit en entrant. Les suivantes restent parce que les
+ * contrats existants s'en servent — « par confirmation » est l'unité du
+ * contrat HEM, et un forfait mensuel reste un forfait mensuel.
  */
-export function suggestOffer(
-  establishmentTypeLabel: string | null | undefined,
-): ContractOfferPreset | null {
-  const label = (establishmentTypeLabel ?? "").toLowerCase();
-  if (!label) return null;
-  if (/(hôpital|hopital|clinique|ght|chu|centre hospitalier)/.test(label)) {
-    return CONTRACT_OFFER_PRESETS[2];
-  }
-  if (/(centre|groupe|réseau|reseau)/.test(label)) {
-    return CONTRACT_OFFER_PRESETS[1];
-  }
-  if (/(cabinet|praticien|libéral|liberal)/.test(label)) {
-    return CONTRACT_OFFER_PRESETS[0];
-  }
-  return null;
-}
-
-/** Unités proposées, celles que la grille du contrat emploie. */
 export const CONTRACT_PRICE_UNITS = [
+  { value: "rendez-vous traité", label: "par rendez-vous traité" },
+  { value: "appel entrant", label: "par appel entrant" },
   { value: "confirmation", label: "par confirmation" },
-  { value: "rendez-vous confirmé", label: "par rendez-vous confirmé" },
   { value: "mois", label: "par mois" },
   { value: "an", label: "par an" },
 ];
+
+/**
+ * Durées proposées pour la période d'essai du POC.
+ *
+ * `null` = personnalisée : la date de fin se saisit alors directement, et le
+ * gabarit omet la mention « pour une durée de N semaines ». Une période de dix
+ * jours n'est pas un nombre entier de semaines, et l'arrondir produirait une
+ * phrase en désaccord avec la date qui la suit.
+ */
+export const CONTRACT_TRIAL_DURATIONS: {
+  value: string;
+  label: string;
+  weeks: number | null;
+}[] = [
+  { value: "1", label: "Une semaine", weeks: 1 },
+  { value: "2", label: "Deux semaines", weeks: 2 },
+  { value: "custom", label: "Personnalisée", weeks: null },
+];
+
+/** « deux (2) » — la forme que le contrat emploie, lettres puis chiffre. */
+const WEEKS_IN_WORDS: Record<number, string> = {
+  1: "une (1)",
+  2: "deux (2)",
+  3: "trois (3)",
+  4: "quatre (4)",
+  6: "six (6)",
+  8: "huit (8)",
+};
+
+export function weeksInWords(weeks: number | null | undefined): string | null {
+  if (weeks == null) return null;
+  return WEEKS_IN_WORDS[weeks] ?? `${weeks}`;
+}
+
+/**
+ * Fin d'une période d'essai de N semaines commencée le `start`.
+ *
+ * Bornes incluses, comme le contrat les écrit : « prend effet le lundi
+ * 31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus » — deux semaines
+ * font donc 13 jours d'écart, pas 14. Le dernier jour est veille
+ * d'anniversaire, sinon le POC durerait quinze jours.
+ */
+export function trialEndDate(start: string, weeks: number): string | null {
+  const date = new Date(`${start}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() + weeks * 7 - 1);
+  return date.toISOString().slice(0, 10);
+}
