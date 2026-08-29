@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckSquare } from "lucide-react";
 import { useRecordContext } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { useShimmer } from "@/components/ui/motion";
 
 import { TaskCreateSheet } from "../../tasks/TaskCreateSheet";
 import type { Deal } from "../../types";
@@ -27,13 +28,29 @@ export const DealCreateTaskButton = ({
 }) => {
   const record = useRecordContext<Deal>();
   const [open, setOpen] = useState(false);
+  /*
+   * Le reflet ne joue que sur l'action principale de l'étape (NOS-1170).
+   *
+   * L'audit : « Discipline absolue : jamais deux sur un même écran. » La fiche
+   * n'en désigne qu'une, `getDealPrimaryAction`, et c'est elle qui reçoit
+   * `variant="default"`. Le reflet suit donc cette désignation plutôt que
+   * d'être posé à la main quelque part.
+   *
+   * Appelé avant le `return null` : c'est un hook.
+   */
+  const shimmer = useShimmer(variant === "default");
 
   // An archived opportunity is read-only, like it is for Modifier and Archiver.
   if (!record || record.archived_at) return null;
 
   return (
     <>
-      <Button size="sm" variant={variant} onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        variant={variant}
+        onClick={() => setOpen(true)}
+        className={shimmer}
+      >
         <CheckSquare className="w-3.5 h-3.5" aria-hidden />
         {label}
       </Button>

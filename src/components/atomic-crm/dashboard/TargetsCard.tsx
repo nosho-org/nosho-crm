@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { AnimatedRing } from "@/components/ui/motion";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal, Sale, Target } from "../types";
 import {
@@ -57,41 +58,6 @@ import {
  * confirmation avant suppression.
  */
 
-const TargetRing = ({ ratio }: { ratio: number }) => {
-  const CIRCUMFERENCE = 132; // 2 × π × 21
-  // Borné à 1 pour le tracé — un dépassement ne peut pas dessiner deux tours —
-  // mais le pourcentage écrit à côté, lui, n'est pas borné.
-  const filled = Math.min(1, Math.max(0, ratio));
-  const reached = ratio >= 1;
-
-  return (
-    <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden>
-      <circle
-        cx="26"
-        cy="26"
-        r="21"
-        fill="none"
-        stroke="var(--muted)"
-        strokeWidth="6"
-      />
-      <circle
-        cx="26"
-        cy="26"
-        r="21"
-        fill="none"
-        stroke={
-          reached ? "var(--deal-status-won)" : "var(--deal-series-potential)"
-        }
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={CIRCUMFERENCE}
-        strokeDashoffset={CIRCUMFERENCE * (1 - filled)}
-        transform="rotate(-90 26 26)"
-      />
-    </svg>
-  );
-};
-
 const TargetRow = ({
   target,
   deals,
@@ -113,7 +79,7 @@ const TargetRow = ({
     <div
       className={`flex items-center gap-3 ${emphasis ? "" : "border-t pt-3"}`}
     >
-      <TargetRing ratio={progress.ratio} />
+      <AnimatedRing ratio={progress.ratio} />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 flex-wrap">

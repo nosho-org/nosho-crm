@@ -193,7 +193,7 @@ export function NoshoAssistChat() {
               <Sparkles className="w-4.5 h-4.5 text-white" />
             </div>
             <div className="flex flex-col min-w-0">
-              <SheetTitle>Nosho AI Assist</SheetTitle>
+              <SheetTitle>Aide &amp; feedback</SheetTitle>
               <SheetDescription>
                 {mode === "crm-action"
                   ? "Demandez à l'agent de chercher, créer ou modifier des contacts et sociétés."

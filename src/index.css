@@ -309,3 +309,62 @@ input[type="time"] {
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Animations reprises de Magic UI (NOS-1170)
+ * ---------------------------------------------------------------------------
+ * Écrites en CSS plutôt qu'installées avec `framer-motion` : cette dépendance
+ * pèse une cinquantaine de kilo-octets pour ce qu'on lui demanderait ici — un
+ * dégradé qui tourne, un reflet qui passe, une entrée décalée. Le prototype de
+ * l'audit les fait lui-même en CSS.
+ *
+ * Les trois règles de l'audit sont tenues dans les composants
+ * (`src/components/ui/motion/`) : une seule animation en boucle par écran,
+ * toute entrée jouée une fois, `prefers-reduced-motion` respecté partout.
+ *
+ * Le garde-fou ci-dessous est le dernier filet : même si un composant oubliait
+ * de vérifier le réglage système, plus rien ne bouge. */
+
+/* Border Beam — le dégradé conique de la carte « À faire maintenant ». Un seul
+   usage dans toute l'application : deux points focaux n'en font aucun. */
+@keyframes border-beam-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(1turn);
+  }
+}
+
+/* Shimmer — le reflet du bouton principal. La pause occupe la majorité du
+   cycle : un reflet continu deviendrait un clignotement. */
+@keyframes shimmer-sweep {
+  0%,
+  72% {
+    transform: translateX(-120%);
+  }
+  92%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Animated List — l'entrée décalée de la file d'actions. */
+@keyframes list-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
