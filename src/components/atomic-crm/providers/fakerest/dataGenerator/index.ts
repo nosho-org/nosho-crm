@@ -2,6 +2,7 @@ import { generateCompanies } from "./companies";
 import { generateContactNotes } from "./contactNotes";
 import { generateContacts } from "./contacts";
 import { generateContracts } from "./contracts";
+import { generateTargets } from "./targets";
 import { generateDealNotes } from "./dealNotes";
 import { generateDeals } from "./deals";
 import { finalize } from "./finalize";
@@ -20,6 +21,7 @@ export default (): Db => {
   db.deals = generateDeals(db);
   db.deal_notes = generateDealNotes(db);
   db.contracts = generateContracts(db);
+  db.targets = generateTargets(db);
   db.tasks = generateTasks(db);
   // No call integration in demo mode, but the collection must exist.
   db.call_logs = [];

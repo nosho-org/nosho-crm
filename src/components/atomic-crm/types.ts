@@ -102,12 +102,26 @@ export type Company = {
 } & Pick<RaRecord, "id">;
 
 /**
- * Un contrat POC ou cadre, edite depuis une opportunite (NOS-1156).
+ * Objectif commercial (NOS-1166).
  *
- * Pas de date de fin, deliberement : l article 7 du contrat cadre pose une
- * periode ferme comptee depuis la mise en production, puis une tacite
- * reconduction. Stocker une fin donnerait un chiffre faux.
+ * `sales_id` nul = objectif COMMUN a l equipe. Des bornes de date plutot qu un
+ * trimestre : « 25 k EUR de MRR d ici la fin de l annee » n en est pas un.
  */
+export type Target = {
+  created_at?: string;
+  updated_at?: string;
+  /** Nul pour l objectif d equipe. */
+  sales_id?: Identifier | null;
+  /** `mrr` ou `arr`. Un objectif doit dire ce qu il compte. */
+  metric: string;
+  /** Bornes incluses. */
+  period_start: string;
+  period_end: string;
+  /** En euros, pas en centimes : un objectif est un chiffre rond. */
+  amount: number;
+  author_id?: Identifier | null;
+} & Pick<RaRecord, "id">;
+
 /** Une ligne de prestation d un contrat. Stockee en jsonb dans `services`. */
 export type ContractService = {
   /** `confirmation-rdv` | `secretariat` | `autre` */
@@ -120,6 +134,13 @@ export type ContractService = {
   comment?: string | null;
 };
 
+/**
+ * Un contrat POC ou cadre, edite depuis une opportunite (NOS-1156).
+ *
+ * Pas de date de fin, deliberement : l article 7 du contrat cadre pose une
+ * periode ferme comptee depuis la mise en production, puis une tacite
+ * reconduction. Stocker une fin donnerait un chiffre faux.
+ */
 export type Contract = {
   created_at: string;
   updated_at?: string;
@@ -280,7 +301,7 @@ export type Deal = {
   /** Annual Recurring Revenue, in euros. Stored as-is, never converted. */
   amount: number;
   /** Monthly Recurring Revenue, derived from `amount` by the database (amount / 12). */
-  mrr?: number;
+  mrr?: number | null;
   /**
    * True once someone typed an ARR by hand. Automatic prefill from the company
    * establishment type must never overwrite the value while this is true.
@@ -313,7 +334,7 @@ export type Deal = {
   expected_closing_date: string;
   trial_start_date?: string;
   /** Signature date, set when the deal reaches the "Contrat signé" stage. */
-  won_at?: string;
+  won_at?: string | null;
   sales_id: Identifier;
   index: number;
   proposal_edit_url?: string;
