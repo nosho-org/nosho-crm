@@ -76,7 +76,6 @@ describe("DealShowPage", () => {
 
     const headings = [
       "Prochaine action",
-      "Tâches",
       "Synthèse de l'opportunité",
       "Société & groupe",
       "Contacts clés",

@@ -19,7 +19,6 @@ import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
 import { DealEmailHistory } from "./DealEmailHistory";
 import { DealKeyContacts } from "./DealKeyContacts";
-import { DealNextTaskBlock } from "./DealNextTaskBlock";
 import { DealSidePanel } from "./DealSidePanel";
 import { DealSynthesis } from "./DealSynthesis";
 import { DealTasksBlock } from "./DealTasksBlock";
@@ -33,11 +32,12 @@ import { DealTasksBlock } from "./DealTasksBlock";
  *
  * The order is prescriptive, and a test asserts it on the DOM:
  *
- *     Header → Prochaine tâche → Tâches → Synthèse → Société & Groupe
+ *     Header → Prochaine action → Synthèse → Société & Groupe
  *            → Contacts clés → Activité
  *
- * "Tâches" sits directly under "Prochaine tâche" (issue #114) so everything the
- * opportunity owes is in one place rather than split across the page.
+ * « Prochaine action » et « Tâches » ne font plus qu'un bloc (NOS-1164) : la
+ * première carte répétait mot pour mot la première ligne de la seconde, la
+ * prochaine action étant littéralement la première tâche.
  *
  * "La colonne droite commence au niveau de Prochaine action" — hence the grid
  * starting below the header rather than wrapping it.
@@ -152,7 +152,6 @@ const DealShowLayout = () => (
     */}
     <div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-4 items-start">
       <div className="flex flex-col gap-4 min-w-0">
-        <DealNextTaskBlock />
         <DealTasksBlock />
         <DealSynthesis />
         <ContractsBlock />
