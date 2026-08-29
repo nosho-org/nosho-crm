@@ -65,49 +65,31 @@ export const CONTRACT_PRICE_UNITS = [
 ];
 
 /**
- * Durées proposées pour la période d'essai du POC.
+ * Le nombre de semaines entre deux bornes incluses, ou `null`.
  *
- * `null` = personnalisée : la date de fin se saisit alors directement, et le
- * gabarit omet la mention « pour une durée de N semaines ». Une période de dix
- * jours n'est pas un nombre entier de semaines, et l'arrondir produirait une
- * phrase en désaccord avec la date qui la suit.
- */
-export const CONTRACT_TRIAL_DURATIONS: {
-  value: string;
-  label: string;
-  weeks: number | null;
-}[] = [
-  { value: "1", label: "Une semaine", weeks: 1 },
-  { value: "2", label: "Deux semaines", weeks: 2 },
-  { value: "custom", label: "Personnalisée", weeks: null },
-];
-
-/** « deux (2) » — la forme que le contrat emploie, lettres puis chiffre. */
-const WEEKS_IN_WORDS: Record<number, string> = {
-  1: "une (1)",
-  2: "deux (2)",
-  3: "trois (3)",
-  4: "quatre (4)",
-  6: "six (6)",
-  8: "huit (8)",
-};
-
-export function weeksInWords(weeks: number | null | undefined): string | null {
-  if (weeks == null) return null;
-  return WEEKS_IN_WORDS[weeks] ?? `${weeks}`;
-}
-
-/**
- * Fin d'une période d'essai de N semaines commencée le `start`.
+ * La durée n'est plus demandée : le menu déroulant « une semaine / deux
+ * semaines / personnalisée » doublait les deux dates, qui suffisent à la dire.
+ * Elle se déduit donc, et sert au seul endroit où elle a un rôle — la
+ * formulation de l'article 2, « pour une durée de deux (2) semaines ».
  *
  * Bornes incluses, comme le contrat les écrit : « prend effet le lundi
- * 31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus » — deux semaines
- * font donc 13 jours d'écart, pas 14. Le dernier jour est veille
- * d'anniversaire, sinon le POC durerait quinze jours.
+ * 31 août 2026 […] jusqu'au dimanche 13 septembre 2026 inclus » — 13 jours
+ * d'écart, donc 14 jours comptés, donc deux semaines.
+ *
+ * `null` dès que la durée n'est pas un nombre entier de semaines. Le gabarit
+ * omet alors la mention plutôt que d'arrondir : dix jours ne font pas une
+ * semaine et demie, et l'écrire donnerait une phrase en désaccord avec la date
+ * qui la suit.
  */
-export function trialEndDate(start: string, weeks: number): string | null {
-  const date = new Date(`${start}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setUTCDate(date.getUTCDate() + weeks * 7 - 1);
-  return date.toISOString().slice(0, 10);
+export function weeksBetween(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): number | null {
+  if (!start || !end) return null;
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(`${end}T00:00:00Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null;
+  const days = (to.getTime() - from.getTime()) / 86_400_000 + 1;
+  if (days <= 0 || !Number.isInteger(days) || days % 7 !== 0) return null;
+  return days / 7;
 }

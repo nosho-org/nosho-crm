@@ -164,7 +164,10 @@ describe("DealTasksBlock", () => {
     const { dataProvider, create } = buildProvider([]);
     const screen = await renderBlock(dataProvider);
 
-    await screen.getByRole("button", { name: /Ajouter une tâche/ }).click();
+    // Le CTA de l'état vide. Le bouton « Ajouter une tâche » de l'en-tête a
+    // été retiré (NOS-1164) : « Créer une tâche » de la barre d'actions faisait
+    // déjà le même geste, à trente pixels de là.
+    await screen.getByRole("button", { name: /Définir l'action/ }).click();
     await screen.getByLabelText(/description/i).fill("Envoyer la proposition");
     await screen.getByRole("button", { name: /Enregistrer/ }).click();
 

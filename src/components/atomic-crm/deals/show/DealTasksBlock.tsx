@@ -121,17 +121,18 @@ export const DealTasksBlock = () => {
 
   return (
     <Card className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Prochaine action
-        </span>
-        {(expected || tasks.length > 0) && (
-          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-            <Plus className="w-3.5 h-3.5" aria-hidden />
-            Ajouter une tâche
-          </Button>
-        )}
-      </div>
+      {/*
+        Pas de bouton d'ajout ici : « Créer une tâche » est déjà dans la barre
+        d'actions, en haut de la colonne droite. Deux boutons pour le même
+        geste, à trente pixels l'un de l'autre, laissaient croire à deux gestes
+        différents (NOS-1164).
+
+        Le CTA de l'état vide, lui, reste : il n'est pas un doublon mais le
+        seul contenu de la carte quand il n'y a rien à montrer.
+      */}
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Prochaine action
+      </span>
 
       {nextTask ? (
         <div className="flex items-start justify-between gap-4 flex-wrap">
