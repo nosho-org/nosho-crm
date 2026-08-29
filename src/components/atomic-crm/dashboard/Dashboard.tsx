@@ -10,6 +10,7 @@ import { NoshoAIAssist } from "./NoshoAIAssist";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
 import { RevenueForecastChart } from "./RevenueForecastChart";
+import { TargetsCard } from "./TargetsCard";
 import { TasksList } from "./TasksList";
 import { UpcomingCalendarEvents } from "./UpcomingCalendarEvents";
 import { Welcome } from "./Welcome";
@@ -42,6 +43,8 @@ const Reporting = () => (
       <RevenueForecastChart />
       <PipelineFunnel />
     </div>
+
+    <TargetsCard />
 
     <PipelineHealthBanner />
   </div>

@@ -3,6 +3,7 @@ import type {
   Contact,
   ContactNote,
   Contract,
+  Target,
   Deal,
   DealNote,
   Sale,
@@ -24,6 +25,7 @@ export interface Db {
    * l'enregistrement échouerait en démo (NOS-1156).
    */
   contracts: Contract[];
+  targets: Target[];
   sales: Sale[];
   tags: Tag[];
   tasks: Task[];
