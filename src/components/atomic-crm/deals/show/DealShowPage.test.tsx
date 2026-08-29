@@ -70,7 +70,9 @@ const renderPage = (overrides: Partial<typeof deal> = {}) =>
 describe("DealShowPage", () => {
   it("renders the blocks in the order the spec imposes", async () => {
     const screen = await renderPage();
-    await expect.element(screen.getByText("Nicolas Roussey")).toBeVisible();
+    await expect
+      .element(screen.getByText("Centre Dentaire Mutualiste"))
+      .toBeVisible();
 
     const headings = [
       "Prochaine action",
@@ -104,11 +106,13 @@ describe("DealShowPage", () => {
    * stopped existing, and the sales team lost the only way to attach a task to
    * an opportunity.
    */
-  it("offers task creation from the header", async () => {
+  it("offers task creation from the actions bar", async () => {
+    // Les actions ont quitté le <header> pour le haut de la colonne droite
+    // (NOS-1163). Elles ne sont donc plus dans le banner — mais elles doivent
+    // toujours exister, ce que ce test garde de #112.
     const screen = await renderPage();
-    const header = screen.getByRole("banner");
     await expect
-      .element(header.getByRole("button", { name: /créer une tâche/i }))
+      .element(screen.getByRole("button", { name: /créer une tâche/i }))
       .toBeVisible();
   });
 
@@ -122,6 +126,24 @@ describe("DealShowPage", () => {
     await expect
       .element(screen.getByRole("button", { name: /créer une tâche/i }))
       .not.toBeInTheDocument();
+  });
+
+  it("titles the page with the company alone, and keeps the deal name in the synthesis", async () => {
+    const screen = await renderPage();
+    const header = screen.getByRole("banner");
+    await expect
+      .element(header.getByText("Centre Dentaire Mutualiste"))
+      .toBeVisible();
+    // L'intitulé n'est plus dans le titre…
+    await expect
+      .poll(() => {
+        const banner = screen.container.querySelector("header");
+        return (banner?.textContent ?? "").includes("Nicolas Roussey");
+      })
+      .toBe(false);
+    // …mais il n'est pas perdu pour autant.
+    await expect.element(screen.getByText("Intitulé")).toBeVisible();
+    await expect.element(screen.getByText("Nicolas Roussey")).toBeVisible();
   });
 
   it("shows the stage, priority and products badges in the header", async () => {
