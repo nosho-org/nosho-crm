@@ -254,12 +254,16 @@ export const defaultDealNextActionFromStage = "qualified";
  *
  * The twenty healthcare specialities they replace were never used — production
  * held four values, all residue from the upstream Atomic CRM demo fixture
- * (print-project, ui-design, other, copywriting), on 72 of 232 deals. Those are
- * parked in `a-reclasser`; the 160 deals with no category keep none, because
- * "no category" is not "ambiguous category".
+ * (print-project, ui-design, other, copywriting), on 72 of 232 deals.
+ *
+ * Elles ont d'abord été parquées dans un placeholder « À reclasser », retiré le
+ * 29/08/2026 à la demande de Simon : les 25 opportunités qui le portaient
+ * encore sont passées sans catégorie. Leur `legacy_category` ne pouvait pas
+ * servir de repli — c'étaient les valeurs de démo ci-dessus, et « copywriting »
+ * n'a jamais décrit un CHU. « Aucune catégorie » dit la vérité ; « Autre »
+ * aurait affirmé un classement que personne n'a fait.
  */
 export const defaultDealCategories = [
-  { value: "a-reclasser", label: "À reclasser" },
   { value: "hopital", label: "Hôpital" },
   { value: "imagerie", label: "Imagerie" },
   { value: "dentaire", label: "Dentaire" },

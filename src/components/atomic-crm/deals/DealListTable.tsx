@@ -360,13 +360,19 @@ const StageField = ({
 };
 
 /**
- * Category, falling back to the pre-v2 value (issue #108).
+ * La catégorie de l'opportunité.
  *
- * The v2 migration (20260823093000) rewrote every non-null `category` to the
- * placeholder `'a-reclasser'` and parked the original in `legacy_category`.
- * Rendering the placeholder alone told the sales team nothing and read as a
- * bug; showing what the opportunity used to be, marked as such, keeps the
- * information visible until the reclassification is actually done.
+ * Le repli sur `legacy_category` a été retiré le 29/08/2026, avec la catégorie
+ * « À reclasser » qui le déclenchait (issue #108).
+ *
+ * Il ne se justifiait que tant que ce placeholder existait. Et le conserver
+ * serait devenu nuisible : les valeurs qu'il exhume — `copywriting`,
+ * `print-project`, `ui-design` — sont celles du jeu de démonstration d'Atomic
+ * CRM, restées en base avant la refonte v2. Elles n'ont jamais décrit ces
+ * affaires ; les afficher sur un CHU serait pire que de n'afficher rien.
+ *
+ * `legacy_category` reste en base : les 25 opportunités concernées demeurent
+ * identifiables par `category is null and legacy_category is not null`.
  */
 const ChoiceField = ({
   choices,
@@ -377,24 +383,8 @@ const ChoiceField = ({
 }) => {
   const record = useRecordContext<Deal>();
   const value = record?.[source];
-  const legacy = record?.legacy_category?.trim();
-  const label = (raw: string) =>
-    choices.find((c) => c.value === raw)?.label ?? raw;
-
-  if (value && value !== "a-reclasser") return <span>{label(value)}</span>;
-  if (legacy) {
-    return (
-      <span
-        className="text-muted-foreground"
-        title="Catégorie d'avant la refonte v2 — à reclasser"
-      >
-        {label(legacy)}
-        <span className="ml-1 text-xs">(à reclasser)</span>
-      </span>
-    );
-  }
-  if (value) return <span>{label(value)}</span>;
-  return <span className="text-muted-foreground">—</span>;
+  if (!value) return <span className="text-muted-foreground">—</span>;
+  return <span>{choices.find((c) => c.value === value)?.label ?? value}</span>;
 };
 
 const ArrField = ({ currency }: { currency: string }) => {
