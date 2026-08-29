@@ -148,7 +148,7 @@ const ContactItemContent = ({
                 </ReferenceField>
               )}
               {contact.nb_tasks
-                ? ` - ${contact.nb_tasks} task${contact.nb_tasks > 1 ? "s" : ""}`
+                ? ` - ${contact.nb_tasks} tâche${contact.nb_tasks > 1 ? "s" : ""}`
                 : ""}
               &nbsp;&nbsp;
               <TagsList />
@@ -280,7 +280,7 @@ const ContactItemContentMobile = ({ contact }: { contact: Contact }) => (
             </span>
             {contact.nb_tasks ? (
               <span>
-                {contact.nb_tasks} task{contact.nb_tasks > 1 ? "s" : ""}
+                {contact.nb_tasks} tâche{contact.nb_tasks > 1 ? "s" : ""}
               </span>
             ) : null}
           </div>

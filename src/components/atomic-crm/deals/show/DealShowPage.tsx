@@ -1,10 +1,16 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MoreHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ShowBase, useRecordContext } from "ra-core";
 import { EditButton } from "@/components/admin/edit-button";
 import { ReferenceField } from "@/components/admin/reference-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { CompanyAvatar } from "../../companies/CompanyAvatar";
 import type { Deal } from "../../types";
@@ -17,6 +23,7 @@ import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
+import { getDealPrimaryAction } from "./dealPrimaryAction";
 import { DealEmailHistory } from "./DealEmailHistory";
 import { DealKeyContacts } from "./DealKeyContacts";
 import { DealSidePanel } from "./DealSidePanel";
@@ -120,24 +127,79 @@ const DealHeader = () => {
  * Elles partageaient la ligne du titre, qui devait donc composer avec sept
  * boutons et se faisait tronquer. Ici elles s'empilent au-dessus de la carte
  * client, dans la colonne qui a la place de les recevoir.
+ *
+ * ---------------------------------------------------------------------------
+ * Une seule action pleine, et « Archiver » n'en est jamais une (NOS-1165)
+ * ---------------------------------------------------------------------------
+ * L'audit du 29 août 2026 : « Cinq boutons de même poids, aucun principal.
+ * L'action qui fait avancer le deal et celle qui l'enterre ont la même
+ * apparence. » C'était vrai — cinq contours identiques, à lire un par un.
+ *
+ * Désormais : une action pleine choisie d'après l'étape
+ * (`getDealPrimaryAction`), les autres en contour, et « Archiver » dans un menu
+ * ⋯. Archiver n'est pas une action rare — c'est une action *terminale*, et une
+ * action terminale ne se met pas à portée de clic distrait à côté de celle
+ * qu'on vient faire.
+ *
+ * Sur une opportunité close — gagnée, perdue, churn — il n'y a pas d'action
+ * pleine du tout. Tout reste accessible, rien n'est mis en avant : il n'y a
+ * plus rien à faire avancer.
  */
 const DealActions = () => {
   const record = useRecordContext<Deal>();
   if (!record) return null;
 
+  if (record.archived_at) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <DealUnarchiveButton record={record} />
+      </div>
+    );
+  }
+
+  const primary = getDealPrimaryAction(record.stage, {
+    hasCompany: record.company_id != null,
+  });
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      {record.archived_at ? (
-        <DealUnarchiveButton record={record} />
-      ) : (
-        <>
-          <DealCreateTaskButton />
-          <EditButton />
-          <GenerateProposalAction />
-          <ContractAction />
-          <DealArchiveButton record={record} />
-        </>
-      )}
+      <DealCreateTaskButton
+        variant={primary === "task" ? "default" : "outline"}
+      />
+      <EditButton />
+      <GenerateProposalAction
+        variant={primary === "proposal" ? "default" : "outline"}
+      />
+      <ContractAction
+        variant={primary === "contract" ? "default" : "outline"}
+      />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-label="Autres actions"
+          >
+            <MoreHorizontal className="w-4 h-4" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {/*
+            `DealArchiveButton` porte sa propre confirmation et son propre
+            appel : on l'enveloppe plutôt que de le réécrire en élément de
+            menu. `onSelect` est neutralisé pour que le menu ne se ferme pas
+            sous la boîte de dialogue qu'il ouvre.
+          */}
+          <DropdownMenuItem
+            onSelect={(event) => event.preventDefault()}
+            className="p-0 focus:bg-transparent"
+          >
+            <DealArchiveButton record={record} />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

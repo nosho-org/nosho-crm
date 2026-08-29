@@ -1,12 +1,12 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useRedirect, RecordContextProvider } from "ra-core";
-import { ReferenceField } from "@/components/admin/reference-field";
 import { SelectField } from "@/components/admin/select-field";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
+import { companySubline } from "./dealCardSubline";
 import { DealPriorityField } from "./DealPriorityField";
 import { DealNextActionCell, DealStaleBadge } from "./cockpit/DealFieldBadges";
 import { DealProductBadges } from "./shared/DealBadges";
@@ -34,6 +34,13 @@ export const DealCardContent = ({
 }) => {
   const { dealCategories, currency } = useConfigurationContext();
   const redirect = useRedirect();
+
+  /*
+   * `company_name` vient de `deals_summary`, que la liste et le kanban lisent
+   * tous deux. Pas de `ReferenceField` ici : la carte n'a plus besoin d'une
+   * requête par société pour écrire un nom que la vue lui a déjà donné.
+   */
+  const subline = companySubline(deal.name, deal.company_name);
   const handleClick = () => {
     redirect(`/deals/${deal.id}/show`, undefined, undefined, undefined, {
       _scrollToTop: false,
@@ -70,22 +77,38 @@ export const DealCardContent = ({
               <span className="flex-1" />
               <DealStaleBadge deal={deal} />
             </div>
-            <div className="flex-1 flex">
-              {/*
-                L'avatar de la société a été retiré ici. Il n'affichait qu'une
-                initiale, souvent la même d'une carte à l'autre dans une même
-                colonne, alors que le nom de la société est écrit juste à côté
-                du nom de l'opportunité — l'information était déjà là, en clair.
-              */}
-              <p className="flex-1 text-sm font-medium mb-2">
-                <ReferenceField
-                  source="company_id"
-                  reference="companies"
-                  link={false}
-                />
-                {" - "}
+            {/*
+              L'intitulé, puis la société en sous-ligne (NOS-1165).
+
+              La carte écrivait « société - intitulé », ce qui donnait
+              « KERSANTE - Kersanté » et, pire, « C.M.C.O. CENTRE MEDITERRANEEN
+              DE CHIRURGIE ORTHOPEDIQUE - C.M.C.O. CENTRE MEDITERRANEEN DE
+              CHIRURGIE ORTHOPEDIQUE » : la même information deux fois, sur
+              200 px de haut, pour deux cartes visibles par colonne.
+
+              La société ne s'affiche que lorsqu'elle ajoute quelque chose —
+              voir `companySubline`. L'avatar avait déjà été retiré pour la même
+              raison : il ne portait qu'une initiale, souvent identique d'une
+              carte à l'autre dans une colonne.
+
+              `line-clamp` plutôt qu'une hauteur fixe : la hauteur devient
+              bornée sans qu'une carte courte se retrouve à traîner du vide.
+            */}
+            <div className="flex-1 flex flex-col mb-2">
+              <p
+                className="text-sm font-medium line-clamp-2"
+                title={deal.name ?? undefined}
+              >
                 {deal.name}
               </p>
+              {subline && (
+                <p
+                  className="text-xs text-muted-foreground line-clamp-1"
+                  title={subline}
+                >
+                  {subline}
+                </p>
+              )}
             </div>
             {/* Products (NOS-956): a deal can carry several, so they get their
                 own row rather than being crammed next to the amount. */}

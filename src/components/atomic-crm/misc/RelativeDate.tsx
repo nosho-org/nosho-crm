@@ -1,12 +1,12 @@
-import { differenceInDays, formatRelative } from "date-fns";
+import { formatRelativeShort } from "./formatDate";
 
+/**
+ * Une date relative courte : « il y a 3 j », « hier », sinon la date.
+ *
+ * Passait par `date-fns` sans locale, ce qui donnait « last Wednesday at
+ * 9:52 AM » en anglais, puis `toLocaleDateString()` sans locale ni fuseau —
+ * donc un format qui changeait d'un poste à l'autre (NOS-1165).
+ */
 export function RelativeDate({ date }: { date: string }) {
-  const dateObj = new Date(date);
-  const now = new Date();
-
-  if (differenceInDays(now, dateObj) > 6) {
-    return dateObj.toLocaleDateString();
-  }
-
-  return formatRelative(dateObj, now);
+  return <>{formatRelativeShort(date)}</>;
 }

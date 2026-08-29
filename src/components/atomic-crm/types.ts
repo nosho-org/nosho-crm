@@ -228,6 +228,13 @@ export type DealContactRoles = Record<string, string>;
 export type Deal = {
   name: string;
   company_id: Identifier;
+  /**
+   * Raison sociale, exposee par la vue `deals_summary`.
+   *
+   * Optionnelle parce qu un `Deal` ecrit vers la table n en porte pas ; toute
+   * lecture de liste ou de kanban, elle, passe par la vue et l a.
+   */
+  company_name?: string | null;
   /** Pipeline view the deal belongs to — NOT the growth source. */
   company_type?: string;
   /** Growth source: nouveau client / extension / renouvellement. */

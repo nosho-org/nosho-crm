@@ -23,7 +23,12 @@ import { ContractDialog } from "./ContractDialog";
  * morale, et un contrat sans client n'a pas de sens. Mieux vaut ne rien
  * proposer que d'ouvrir une fenêtre qui refusera d'aboutir.
  */
-export const ContractAction = () => {
+export const ContractAction = ({
+  variant = "outline",
+}: {
+  /** `default` quand c'est l'action principale de l'etape (NOS-1165). */
+  variant?: "outline" | "default";
+} = {}) => {
   const record = useRecordContext<Deal>();
   const [kind, setKind] = useState<"poc" | "cadre" | null>(null);
 
@@ -33,7 +38,7 @@ export const ContractAction = () => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant={variant} size="sm">
             <FileSignature className="w-4 h-4" aria-hidden />
             Éditer un contrat
             <ChevronDown className="w-3.5 h-3.5 opacity-50" aria-hidden />

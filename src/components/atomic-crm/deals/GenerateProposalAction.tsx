@@ -49,23 +49,34 @@ function errorToMessage(err: GenerateProposalError): string {
   );
 }
 
-export const GenerateProposalAction = () => {
+export const GenerateProposalAction = ({
+  variant = "outline",
+}: {
+  /** `default` quand c'est l'action principale de l'étape (NOS-1165). */
+  variant?: "outline" | "default";
+} = {}) => {
   const record = useRecordContext<Deal>();
   if (!record) return null;
   if (record.proposal_public_url) {
     return <ProposalUrlsDisplay deal={record} />;
   }
-  return <GenerateProposalTrigger deal={record} />;
+  return <GenerateProposalTrigger deal={record} variant={variant} />;
 };
 
-const GenerateProposalTrigger = ({ deal }: { deal: Deal }) => {
+const GenerateProposalTrigger = ({
+  deal,
+  variant = "outline",
+}: {
+  deal: Deal;
+  variant?: "outline" | "default";
+}) => {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button
         onClick={() => setOpen(true)}
         size="sm"
-        variant="outline"
+        variant={variant}
         className="flex items-center gap-2 h-9"
       >
         <FileText className="w-4 h-4" />
