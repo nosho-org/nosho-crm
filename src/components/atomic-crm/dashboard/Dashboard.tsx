@@ -1,17 +1,19 @@
-import { useGetIdentity, useGetList } from "ra-core";
+import { useGetList } from "ra-core";
 
-import type { Contact, ContactNote, Sale } from "../types";
+import type { Contact, ContactNote } from "../types";
 import { useGoogleConnectionStatus } from "../google/useGoogleConnectionStatus";
-import { DashboardProvider, useDashboard } from "./DashboardContext";
+import { DashboardProvider } from "./DashboardContext";
 import { DashboardFilters } from "./DashboardFilters";
 import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
+import { CockpitDayBar } from "./CockpitDayBar";
+import { CockpitFocus } from "./CockpitFocus";
+import { CockpitQueue } from "./CockpitQueue";
 import { NoshoAIAssist } from "./NoshoAIAssist";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
 import { RevenueForecastChart } from "./RevenueForecastChart";
 import { TargetsCard } from "./TargetsCard";
-import { TasksList } from "./TasksList";
 import { UpcomingCalendarEvents } from "./UpcomingCalendarEvents";
 import { Welcome } from "./Welcome";
 
@@ -34,19 +36,46 @@ import { Welcome } from "./Welcome";
  * asked for them to go. Worth confirming with Marc-Henri.
  */
 
+/**
+ * ---------------------------------------------------------------------------
+ * Cockpit avant reporting (NOS-1167)
+ * ---------------------------------------------------------------------------
+ * L'audit du 29 août 2026 : « Le tableau de bord est un reporting de
+ * direction, pas un cockpit. Les six cartes du haut sont toutes des montants
+ * de pipeline, toutes au même poids typographique. […] Aucune ne répond à
+ * "qu'est-ce que je fais maintenant". »
+ *
+ * La hiérarchie est donc inversée : ce qu'on a à faire d'abord, les
+ * instruments de pilotage ensuite. Rien n'est supprimé — les six KPI, la
+ * prévision et le funnel restent, plus bas, sous leur propre titre. Ils
+ * servent une question réelle, simplement pas celle qu'on se pose en ouvrant
+ * l'écran le matin.
+ *
+ * Les filtres restent en tête des deux : ils s'appliquent à tout.
+ */
+const Cockpit = () => (
+  <div className="flex flex-col gap-4">
+    <CockpitDayBar />
+    <CockpitFocus />
+
+    <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
+      <CockpitQueue />
+      <div className="flex flex-col gap-4">
+        <PipelineHealthBanner />
+        <TargetsCard />
+      </div>
+    </div>
+  </div>
+);
+
 const Reporting = () => (
   <div className="flex flex-col gap-5">
-    <DashboardFilters />
     <DashboardKpiBanner />
 
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <RevenueForecastChart />
       <PipelineFunnel />
     </div>
-
-    <TargetsCard />
-
-    <PipelineHealthBanner />
   </div>
 );
 
@@ -98,59 +127,30 @@ export const Dashboard = () => {
       <div className="flex flex-col gap-6 mt-1 pb-6">
         {import.meta.env.VITE_IS_DEMO === "true" ? <Welcome /> : null}
 
-        <Reporting />
+        <DashboardFilters />
+
+        <Cockpit />
+
+        {/*
+          L'agenda et l'assistant restent, à côté de la file d'actions plutôt
+          qu'en dessous d'elle : ce sont les deux compléments qu'on consulte en
+          traitant sa journée. « Tâches à venir » a disparu — la file les porte
+          désormais, groupées et chiffrées.
+        */}
+        <section
+          className={`grid grid-cols-1 gap-5 ${showCalendar ? "lg:grid-cols-2" : ""}`}
+        >
+          {showCalendar && <UpcomingCalendarEvents />}
+          <NoshoAIAssist />
+        </section>
 
         <section className="flex flex-col gap-3">
-          <ActivityHeading />
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div className={showCalendar ? "lg:col-span-5" : "lg:col-span-8"}>
-              <TasksList />
-            </div>
-            {showCalendar && (
-              <div className="lg:col-span-4">
-                <UpcomingCalendarEvents />
-              </div>
-            )}
-            <div className={showCalendar ? "lg:col-span-3" : "lg:col-span-4"}>
-              <NoshoAIAssist />
-            </div>
-          </div>
+          <h2 className="text-base font-semibold text-muted-foreground">
+            Pilotage
+          </h2>
+          <Reporting />
         </section>
       </div>
     </DashboardProvider>
-  );
-};
-
-/**
- * « Mon activité » ne dit plus la vérité dès qu'on regarde quelqu'un d'autre
- * (NOS-1064). Le titre suit donc le responsable sélectionné, plutôt que de
- * laisser croire que ces tâches sont les siennes.
- */
-const ActivityHeading = () => {
-  const { selection } = useDashboard();
-  const { identity } = useGetIdentity();
-  const { data: sales } = useGetList<Sale>("sales", {
-    pagination: { page: 1, perPage: 100 },
-    sort: { field: "last_name", order: "ASC" },
-  });
-
-  const isMine =
-    selection.salesId != null &&
-    identity?.id != null &&
-    selection.salesId === identity.id.toString();
-
-  const owner = (sales ?? []).find(
-    (sale) => sale.id.toString() === selection.salesId,
-  );
-
-  const label =
-    selection.salesId === null
-      ? "Activité de l'équipe"
-      : isMine || !owner
-        ? "Mon activité"
-        : `Activité de ${owner.first_name} ${owner.last_name}`.trim();
-
-  return (
-    <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
   );
 };
