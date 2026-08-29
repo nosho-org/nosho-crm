@@ -1,0 +1,271 @@
+<!--
+  Gabarit : CONTRAT DE SERVICE — PÉRIODE D'ESSAI
+  Destiné à doc.nosho.org. Voir README.md pour les variables.
+
+  Texte repris mot pour mot du contrat Aboulker du 25 août 2026. Les seules
+  modifications sont les variables : rien n'a été reformulé.
+
+  Deux points à ne pas « corriger » :
+
+  - Le contrat est GRATUIT. Le prix qui figure à l'article 5 est explicitement
+    indicatif et sans valeur d'engagement. Le présenter autrement changerait la
+    nature de l'acte.
+  - Le client peut être une personne physique exerçant en nom propre —
+    `client.isIndividual`. Le bloc « parties » n'a alors ni capital ni
+    représentant.
+-->
+<article class="contrat contrat--poc">
+  <header>
+    <h1>Contrat de service — Période d'essai</h1>
+    <p class="sous-titre">Pour {{client.name}}</p>
+
+    <dl class="entete">
+      <dt>Date</dt>
+      <dd>{{contractDate}}</dd>
+      <dt>Référence</dt>
+      <dd>{{contractRef}}</dd>
+    </dl>
+
+    <p class="prestataire">
+      NOSHO SAS : 390 Avenue du Prado 13008 Marseille. Immatriculée au RCS
+      Marseille, numéro 990546418, représentée par
+      {{noshoSignatoryName}}, {{noshoSignatoryJobTitle}}.
+    </p>
+  </header>
+
+  <section class="parties">
+    <p>Entre les soussignés :</p>
+
+    <p>
+      La société nosho, Société par Actions Simplifiée au capital de 822 €,
+      immatriculée au RCS de Marseille sous le numéro 990 546 418, dont le
+      siège social est situé 390 Avenue du Prado, 13008 Marseille, représentée
+      par {{noshoSignatoryName}}, en qualité de {{noshoSignatoryJobTitle}},
+    </p>
+    <p>(ci-après désignée « Nosho »),</p>
+
+    <p>Et :</p>
+
+    {{#client.isIndividual}}
+    <!-- Personne physique exerçant en nom propre. Ni capital, ni représentant :
+         le signataire est le client lui-même. -->
+    <p>
+      {{signatory.firstName}} {{signatory.lastName}}{{#signatory.jobTitle}},
+      {{signatory.jobTitle}}{{/signatory.jobTitle}}, exerçant sous forme
+      d'entreprise individuelle, immatriculé au RCS de
+      {{client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du siège :
+      {{client.siret}}{{#client.apeCode}}, code APE
+      {{client.apeCode}}{{/client.apeCode}}), dont l'établissement est situé
+      {{client.address}}, {{client.zipcode}} {{client.city}}, agissant en son
+      nom propre,
+    </p>
+    {{/client.isIndividual}}
+
+    {{^client.isIndividual}}
+    <p>
+      La société {{client.name}}{{#client.legalForm}},
+      {{client.legalForm}}{{/client.legalForm}}{{#client.shareCapital}} au
+      capital de {{client.shareCapital}}{{/client.shareCapital}}, immatriculée
+      au RCS de {{client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du
+      siège : {{client.siret}}{{#client.apeCode}}, code APE
+      {{client.apeCode}}{{/client.apeCode}}), dont l'établissement est situé
+      {{client.address}}, {{client.zipcode}} {{client.city}}, représentée par
+      {{signatory.firstName}} {{signatory.lastName}}, en qualité de
+      {{signatory.jobTitle}},
+    </p>
+    {{/client.isIndividual}}
+
+    <p>(ci-après désigné « le Client »),</p>
+    <p>Ensemble désignés les Parties, il a été convenu ce qui suit :</p>
+  </section>
+
+  <section>
+    <h2>Article 1 — Objet</h2>
+    <p>
+      Le présent contrat définit les modalités d'utilisation gratuite du service
+      Nosho, agent conversationnel (appels, SMS et messages) dédié à la
+      confirmation des rendez-vous et à la réduction des absences non
+      justifiées, dans le cadre d'une période d'essai gratuite (ci-après la
+      « Période d'essai »).
+    </p>
+  </section>
+
+  <section>
+    <h2>Article 2 — Durée</h2>
+    <p>
+      La Période d'essai prend effet le {{trial.startDate}} pour une durée de
+      {{trial.weeks}} semaines, soit jusqu'au {{trial.endDate}} inclus.
+    </p>
+    <p>
+      À son terme, le Service est automatiquement suspendu. Sa poursuite suppose
+      la conclusion d'un contrat distinct.
+    </p>
+    <p>
+      La Période d'essai peut être prolongée par simple accord écrit des
+      Parties, y compris par courrier électronique.
+    </p>
+    <p>
+      Chaque Partie peut y mettre fin à tout moment, sans motif, sans préavis et
+      sans indemnité.
+    </p>
+  </section>
+
+  <section>
+    <h2>Article 3 — Prestations réalisées par Nosho</h2>
+    <p>Pendant la Période d'essai, Nosho s'engage à :</p>
+    <ul>
+      <li>
+        appeler les patients dont le rendez-vous est à venir, afin de le
+        confirmer, le rappeler ou l'annuler, et les relancer par SMS ou message
+        en cas de non-réponse ;
+      </li>
+      <li>
+        proposer, le cas échéant, un nouveau créneau selon les consignes
+        transmises par le Client ;
+      </li>
+      <li>reporter le statut obtenu dans l'agenda du Client ;</li>
+      <li>
+        mettre à disposition un tableau de bord des confirmations et remettre,
+        en fin de Période d'essai, un bilan chiffré des appels, messages et
+        résultats observés.
+      </li>
+    </ul>
+    <p>
+      Aucun conseil médical, diagnostic ni prise en charge d'urgence n'est
+      fourni dans le cadre du Service.
+    </p>
+  </section>
+
+  <section>
+    <h2>Article 4 — Prestations à la charge du Client</h2>
+    <p>Le Client s'engage à :</p>
+    <ul>
+      <li>
+        ouvrir à Nosho un accès de type « secrétariat », sans droit
+        d'administrateur, à son outil de prise de rendez-vous, limité à la
+        gestion des rendez-vous. Le Client peut désactiver cet accès à tout
+        moment et sans formalité ;
+      </li>
+      <li>
+        transmettre les consignes utiles (plages horaires, types de rendez-vous,
+        règles de reprogrammation) ;
+      </li>
+      <li>
+        informer ses patients, par les supports appropriés, que leurs données
+        peuvent être traitées par Nosho aux fins de gestion des rappels de
+        rendez-vous ;
+      </li>
+      <li>
+        ne transmettre que les données strictement nécessaires à cette finalité.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Article 5 — Gratuité et suites de la Période d'essai</h2>
+    <p>
+      La Période d'essai est intégralement gratuite. Aucun montant, à quelque
+      titre que ce soit, ne pourra être facturé au Client au titre de celle-ci.
+    </p>
+    <p>
+      Le Client n'est tenu à aucune obligation de poursuivre à l'issue de la
+      Période d'essai. À titre purement indicatif et sans valeur d'engagement,
+      les conditions applicables en cas de poursuite seraient les suivantes :
+    </p>
+    <ul>
+      <li>
+        Aucun abonnement, aucun frais de mise en service, aucun minimum mensuel.
+      </li>
+      <li>
+        <!-- Indicatif, et le contrat le dit deux fois. Le prix vient de l'offre
+             saisie dans le CRM ; à défaut le gabarit ne l'invente pas. -->
+        {{#offer.unitPrice}}{{offer.unitPrice}} HT par
+        {{offer.unit}}{{/offer.unitPrice}}, un rendez-vous étant réputé confirmé
+        lorsque le patient a expressément confirmé, annulé ou reprogrammé son
+        rendez-vous à la suite d'une sollicitation de l'agent.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Article 6 — Données à caractère personnel</h2>
+    <p>
+      Les Parties respectent le Règlement (UE) 2016/679 (RGPD) et la loi
+      Informatique et Libertés. Le Client agit en qualité de responsable de
+      traitement, Nosho en qualité de sous-traitant, traitant les données
+      uniquement pour le compte du Client et selon ses instructions
+      documentées.
+    </p>
+    <p>
+      Les données sont hébergées en France chez des prestataires certifiés
+      Hébergeur de Données de Santé (HDS) (OVH Cloud, Scaleway), chiffrées au
+      repos (AES-256) et en transit (TLS 1.3), avec gestion des habilitations
+      par rôles, authentification multi-facteurs et journalisation des accès.
+    </p>
+    <p>
+      Nosho est autorisée à recourir aux sous-traitants ultérieurs suivants,
+      chacun lié par un contrat conforme à l'article 28 du RGPD : OVH Cloud,
+      Scaleway, SMSMode, SMSFactor, Rounded, Mollie.
+    </p>
+    <p>
+      Les données traitées durant la Période d'essai sont supprimées ou
+      anonymisées dans les trente (30) jours suivant son terme, sauf poursuite
+      de la relation contractuelle ou obligation légale contraire. Une
+      convention de sous-traitance détaillée conforme à l'article 28 du RGPD est
+      annexée sur simple demande du Client.
+    </p>
+  </section>
+
+  <section>
+    <h2>Article 7 — Confidentialité et responsabilité</h2>
+    <p>
+      Les informations échangées entre les Parties sont confidentielles. Nosho
+      s'interdit tout usage des données transmises à des fins étrangères au
+      présent contrat, et notamment toute prospection commerciale auprès des
+      patients.
+    </p>
+    <p>
+      Nosho est tenue à une obligation de moyens. Sa responsabilité ne saurait
+      être engagée au titre des dommages indirects, des données inexactes ou
+      incomplètes fournies par le Client, des indisponibilités imputables à des
+      prestataires tiers, ni des conséquences médicales d'un rendez-vous non
+      honoré ou reporté. La responsabilité globale de Nosho au titre du présent
+      contrat est limitée à mille (1 000) euros, sans préjudice des
+      responsabilités qui ne peuvent être limitées par la loi.
+    </p>
+  </section>
+
+  <section>
+    <h2>Article 8 — Droit applicable et juridiction</h2>
+    <p>
+      Le présent contrat est soumis au droit français. En cas de différend, les
+      Parties rechercheront une solution amiable pendant trente (30) jours. À
+      défaut, le litige sera porté devant les juridictions compétentes de
+      Marseille.
+    </p>
+  </section>
+
+  <footer class="signature">
+    <p>
+      Fait à Marseille, le {{contractDate}}, en deux exemplaires originaux.
+    </p>
+
+    <div class="signatures">
+      <div class="signature-bloc">
+        <h3>Pour Nosho</h3>
+        <p>Nom : {{noshoSignatoryName}}</p>
+        <p>Fonction : {{noshoSignatoryJobTitle}}</p>
+        <!-- Zone de signature : c'est ici que se pose le champ eSignature de
+             Google Drive. Ne pas la remplir côté gabarit. -->
+        <p class="zone-signature">Signature :</p>
+      </div>
+
+      <div class="signature-bloc">
+        <h3>Le Client</h3>
+        <p>Nom : {{signatory.firstName}} {{signatory.lastName}}</p>
+        <p>Fonction : {{signatory.jobTitle}}</p>
+        <p class="zone-signature">Signature :</p>
+      </div>
+    </div>
+  </footer>
+</article>
