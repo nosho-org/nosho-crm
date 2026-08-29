@@ -6,6 +6,7 @@ import { Task } from "../tasks/Task";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import type { Deal, Task as TaskRecord } from "../types";
+import { AnimatedListItem } from "@/components/ui/motion";
 import { useDashboard } from "./DashboardContext";
 import {
   BUCKET_LABELS,
@@ -116,8 +117,15 @@ export const CockpitQueue = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {entries.map((entry) => (
-                    <div key={entry.task.id} className="flex flex-col">
+                  {/* L'entrée décalée dit l'ordre du tri : le retard le plus
+                      ancien d'abord, puis l'enjeu décroissant. Coupée au-delà
+                      de huit lignes — voir `AnimatedListItem`. */}
+                  {entries.map((entry, index) => (
+                    <AnimatedListItem
+                      key={entry.task.id}
+                      index={index}
+                      className="flex flex-col"
+                    >
                       <Task task={entry.task} showContact showTime={false} />
                       {(entry.deal || entry.daysOverdue > 0) && (
                         <div className="ml-9 -mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
@@ -143,7 +151,7 @@ export const CockpitQueue = () => {
                           )}
                         </div>
                       )}
-                    </div>
+                    </AnimatedListItem>
                   ))}
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { DealStageBadge } from "../deals/shared/DealBadges";
+import { BorderBeam } from "@/components/ui/motion";
 import { useDashboard } from "./DashboardContext";
 import { explainFocus, rankDealsByFocus } from "./dealFocus";
 
@@ -77,8 +78,15 @@ export const CockpitFocus = () => {
   const amount = (value: number) => formatCurrencyCompact(value, currency);
 
   return (
-    <Card className="p-4 flex flex-col gap-3 border-[var(--deal-series-potential)] border-l-4">
-      <div className="flex items-center gap-2 flex-wrap">
+    <Card className="relative p-4 flex flex-col gap-3 border-[var(--deal-series-potential)] border-l-4">
+      {/*
+        Le seul élément animé en permanence de toute l'application.
+
+        « Si deux éléments l'ont, l'effet s'annule » : avant d'en poser un
+        second ailleurs, il faut retirer celui-ci.
+      */}
+      <BorderBeam />
+      <div className="relative flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--deal-series-potential)] flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5" aria-hidden />À faire maintenant
         </span>
@@ -88,7 +96,7 @@ export const CockpitFocus = () => {
         </span>
       </div>
 
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="relative flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold">
             {top.deal.company_name || top.deal.name}
@@ -120,7 +128,7 @@ export const CockpitFocus = () => {
         </div>
       </div>
 
-      <div>
+      <div className="relative">
         <Button asChild size="sm">
           <Link to={`/deals/${top.deal.id}/show`}>
             Ouvrir la fiche

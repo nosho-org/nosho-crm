@@ -1,6 +1,7 @@
 import { useGetIdentity, useGetList } from "ra-core";
 import { Card } from "@/components/ui/card";
 
+import { AnimatedRing } from "@/components/ui/motion";
 import { formatCurrency } from "../misc/formatCurrency";
 import { formatDateLong } from "../misc/formatDate";
 import type { Deal, Sale, Target, Task } from "../types";
@@ -25,37 +26,6 @@ import { computeTargetProgress, findActiveTarget } from "./targets";
  * un commercial sans objectif personnel n'est pas hors sujet, il partage celui
  * de tout le monde.
  */
-
-const Ring = ({ ratio }: { ratio: number }) => {
-  const CIRCUMFERENCE = 132;
-  const filled = Math.min(1, Math.max(0, ratio));
-  return (
-    <svg width="48" height="48" viewBox="0 0 52 52" aria-hidden>
-      <circle
-        cx="26"
-        cy="26"
-        r="21"
-        fill="none"
-        stroke="var(--muted)"
-        strokeWidth="6"
-      />
-      <circle
-        cx="26"
-        cy="26"
-        r="21"
-        fill="none"
-        stroke={
-          ratio >= 1 ? "var(--deal-status-won)" : "var(--deal-series-potential)"
-        }
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={CIRCUMFERENCE}
-        strokeDashoffset={CIRCUMFERENCE * (1 - filled)}
-        transform="rotate(-90 26 26)"
-      />
-    </svg>
-  );
-};
 
 export const CockpitDayBar = () => {
   const { selection, today } = useDashboard();
@@ -139,7 +109,7 @@ export const CockpitDayBar = () => {
 
       {progress && target && (
         <div className="flex items-center gap-3 ml-auto">
-          <Ring ratio={progress.ratio} />
+          <AnimatedRing ratio={progress.ratio} size={48} />
           <div>
             <div className="text-sm font-semibold tabular-nums">
               {Math.round(progress.ratio * 100)} %

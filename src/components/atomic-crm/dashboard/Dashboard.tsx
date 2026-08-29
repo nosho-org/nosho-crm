@@ -6,10 +6,10 @@ import { DashboardProvider } from "./DashboardContext";
 import { DashboardFilters } from "./DashboardFilters";
 import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
+import { BlurFade } from "@/components/ui/motion";
 import { CockpitDayBar } from "./CockpitDayBar";
 import { CockpitFocus } from "./CockpitFocus";
 import { CockpitQueue } from "./CockpitQueue";
-import { NoshoAIAssist } from "./NoshoAIAssist";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
 import { RevenueForecastChart } from "./RevenueForecastChart";
@@ -46,36 +46,47 @@ import { Welcome } from "./Welcome";
  * "qu'est-ce que je fais maintenant". »
  *
  * La hiérarchie est donc inversée : ce qu'on a à faire d'abord, les
- * instruments de pilotage ensuite. Rien n'est supprimé — les six KPI, la
- * prévision et le funnel restent, plus bas, sous leur propre titre. Ils
- * servent une question réelle, simplement pas celle qu'on se pose en ouvrant
- * l'écran le matin.
+ * instruments de pilotage ensuite.
  *
- * Les filtres restent en tête des deux : ils s'appliquent à tout.
+ * Les KPI, eux, restent en haut mais **flottent** (NOS-1170, demandé par
+ * Simon) : collés sous l'en-tête, ils suivent le défilement. Ils ne prennent
+ * donc plus le meilleur emplacement de façon permanente — ils restent
+ * consultables à tout moment sans qu'on ait à remonter, ce qui est le vrai
+ * besoin qu'ils servaient.
+ *
+ * Les filtres restent en tête de tout : ils s'appliquent aux deux moitiés.
+ *
+ * ## L'ordre d'apparition dit l'ordre de lecture
+ *
+ * `BlurFade` échelonne les trois blocs du cockpit de 60 ms. Le décalage n'est
+ * pas décoratif : il masque le temps de requête et guide l'œil de haut en bas,
+ * dans l'ordre où l'écran doit être lu. Il joue une fois, jamais au re-render.
  */
 const Cockpit = () => (
   <div className="flex flex-col gap-4">
-    <CockpitDayBar />
-    <CockpitFocus />
+    <BlurFade>
+      <CockpitDayBar />
+    </BlurFade>
+    <BlurFade delayMs={60}>
+      <CockpitFocus />
+    </BlurFade>
 
-    <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
-      <CockpitQueue />
-      <div className="flex flex-col gap-4">
-        <PipelineHealthBanner />
-        <TargetsCard />
+    <BlurFade delayMs={120}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
+        <CockpitQueue />
+        <div className="flex flex-col gap-4">
+          <PipelineHealthBanner />
+          <TargetsCard />
+        </div>
       </div>
-    </div>
+    </BlurFade>
   </div>
 );
 
 const Reporting = () => (
-  <div className="flex flex-col gap-5">
-    <DashboardKpiBanner />
-
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-      <RevenueForecastChart />
-      <PipelineFunnel />
-    </div>
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+    <RevenueForecastChart />
+    <PipelineFunnel />
   </div>
 );
 
@@ -129,20 +140,35 @@ export const Dashboard = () => {
 
         <DashboardFilters />
 
+        {/*
+          Les KPI flottent sous l'en-tête (NOS-1170).
+
+          `top-16` : l'en-tête de l'application est lui-même `sticky top-0`, et
+          une bande collée à 0 passerait dessous. `-mx-*` puis `px-*` : la
+          bande doit couvrir toute la largeur quand elle se fige, sinon on voit
+          le contenu défiler dans ses marges.
+
+          Le fond opaque n'est pas décoratif : sans lui, les cartes du cockpit
+          transparaîtraient à travers.
+        */}
+        <div className="sticky top-16 z-30 -mx-[50px] px-[50px] py-2 bg-background border-b">
+          <DashboardKpiBanner />
+        </div>
+
         <Cockpit />
 
         {/*
-          L'agenda et l'assistant restent, à côté de la file d'actions plutôt
-          qu'en dessous d'elle : ce sont les deux compléments qu'on consulte en
-          traitant sa journée. « Tâches à venir » a disparu — la file les porte
-          désormais, groupées et chiffrées.
+          L'agenda seul. « Nosho Assist » n'est plus ici : il ne sert qu'à
+          remonter des bugs, et sa place est le widget flottant du Layout,
+          présent sur toutes les pages. Un encart de tableau de bord promettant
+          des « suggestions intelligentes » désignait une fonction qui n'existe
+          pas (NOS-1170).
         */}
-        <section
-          className={`grid grid-cols-1 gap-5 ${showCalendar ? "lg:grid-cols-2" : ""}`}
-        >
-          {showCalendar && <UpcomingCalendarEvents />}
-          <NoshoAIAssist />
-        </section>
+        {showCalendar && (
+          <section>
+            <UpcomingCalendarEvents />
+          </section>
+        )}
 
         <section className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-muted-foreground">

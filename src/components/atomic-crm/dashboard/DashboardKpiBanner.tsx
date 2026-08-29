@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { MagicCard, NumberTicker } from "@/components/ui/motion";
 
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { computeRevenueSnapshot } from "../deals/cockpit/dealRevenue";
@@ -52,6 +53,7 @@ const KpiCard = ({
   icon: Icon,
   color,
   value,
+  tickerValue,
   context,
   children,
 }: {
@@ -59,28 +61,54 @@ const KpiCard = ({
   icon: LucideIcon;
   color: string;
   value: string;
+  /**
+   * Le montant brut, pour le compteur qui monte (NOS-1170).
+   *
+   * L'audit : « À réserver au **chiffre héros, une seule fois par écran** ».
+   * Une seule carte le passe — le pipeline pondéré, la seule métrique
+   * prédictive du bandeau. Sur six cartes qui comptent toutes ensemble,
+   * l'effet ne dirait plus lequel regarder.
+   */
+  tickerValue?: number;
   context?: string;
   children?: React.ReactNode;
 }) => (
-  <Card className="p-4 flex flex-col gap-1 min-w-0">
-    <div className="flex items-start justify-between gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
+  /*
+   * `MagicCard` : le halo suit le curseur au survol (NOS-1170).
+   *
+   * L'audit le place ici précisément : « Utile sur une grille dense où la
+   * bordure coûte cher visuellement. » Six cartes côte à côte, où épaissir une
+   * bordure au survol ferait sauter la mise en page d'un pixel — et six fois
+   * plus depuis que la bande est collante.
+   */
+  <MagicCard className="rounded-xl">
+    <Card className="p-4 flex flex-col gap-1 min-w-0 bg-transparent">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        <Icon className="w-4 h-4 shrink-0" style={{ color }} aria-hidden />
+      </div>
+      <span
+        className="text-3xl font-semibold leading-tight truncate"
+        style={{ color }}
+        title={value}
+      >
+        {tickerValue != null ? (
+          <NumberTicker
+            value={tickerValue}
+            format={(current) => formatCurrencyCompact(current)}
+          />
+        ) : (
+          value
+        )}
       </span>
-      <Icon className="w-4 h-4 shrink-0" style={{ color }} aria-hidden />
-    </div>
-    <span
-      className="text-3xl font-semibold leading-tight truncate"
-      style={{ color }}
-      title={value}
-    >
-      {value}
-    </span>
-    {context && (
-      <span className="text-xs text-muted-foreground">{context}</span>
-    )}
-    {children}
-  </Card>
+      {context && (
+        <span className="text-xs text-muted-foreground">{context}</span>
+      )}
+      {children}
+    </Card>
+  </MagicCard>
 );
 
 /**
@@ -180,6 +208,11 @@ export const DashboardKpiBanner = () => {
             snapshot.weighted.available
               ? `${formatPercent(snapshot.weighted.averageProbability)} de probabilité moyenne`
               : snapshot.weighted.reason
+          }
+          /* Le seul compteur qui monte de l'ecran : la seule metrique
+             predictive du bandeau. */
+          tickerValue={
+            snapshot.weighted.available ? snapshot.weighted.amount : undefined
           }
         />
 
