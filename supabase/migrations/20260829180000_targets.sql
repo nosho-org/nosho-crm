@@ -1,4 +1,4 @@
--- Objectifs commerciaux, par personne et pour l'equipe (NOS-1166).
+-- Objectifs commerciaux, par personne et pour l'equipe (NOS-1173).
 --
 -- Fichier en ASCII pur : `scripts/supabase-push.sh` passe la migration a
 -- `jq --arg` apres un `cat`, et sous Git Bash / Windows tout caractere
@@ -80,7 +80,7 @@ create index if not exists targets_period_idx
     on public.targets (period_start, period_end);
 
 comment on table public.targets is
-  'Objectifs commerciaux (NOS-1166). Une ligne sans sales_id est l''objectif '
+  'Objectifs commerciaux (NOS-1173). Une ligne sans sales_id est l''objectif '
   'commun de l''equipe. Bornes de date plutot que trimestre : "25 k EUR de '
   'MRR d''ici la fin de l''annee" n''est pas un trimestre.';
 

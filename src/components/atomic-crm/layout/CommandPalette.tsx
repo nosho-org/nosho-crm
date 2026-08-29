@@ -22,7 +22,7 @@ import type { Company, Contact, Deal } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * La palette ⌘K (NOS-1168)
+ * La palette ⌘K (NOS-1175)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Chaque liste a son propre champ de recherche,
  * limité à son entité. Retrouver "Kersanté" suppose de savoir d'avance si

@@ -2,7 +2,7 @@ import type { Deal, Task } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * La file d'actions, regroupée par échéance (NOS-1167)
+ * La file d'actions, regroupée par échéance (NOS-1174)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Tâches à venir, Prochains rendez-vous, et les
  * deals à risque vivent dans trois colonnes séparées. Aucune n'est ordonnée

@@ -1,6 +1,6 @@
 /**
  * ---------------------------------------------------------------------------
- * La sous-ligne d'une carte Kanban (NOS-1165)
+ * La sous-ligne d'une carte Kanban (NOS-1172)
  * ---------------------------------------------------------------------------
  * Répond à un constat d'audit : les cartes écrivaient « société - intitulé »,
  * ce qui donnait « KERSANTE - Kersanté » et, sur un cas réel, « C.M.C.O. CENTRE

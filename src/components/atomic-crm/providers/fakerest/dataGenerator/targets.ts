@@ -3,7 +3,7 @@ import type { Target } from "../../../types";
 
 /**
  * Deux objectifs d'exemple, pour que la carte du cockpit ait quelque chose à
- * montrer en démo (NOS-1166).
+ * montrer en démo (NOS-1173).
  *
  * Un objectif d'équipe et un objectif personnel, parce que c'est justement la
  * cohabitation des deux que la carte met en scène — avec une seule ligne, on

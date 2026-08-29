@@ -42,7 +42,7 @@ export { DealPriorityBadge, DealOwner } from "../cockpit/DealFieldBadges";
 const STAGE_STYLES: Record<string, string> = {
   "a-reclasser": "bg-muted text-muted-foreground border-border",
   /*
-   * Un dégradé monochrome, et non six teintes (NOS-1174).
+   * Un dégradé monochrome, et non six teintes (NOS-1178).
    *
    * L'audit du 29 août : « Bleu, violet, vert, rouge, orange et jaune
    * coexistent au même niveau sur les étapes, les produits, les statuts, les

@@ -3,7 +3,7 @@ import { useCallback, useRef } from "react";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Halo qui suit le curseur (Magic UI « Magic Card », NOS-1170).
+ * Halo qui suit le curseur (Magic UI « Magic Card », NOS-1177).
  *
  * L'audit : « Le halo qui suit le curseur donne un retour de survol **sans
  * bordure supplémentaire**. Utile sur une grille dense où la bordure coûte

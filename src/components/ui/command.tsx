@@ -37,7 +37,7 @@ function CommandDialog({
   title?: string
   description?: string
   /**
-   * Forwarded to the inner <Command> (NOS-1168).
+   * Forwarded to the inner <Command> (NOS-1175).
    *
    * Added here because the palette filters server-side: letting cmdk filter a
    * second time on the client would hide results that matched on a field the

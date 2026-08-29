@@ -185,7 +185,7 @@ export const DealListTable = () => {
         <ChoiceField choices={dealCategories} source="category" />
       </DataTable.Col>
       {/*
-        Le nom vient de la vue, pas d'une référence (NOS-1165).
+        Le nom vient de la vue, pas d'une référence (NOS-1172).
 
         La colonne s'affichait vide alors que les 147 opportunités ouvertes ont
         toutes une société : le `ReferenceField` déclenchait un `getMany` sur

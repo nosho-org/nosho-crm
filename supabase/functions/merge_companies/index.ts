@@ -7,7 +7,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 /**
  * ---------------------------------------------------------------------------
- * Fusionner deux societes (NOS-1169)
+ * Fusionner deux societes (NOS-1176)
  * ---------------------------------------------------------------------------
  * L'audit du 29 aout 2026 : « Un CRM avec des doublons visibles perd la
  * confiance du commercial en une semaine. » La mesure en production : 85

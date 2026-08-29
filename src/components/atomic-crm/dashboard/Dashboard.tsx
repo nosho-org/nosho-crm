@@ -36,7 +36,7 @@ import { Welcome } from "./Welcome";
 
 /**
  * ---------------------------------------------------------------------------
- * Cockpit avant reporting (NOS-1167)
+ * Cockpit avant reporting (NOS-1174)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Le tableau de bord est un reporting de
  * direction, pas un cockpit. Les six cartes du haut sont toutes des montants
@@ -46,7 +46,7 @@ import { Welcome } from "./Welcome";
  * La hiérarchie est donc inversée : ce qu'on a à faire d'abord, les
  * instruments de pilotage ensuite.
  *
- * Les KPI, eux, restent en haut mais **flottent** (NOS-1170, demandé par
+ * Les KPI, eux, restent en haut mais **flottent** (NOS-1177, demandé par
  * Simon) : collés sous l'en-tête, ils suivent le défilement. Ils ne prennent
  * donc plus le meilleur emplacement de façon permanente — ils restent
  * consultables à tout moment sans qu'on ait à remonter, ce qui est le vrai
@@ -62,7 +62,7 @@ import { Welcome } from "./Welcome";
  */
 const Cockpit = () => (
   /*
-   * « À faire maintenant » et « Ma journée » ont quitté cet écran (NOS-1172).
+   * « À faire maintenant » et « Ma journée » ont quitté cet écran (NOS-1178).
    *
    * Elles sont passées en notifications, puis les notifications elles-mêmes
    * sont passées dans la cloche de l'en-tête : une pile de cartes prenait la
@@ -79,7 +79,7 @@ const Cockpit = () => (
 );
 
 /**
- * Prévision et funnel, juste sous les KPI (NOS-1171, demandé par Simon).
+ * Prévision et funnel, juste sous les KPI (NOS-1178, demandé par Simon).
  *
  * Ils étaient en pied de page. Ils y étaient cohérents — du pilotage, pas de
  * l'action — mais si loin qu'on ne les voyait jamais. Placés sous la bande de
@@ -144,7 +144,7 @@ export const Dashboard = () => {
         <DashboardFilters />
 
         {/*
-          Les KPI flottent sous l'en-tête (NOS-1170).
+          Les KPI flottent sous l'en-tête (NOS-1177).
 
           `top-16` : l'en-tête de l'application est lui-même `sticky top-0`, et
           une bande collée à 0 passerait dessous. `-mx-*` puis `px-*` : la
@@ -159,7 +159,7 @@ export const Dashboard = () => {
         </div>
 
         {/*
-          Les objectifs au même niveau que les KPI (NOS-1171, demandé par
+          Les objectifs au même niveau que les KPI (NOS-1178, demandé par
           Simon), et non plus dans la colonne du cockpit.
 
           C'est leur place : ce sont eux qui donnent un référentiel aux six
@@ -180,7 +180,7 @@ export const Dashboard = () => {
           remonter des bugs, et sa place est le widget flottant du Layout,
           présent sur toutes les pages. Un encart de tableau de bord promettant
           des « suggestions intelligentes » désignait une fonction qui n'existe
-          pas (NOS-1170).
+          pas (NOS-1177).
         */}
         {showCalendar && (
           <section>

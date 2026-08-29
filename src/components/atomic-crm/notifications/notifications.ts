@@ -1,6 +1,6 @@
 /**
  * ---------------------------------------------------------------------------
- * Les notifications du CRM (NOS-1172)
+ * Les notifications du CRM (NOS-1178)
  * ---------------------------------------------------------------------------
  * Demandé par Simon : « À faire maintenant », je le veux plutôt en
  * notification qu'on peut fermer.

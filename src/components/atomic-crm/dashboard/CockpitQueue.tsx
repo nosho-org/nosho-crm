@@ -17,7 +17,7 @@ import {
 
 /**
  * ---------------------------------------------------------------------------
- * La file d'actions (NOS-1167)
+ * La file d'actions (NOS-1174)
  * ---------------------------------------------------------------------------
  * Remplace « Tâches à venir », qui listait sans hiérarchie et coiffait des
  * tâches déjà échues d'un en-tête « PLUS TARD ».

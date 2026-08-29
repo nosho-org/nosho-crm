@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
- * Apparition floutée, une seule fois (Magic UI « Blur Fade », NOS-1170).
+ * Apparition floutée, une seule fois (Magic UI « Blur Fade », NOS-1177).
  *
  * L'audit : « Séquence de chargement de 250 ms qui masque le temps de requête
  * et guide l'œil de haut en bas. **Une fois, à l'ouverture.** »

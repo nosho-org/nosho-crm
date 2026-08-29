@@ -51,6 +51,27 @@ for file in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
     continue
   fi
 
+  # ---------------------------------------------------------------------
+  # Garde-fou ASCII
+  # ---------------------------------------------------------------------
+  # Ce script lit la migration avec `cat` puis la passe a `jq --arg`. Sous Git
+  # Bash / Windows, tout caractere non-ASCII y devient U+FFFD : la migration
+  # part en production avec des losanges a la place des accents.
+  #
+  # La regle etait ecrite en tete de chaque fichier de migration, et a ete
+  # violee deux fois en une journee -- une fois sur des commentaires de table,
+  # une fois sur des commentaires SQL. La prochaine fois, ce sera sur une
+  # donnee, et il n'y aura pas de retour en arriere.
+  #
+  # D'ou ce controle : la regle ne repose plus sur la vigilance de qui ecrit.
+  if LC_ALL=C grep -qn '[^ -~]' "$file"; then
+    echo "  ERROR: $filename contient des caracteres non-ASCII." >&2
+    echo "  Ce script les detruit (cat + jq --arg sous Git Bash)." >&2
+    echo "  Lignes fautives :" >&2
+    LC_ALL=C grep -n '[^ -~]' "$file" | head -5 >&2
+    exit 1
+  fi
+
   echo "  Applying: $filename"
   SQL=$(cat "$file")
   run_sql "$SQL" > /dev/null

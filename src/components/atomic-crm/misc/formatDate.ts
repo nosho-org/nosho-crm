@@ -1,6 +1,6 @@
 /**
  * ---------------------------------------------------------------------------
- * Le formatage des dates, en un seul endroit (NOS-1165)
+ * Le formatage des dates, en un seul endroit (NOS-1172)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 relevait trois formats sur un même écran :
  * « Sep 30, 2026 », « 05/09/2026 » et « 26/08/2026 09:52 », plus un

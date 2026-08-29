@@ -40,7 +40,7 @@ export const Task = ({
   const notify = useNotify();
 
   /*
-   * « None » s'affichait comme un type de tâche (NOS-1165).
+   * « None » s'affichait comme un type de tâche (NOS-1172).
    *
    * Le garde-fou existait — `task.type !== "none"` — mais il était sensible à
    * la casse, et la production porte six tâches typées `"None"` avec une

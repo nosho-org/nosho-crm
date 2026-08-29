@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 /**
  * ---------------------------------------------------------------------------
- * Le socle des composants animés (NOS-1170)
+ * Le socle des composants animés (NOS-1177)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 pose trois règles non négociables sur les effets
  * repris de Magic UI :

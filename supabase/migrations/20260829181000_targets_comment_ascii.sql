@@ -13,7 +13,7 @@
 -- doit rester en ASCII pur. Verification avant push :
 --   LC_ALL=C grep -n '[^ -~]' supabase/migrations/<fichier>.sql
 comment on table public.targets is
-  'Objectifs commerciaux (NOS-1166). Une ligne sans sales_id est l''objectif '
+  'Objectifs commerciaux (NOS-1173). Une ligne sans sales_id est l''objectif '
   'commun de l''equipe. Bornes de date plutot que trimestre : "25 k EUR de '
   'MRR d''ici la fin de l''annee" n''est pas un trimestre.';
 

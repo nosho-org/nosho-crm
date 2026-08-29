@@ -29,7 +29,7 @@ export const DealCreateTaskButton = ({
   const record = useRecordContext<Deal>();
   const [open, setOpen] = useState(false);
   /*
-   * Le reflet ne joue que sur l'action principale de l'étape (NOS-1170).
+   * Le reflet ne joue que sur l'action principale de l'étape (NOS-1177).
    *
    * L'audit : « Discipline absolue : jamais deux sur un même écran. » La fiche
    * n'en désigne qu'une, `getDealPrimaryAction`, et c'est elle qui reçoit

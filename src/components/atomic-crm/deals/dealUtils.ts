@@ -361,7 +361,7 @@ function ucFirst(str: string): string {
 /**
  * Une date de calendrier, sans heure.
  *
- * Ne fait plus que déléguer à `misc/formatDate` (NOS-1165). Elle portait sa
+ * Ne fait plus que déléguer à `misc/formatDate` (NOS-1172). Elle portait sa
  * propre logique de fuseau — construire un `Date` local depuis les composants
  * — qui donnait le bon jour à Paris comme à New York, mais le jour précédent à
  * Tokyo. Le module central ancre les dates nues à midi UTC, où aucun fuseau

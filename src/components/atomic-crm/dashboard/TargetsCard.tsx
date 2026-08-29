@@ -39,7 +39,7 @@ import {
 
 /**
  * ---------------------------------------------------------------------------
- * Objectifs (NOS-1166)
+ * Objectifs (NOS-1173)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « 912 k€ de pipeline, mais contre quel objectif ?
  * Un chiffre sans référentiel n'est pas un instrument de pilotage, c'est une
@@ -415,7 +415,7 @@ export const TargetsCard = () => {
       ) : (
         <div className="flex flex-col gap-3">
           {/*
-            Les deux natures, nommées et séparées (NOS-1171).
+            Les deux natures, nommées et séparées (NOS-1178).
 
             L'objectif d'équipe d'abord et en grand : c'est celui qui engage
             l'entreprise, les objectifs personnels en sont la décomposition.

@@ -1,6 +1,6 @@
 /**
  * ---------------------------------------------------------------------------
- * Quelle action fait avancer CE deal (NOS-1165)
+ * Quelle action fait avancer CE deal (NOS-1172)
  * ---------------------------------------------------------------------------
  * L'audit du 29 août 2026 : « Cinq boutons de même poids, aucun principal.
  * L'action qui fait avancer le deal et celle qui l'enterre ont la même
