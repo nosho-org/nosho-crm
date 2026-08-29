@@ -6,6 +6,7 @@ import { ListPagination } from "@/components/admin/list-pagination";
 import { SortButton } from "@/components/admin/sort-button";
 
 import { TopToolbar } from "../layout/TopToolbar";
+import { CompanyDuplicatesBanner } from "./CompanyDuplicatesBanner";
 import { CompanyEmpty } from "./CompanyEmpty";
 import { CompanyListFilter } from "./CompanyListFilter";
 import { ImageList } from "./GridList";
@@ -37,6 +38,9 @@ const CompanyListLayout = () => {
     <div className="w-full flex flex-row gap-8">
       <CompanyListFilter />
       <div className="flex flex-col flex-1 gap-4">
+        {/* En tête de liste : c'est là que le doublon se voit, donc là qu'on
+            doit pouvoir le résoudre (NOS-1169). */}
+        <CompanyDuplicatesBanner />
         <ImageList />
       </div>
     </div>

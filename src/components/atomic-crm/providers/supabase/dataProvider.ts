@@ -317,6 +317,31 @@ const getDataProviderWithCustomMethods = () => {
 
       return data;
     },
+    /**
+     * Fusionne deux sociétés (NOS-1169).
+     *
+     * `targetId` gagne, `sourceId` disparaît. Tout se joue dans une
+     * transaction côté serveur : cinq tables référencent `companies`, et une
+     * fusion faite depuis le navigateur laisserait, sur un rechargement au
+     * mauvais moment, des contacts pointant vers une société supprimée — un
+     * état pire que le doublon qu'on corrigeait.
+     */
+    async mergeCompanies(sourceId: Identifier, targetId: Identifier) {
+      const { data, error } = await getSupabaseClient().functions.invoke(
+        "merge_companies",
+        {
+          method: "POST",
+          body: { loserId: sourceId, winnerId: targetId },
+        },
+      );
+
+      if (error) {
+        console.error("merge_companies.error", error);
+        throw new Error("La fusion a échoué. Aucune fiche n'a été modifiée.");
+      }
+
+      return data;
+    },
     async getConfiguration(): Promise<ConfigurationContextValue> {
       const { data } = await baseDataProvider.getOne("configuration", {
         id: 1,
