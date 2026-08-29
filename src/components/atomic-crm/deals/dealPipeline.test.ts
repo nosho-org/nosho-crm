@@ -30,11 +30,8 @@ const view = (id: string, label: string, companyType: string): CustomView => ({
 
 // NOS-796, revised by NOS-956 (seven-stage pipeline)
 describe("canonical pipeline", () => {
-  it("has the 7 commercial stages, in order, framed by the queue and churn", () => {
+  it("has the 6 commercial stages, in order, closed by churn", () => {
     expect(defaultDealStages.map((s) => s.value)).toEqual([
-      // Deals the v2 migration could not map with certainty wait here rather
-      // than being guessed into a column.
-      "a-reclasser",
       "lead",
       "qualified",
       "demo-poc",
@@ -45,6 +42,17 @@ describe("canonical pipeline", () => {
       // Terminal, still counted in lost ARR, only hidden from the board.
       "churn",
     ]);
+  });
+
+  it("a retiré « À reclasser » sans la perdre", () => {
+    // Retirée du pipeline le 29/08/2026 : c'était la file d'attente de la
+    // refonte v2, et la production n'y comptait plus aucune opportunité.
+    //
+    // Archivée plutôt que supprimée, pour que son libellé reste résoluble si
+    // un enregistrement égaré la porte encore — une étape effacée tout court
+    // afficherait son slug brut.
+    expect(defaultDealStages.map((s) => s.value)).not.toContain("a-reclasser");
+    expect(archivedDealStages.map((s) => s.value)).toContain("a-reclasser");
   });
 
   it("maps every retired stage onto a live one", () => {
