@@ -11,13 +11,23 @@ import type { Deal } from "../../types";
 import { DealTasksBlock } from "./DealTasksBlock";
 
 /**
- * Regression cover for #114: the block `8dd2513e` dropped, and the trap waiting
- * for whoever put it back.
+ * Couvre les deux blocs fusionnés par NOS-1164, et les régressions que
+ * chacun portait.
  *
- * `AddTask` — the obvious component to reuse for the CTA — reads its contact
- * from `useRecordContext()`. On this page that context holds a `Deal`, so
- * reusing it writes the opportunity's id into `tasks.contact_id`: a task
- * pointing at a contact that does not exist, silently.
+ * #114, moitié « Tâches » : `AddTask` — le composant qu'on réutiliserait
+ * spontanément pour le CTA — lit son contact dans `useRecordContext()`. Sur
+ * cette page le contexte porte un `Deal` : le réutiliser écrit l'identifiant
+ * de l'opportunité dans `tasks.contact_id`, désignant en silence un contact
+ * qui n'existe pas.
+ *
+ * #114, moitié « Prochaine action » : deux défauts livrés ensemble par
+ * `8dd2513e` — le CTA était un `<a href="#/deals/:id">` qui menait à la
+ * fenêtre d'édition, un formulaire sans champ d'action ; et « Marquer comme
+ * fait » créait une *seconde* tâche déjà terminée en laissant l'originale en
+ * cours, si bien que le bloc se redessinait à l'identique.
+ *
+ * NOS-1164 : la prochaine action est `tasks[0]`. Les deux cartes montraient
+ * donc la même tâche, l'une au-dessus de l'autre.
  */
 
 const deal = {
@@ -67,6 +77,9 @@ const buildProvider = (tasks: unknown[] = [taskViaContact]) => {
   const create = vi.fn(() =>
     Promise.resolve({ data: { ...taskViaContact, id: 999 } }),
   );
+  const update = vi.fn((_resource: string, params: { id: unknown }) =>
+    Promise.resolve({ data: { ...taskViaContact, id: params.id } }),
+  );
   // Mirrors FakeRest and PostgREST: asking for a row by `undefined` is an
   // error, not an empty result.
   const getOne = vi.fn((_resource: string, params: { id: unknown }) =>
@@ -85,10 +98,10 @@ const buildProvider = (tasks: unknown[] = [taskViaContact]) => {
     getOne: getOne as never,
     getMany: (() => Promise.resolve({ data: [] })) as never,
     create: create as never,
-    update: (() => Promise.resolve({ data: taskViaContact })) as never,
+    update: update as never,
   });
 
-  return { dataProvider, create, getOne };
+  return { dataProvider, create, getOne, update };
 };
 
 const renderBlock = (dataProvider: ReturnType<typeof testDataProvider>) =>
@@ -166,5 +179,79 @@ describe("DealTasksBlock", () => {
     expect(params.data.sales_id).toBe(9);
     // The `AddTask` trap: the deal's id landing in contact_id.
     expect(params.data.contact_id).not.toBe(36);
+  });
+
+  it("met la tâche la plus proche en avant, et les suivantes dessous", async () => {
+    // Le défaut que la fusion corrige : `nextTask` est `tasks[0]`, donc les
+    // deux cartes montraient la même tâche. Elle ne doit apparaître qu'une
+    // fois, et la seconde tâche une fois aussi.
+    const { dataProvider } = buildProvider([
+      taskViaContact,
+      { ...taskViaContact, id: 413, text: "Envoyer le devis" },
+    ]);
+    const screen = await renderBlock(dataProvider);
+
+    await expect.element(screen.getByText("Envoyer le devis")).toBeVisible();
+    await expect
+      .poll(() => {
+        const text = screen.container.textContent ?? "";
+        return text.split("Relancer le Dr Germain").length - 1;
+      })
+      .toBe(1);
+  });
+
+  it("n'annonce « Ensuite » que lorsqu'il y a bien une suite", async () => {
+    const { dataProvider } = buildProvider();
+    const screen = await renderBlock(dataProvider);
+
+    await expect
+      .element(screen.getByText("Relancer le Dr Germain"))
+      .toBeVisible();
+    expect(screen.container.textContent ?? "").not.toContain("Ensuite");
+  });
+
+  it("dérive le statut de la date d'échéance", async () => {
+    const { dataProvider } = buildProvider([
+      { ...taskViaContact, due_date: "2026-08-20T09:00:00Z" },
+    ]);
+    const screen = await renderBlock(dataProvider);
+
+    await expect.element(screen.getByText(/En retard/)).toBeVisible();
+  });
+
+  it("termine la tâche affichée, sans en créer une seconde", async () => {
+    const { dataProvider, create, update } = buildProvider();
+    const screen = await renderBlock(dataProvider);
+
+    await screen.getByRole("button", { name: /Marquer comme fait/ }).click();
+    await vi.waitFor(() => expect(update).toHaveBeenCalled());
+
+    const [resource, params] = update.mock.calls[0] as unknown as [
+      string,
+      { id: unknown; data: Record<string, unknown> },
+    ];
+    expect(resource).toBe("tasks");
+    expect(params.id).toBe(412);
+    expect(params.data.done_date).toMatch(/Z$|[+-]d{2}:d{2}$/);
+
+    // Les deux moitiés de l'ancien défaut.
+    expect(create).not.toHaveBeenCalled();
+    expect(update.mock.calls.some(([res]: [string]) => res === "deals")).toBe(
+      false,
+    );
+  });
+
+  it("offre un CTA qui crée une tâche, pas un lien vers la fenêtre d'édition", async () => {
+    const { dataProvider } = buildProvider([]);
+    const screen = await renderBlock(dataProvider);
+
+    const cta = screen.getByRole("button", { name: /Définir l'action/ });
+    await expect.element(cta).toBeVisible();
+
+    // `<a href="#/deals/36">` était le défaut : il quittait la page pour un
+    // formulaire sans champ d'action.
+    expect(
+      screen.container.querySelectorAll('a[href*="/deals/36"]').length,
+    ).toBe(0);
   });
 });
