@@ -414,26 +414,60 @@ export const TargetsCard = () => {
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          {/* L'objectif d'équipe d'abord et en grand : c'est celui qui engage
-              l'entreprise, les objectifs personnels en sont la décomposition. */}
-          {team.map((target) => (
-            <TargetRow
-              key={target.id}
-              target={target}
-              deals={deals}
-              onEdit={() => setEditing(target)}
-              emphasis
-            />
-          ))}
-          {personal.map((target) => (
-            <TargetRow
-              key={target.id}
-              target={target}
-              deals={deals}
-              owner={ownerName(target)}
-              onEdit={() => setEditing(target)}
-            />
-          ))}
+          {/*
+            Les deux natures, nommées et séparées (NOS-1171).
+
+            L'objectif d'équipe d'abord et en grand : c'est celui qui engage
+            l'entreprise, les objectifs personnels en sont la décomposition.
+            Sans intitulé, un commercial qui n'a pas d'objectif personnel
+            lisait celui de l'équipe comme le sien.
+          */}
+          {team.length > 0 && (
+            <>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Équipe
+              </span>
+              {team.map((target) => (
+                <TargetRow
+                  key={target.id}
+                  target={target}
+                  deals={deals}
+                  onEdit={() => setEditing(target)}
+                  emphasis
+                />
+              ))}
+            </>
+          )}
+
+          {personal.length > 0 && (
+            <>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground border-t pt-3">
+                Par commercial
+              </span>
+              {personal.map((target) => (
+                <TargetRow
+                  key={target.id}
+                  target={target}
+                  deals={deals}
+                  owner={ownerName(target)}
+                  onEdit={() => setEditing(target)}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Une moitié absente se dit, plutôt que de laisser croire qu'elle
+              n'existe pas dans le produit. */}
+          {team.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Aucun objectif d'équipe. C'est celui qui engage l'entreprise.
+            </p>
+          )}
+          {personal.length === 0 && (
+            <p className="text-xs text-muted-foreground border-t pt-3">
+              Aucun objectif individuel défini.
+            </p>
+          )}
         </div>
       )}
 

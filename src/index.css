@@ -18,6 +18,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -54,6 +56,20 @@
   --nosho-green-dark: #4aa696;
   --nosho-teal: #4aa696;
   --nosho-red: #ed7c3e;
+
+  /*
+   * Le bandeau de navigation (NOS-1175, demandé par Simon).
+   *
+   * Un jeton dédié plutôt que de réutiliser `--secondary`, qui habille aussi
+   * des boutons et des pastilles : les colorer en bleu parce que la barre du
+   * haut a changé serait un effet de bord invisible à la relecture.
+   *
+   * Bleu profond et désaturé : il doit tenir toute la journée derrière du
+   * texte clair sans fatiguer, et surtout ne jamais entrer en concurrence avec
+   * l'orange, désormais réservé à l'action à faire.
+   */
+  --header: oklch(0.36 0.055 255);
+  --header-foreground: oklch(0.98 0.005 255);
 
   /*
    * Opportunités cockpit — data-viz roles.
@@ -143,6 +159,10 @@
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.28 0.01 260);
   --secondary-foreground: oklch(0.985 0 0);
+  /* En sombre, la barre descend un peu : elle n'a pas à rayonner sur fond
+     noir, elle a seulement à rester distincte du contenu. */
+  --header: oklch(0.29 0.05 255);
+  --header-foreground: oklch(0.97 0.005 255);
   --muted: oklch(0.28 0.01 260);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.28 0.01 260);

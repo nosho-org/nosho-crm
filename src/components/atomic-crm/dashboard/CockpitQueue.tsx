@@ -82,7 +82,7 @@ export const CockpitQueue = () => {
   if (isPending) return null;
 
   return (
-    <Card className="p-4 flex flex-col gap-3">
+    <Card className="p-3 flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           File d'actions
@@ -101,14 +101,14 @@ export const CockpitQueue = () => {
           les deux ne se valent pas.
         </p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {SHOWN.map((bucket) => {
             const entries = queue.filter((entry) => entry.bucket === bucket);
             if (!entries.length) return null;
             const { count, amount: total } = summarizeBucket(entries);
 
             return (
-              <div key={bucket} className="flex flex-col gap-2">
+              <div key={bucket} className="flex flex-col gap-1">
                 <div
                   className={`text-xs font-semibold uppercase tracking-wide ${BUCKET_STYLES[bucket]}`}
                 >
@@ -116,7 +116,7 @@ export const CockpitQueue = () => {
                   {total > 0 && ` · ${amount(total)} en jeu`}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col">
                   {/* L'entrée décalée dit l'ordre du tri : le retard le plus
                       ancien d'abord, puis l'enjeu décroissant. Coupée au-delà
                       de huit lignes — voir `AnimatedListItem`. */}
@@ -128,7 +128,7 @@ export const CockpitQueue = () => {
                     >
                       <Task task={entry.task} showContact showTime={false} />
                       {(entry.deal || entry.daysOverdue > 0) && (
-                        <div className="ml-9 -mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        <div className="ml-9 -mt-2 mb-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           {entry.deal && (
                             <Link
                               to={`/deals/${entry.deal.id}/show`}
