@@ -1,0 +1,133 @@
+<!--
+  Gabarit : MANDAT DE PRÉLÈVEMENT SEPA INTER-ENTREPRISE (B2B)
+  Destiné à doc.nosho.org. Voir README.md pour les variables.
+
+  Document SÉPARÉ du contrat cadre, envoyé comme second document de la même
+  demande de signature. Ce n'est pas une annexe : les annexes du contrat cadre
+  sont A1 à A7, toutes RGPD, sécurité ou SLA.
+
+  ── Trois choses à ne pas toucher ──────────────────────────────────────────
+
+  L'ICS `NL08ZZZ502057730000` est une CONSTANTE. Il est néerlandais parce que
+  le prélèvement passe par Mollie, sous-traitant déjà déclaré à l'article 6 du
+  contrat POC. Le CRM ne l'envoie pas et ne doit jamais le faire.
+
+  La RUM vient du CRM et ne se recalcule jamais. Une fois le mandat enregistré
+  par la banque du débiteur, changer cette référence casse le mandat.
+
+  Les coordonnées bancaires du débiteur restent VIDES à la génération. Elles
+  sont saisies par le signataire, et n'ont pas à transiter par le CRM ni à y
+  être stockées : un IBAN dans une table lue par toute l'équipe est une donnée
+  sensible pour un bénéfice nul.
+
+  ── Ce que la signature électronique ne règle pas ──────────────────────────
+
+  Un mandat B2B doit être transmis par le DÉBITEUR à sa propre banque, qui
+  l'enregistre. Rien n'est prélevable avant. Le CRM suit cet état à part
+  (`sepa_registered_at`), saisi à la main sur retour du client — aucun outil ne
+  peut le connaître. Et rien ne garantit que la banque du débiteur accepte une
+  signature électronique : à tester sur un vrai client avant de bâtir dessus.
+-->
+<article class="mandat mandat--sepa-b2b">
+  <header>
+    <h1>Mandat de prélèvement SEPA Inter-Entreprise</h1>
+    <p class="sous-titre">Direct Debit B2B</p>
+
+    <p class="avertissement">
+      Vous devez signer ce mandat puis le transmettre obligatoirement à votre
+      établissement bancaire. Assurez-vous que votre établissement bancaire a
+      bien enregistré la RUM ci-dessus avant tout premier paiement sur le compte
+      désigné.
+    </p>
+  </header>
+
+  <dl class="mandat-entete">
+    <dt>Référence Unique de Mandat (RUM)</dt>
+    <dd>{{sepaMandateReference}}</dd>
+
+    <dt>Type de paiement</dt>
+    <dd>RÉCURRENT</dd>
+  </dl>
+
+  <p class="autorisation">
+    En signant ce formulaire de mandat, vous autorisez NOSHO via MOLLIE à
+    envoyer des instructions à votre banque pour débiter votre compte, et votre
+    banque à débiter votre compte. Ce mandat est dédié aux prélèvements SEPA
+    interentreprises Direct Débit B2B.
+  </p>
+
+  <section class="creancier">
+    <h2>Informations sur le créancier</h2>
+    <dl>
+      <dt>Créancier</dt>
+      <dd>NOSHO SAS</dd>
+
+      <dt>N° d'Identifiant Créancier SEPA (ICS)</dt>
+      <dd>NL08ZZZ502057730000</dd>
+
+      <dt>Adresse du créancier</dt>
+      <dd>390 avenue du Prado</dd>
+
+      <dt>Code postal</dt>
+      <dd>13008</dd>
+
+      <dt>Ville</dt>
+      <dd>MARSEILLE</dd>
+
+      <dt>Pays</dt>
+      <dd>FRANCE</dd>
+    </dl>
+  </section>
+
+  <section class="debiteur">
+    <h2>Informations sur le débiteur</h2>
+    <!--
+      Le nom et l'adresse viennent du CRM : ils y sont déjà, les redemander au
+      signataire serait une occasion de saisir autre chose que ce que porte le
+      contrat.
+
+      Les coordonnées bancaires, elles, restent vides — voir l'en-tête.
+    -->
+    <dl>
+      <dt>Débiteur</dt>
+      <dd>{{client.name}}</dd>
+
+      <dt>Adresse du débiteur</dt>
+      <dd>{{client.address}}</dd>
+
+      <dt>Code postal</dt>
+      <dd>{{client.zipcode}}</dd>
+
+      <dt>Ville</dt>
+      <dd>{{client.city}}</dd>
+
+      <dt>Nom de la banque du débiteur</dt>
+      <dd class="a-remplir"></dd>
+
+      <dt>Adresse de la banque</dt>
+      <dd class="a-remplir"></dd>
+
+      <dt>Code BIC ou SWIFT de la banque</dt>
+      <dd class="a-remplir"></dd>
+
+      <dt>IBAN du débiteur</dt>
+      <dd class="a-remplir"></dd>
+    </dl>
+  </section>
+
+  <footer class="signature">
+    <h2>Signature du mandat de prélèvement</h2>
+    <dl>
+      <dt>Lieu</dt>
+      <dd class="a-remplir"></dd>
+
+      <dt>Date du jour</dt>
+      <dd class="a-remplir"></dd>
+    </dl>
+    <!-- Zone de signature : c'est ici que se pose le champ eSignature de Google
+         Drive. Ne pas la remplir côté gabarit. -->
+    <p class="zone-signature">
+      Signature du débiteur et/ou tampon de la société
+    </p>
+  </footer>
+</article>

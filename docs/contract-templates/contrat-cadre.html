@@ -1,0 +1,355 @@
+<!--
+  Gabarit : CONTRAT DE SERVICE — CONTRAT CADRE
+  Destiné à doc.nosho.org. Voir README.md pour les variables.
+
+  ── INCOMPLET, et il faut le savoir avant de s'en servir ───────────────────
+
+  Ce fichier porte la STRUCTURE et l'EMPLACEMENT DES VARIABLES, relevés en
+  lisant les 26 pages du contrat HEM rendues à l'écran. Il ne porte PAS le
+  texte juridique des articles.
+
+  Raison : ces 26 pages n'existent qu'en images, dans le PDF comme dans le
+  .docx — 35 fichiers média, aucune police embarquée, 320 caractères
+  extractibles pour 8,9 Mo. Recopier des clauses à l'œil expose à une erreur de
+  chiffre ou de formulation que personne ne rattraperait avant l'envoi.
+
+  Les articles marqués « TEXTE À REPRENDRE » attendent donc leur contenu. Les
+  valeurs chiffrées qui figurent ci-dessous (12 mois, 30 jours, 2 mois, 3 mois,
+  15 jours, 12 mois de réversibilité) ont été relevées directement sur les
+  pages et sont fiables ; elles sont là pour que les variables aient un sens,
+  pas pour remplacer la relecture.
+
+  Avant de transcrire : vérifier que ce document ne sort pas déjà de
+  doc.nosho.org. Pied de page « nosho.ai — CONTRAT DE RÉFÉRENCE · HEM · JUILLET
+  2026 », mise en page aux couleurs Nosho, PDF produit par « Chrome Helper » —
+  si le gabarit existe déjà, il ne reste qu'à y poser les variables.
+-->
+<article class="contrat contrat--cadre">
+  <header>
+    <h1>Contrat de service</h1>
+    <p class="sous-titre">{{client.name}}</p>
+    <dl class="entete">
+      <dt>Date</dt>
+      <dd>{{contractDate}}</dd>
+      <dt>Référence</dt>
+      <dd>{{contractRef}}</dd>
+    </dl>
+  </header>
+
+  <nav class="sommaire">
+    <h2>Sommaire</h2>
+    <ol>
+      <li>Introduction &amp; parties</li>
+      <li>Objet &amp; périmètre d'intervention</li>
+      <li>Tarification &amp; engagement</li>
+      <li>Sécurité, cybersécurité &amp; NIS2</li>
+      <li>Continuité, reprise d'activité &amp; disponibilité</li>
+      <li>Escalade, référents &amp; information client</li>
+      <li>Durée, renouvellement &amp; résiliation</li>
+      <li>Réversibilité, restitution &amp; continuité open source</li>
+      <li>Données personnelles &amp; usage par l'IA</li>
+      <li>Responsabilités, garanties &amp; assurances</li>
+      <li>Propriété intellectuelle &amp; confidentialité</li>
+      <li>Mise en production</li>
+      <li>Signature</li>
+    </ol>
+    <p class="annexes">
+      Annexes — parties intégrantes du contrat : A1 Accord de sous-traitance
+      RGPD (art. 28) · A2 Mesures techniques &amp; organisationnelles (MTO) ·
+      A3 Sous-traitants ultérieurs &amp; référents · A4 SLA &amp; plan de
+      continuité / reprise (PCA-PRA) · A5 Procédure de gestion des violations de
+      données · A6 Clause d'information des patients · A7 Registre des activités
+      de traitement.
+    </p>
+  </nav>
+
+  <section id="art-01">
+    <h2>01 — Introduction &amp; parties</h2>
+    <p>Le présent contrat de service (le « Contrat ») est conclu entre les parties suivantes :</p>
+
+    <div class="parties">
+      <div class="partie partie--prestataire">
+        <h3>Prestataire</h3>
+        <!-- Constantes du gabarit : le CRM ne les envoie pas. -->
+        <p class="raison-sociale">Nosho S.A.S.</p>
+        <p>S.A.S. au capital social variable</p>
+        <p>RCS Marseille 990 546 418</p>
+        <p>390 avenue du Prado, 13008 Marseille</p>
+        <p>Représentée par {{noshoSignatoryName}}, {{noshoSignatoryJobTitle}}</p>
+        <p>Contact : contact@nosho.io</p>
+        <p>DPO : rgpd@nosho.ai</p>
+      </div>
+
+      <div class="partie partie--client">
+        <h3>Client</h3>
+        <p class="raison-sociale">{{client.name}}</p>
+        <p>{{client.qualification}}</p>
+        <!--
+          Le contrat de référence porte ici « [SIREN / FINESS HEM] » : le champ
+          n'a jamais été rempli et est parti tel quel chez le client. Le CRM
+          fournit le SIRET, qui lui est renseigné.
+        -->
+        <p>SIRET {{client.siret}}</p>
+        {{#client.vatNumber}}<p>TVA {{client.vatNumber}}</p>{{/client.vatNumber}}
+        <p>{{client.address}}, {{client.zipcode}} {{client.city}}</p>
+        <p>
+          Représenté par {{signatory.firstName}} {{signatory.lastName}},
+          {{signatory.jobTitle}}
+        </p>
+        {{#referentEmail}}<p>Référent : {{referentEmail}}</p>{{/referentEmail}}
+      </div>
+    </div>
+
+    <!-- TEXTE À REPRENDRE : paragraphe de présentation de la plateforme et
+         qualification du Client en responsable de traitement, puis l'encadré
+         « Contexte de cette version de référence ». -->
+  </section>
+
+  <section id="art-02">
+    <h2>02 — Objet &amp; périmètre d'intervention</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-03">
+    <h2>03 — Tarification &amp; engagement</h2>
+    <p>
+      Modèle simple et transparent, facturé au <strong>volume réel de
+      confirmations traitées</strong>. Le tarif applicable est renseigné
+      ci-dessous ; la grille de référence figure en fin d'article.
+    </p>
+
+    <table class="tarif">
+      <thead>
+        <tr><th>Offre</th><th>Détail</th><th>Prix HT</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            {{offer.label}}
+            <span class="engagement">Engagement {{commitmentMonths}} mois</span>
+          </td>
+          <td>{{offer.detail}}</td>
+          <td>
+            <!-- Déjà formaté par le CRM : le gabarit n'a rien à calculer. -->
+            {{offer.unitPrice}} / {{offer.unit}}
+            <span class="mention">Facturation sur volume réel</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Conditions</h3>
+    <ul>
+      <li>
+        Engagement de {{commitmentMonths}} mois à compter de la mise en
+        production.
+      </li>
+      <li>
+        Facturation mensuelle à terme échu, sur le volume réel. Paiement à 30
+        jours net (1<sup>re</sup> facture à la mise en production).
+      </li>
+      <li>
+        Prix hors TVA (20 % applicable). Retard de paiement : pénalités au taux
+        légal en vigueur ; suspension possible après mise en demeure.
+      </li>
+      <li>
+        Réversibilité et outils d'export open source inclus, sans surcoût
+        (art. 08).
+      </li>
+    </ul>
+
+    <!--
+      Grille de référence, reprise telle quelle du contrat. Elle est indicative
+      et le contrat le dit : « le tarif contractuel est celui figurant dans le
+      tableau ci-dessus ». Le CRM s'en sert pour pré-remplir la saisie, elle
+      n'engage pas.
+    -->
+    <h3>Grille tarifaire de référence (indicative)</h3>
+    <table class="grille">
+      <thead>
+        <tr><th>Offre</th><th>Cible</th><th>Tarif indicatif HT</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Essentiel</td><td>Cabinet / petite structure</td><td>30 € / mois</td></tr>
+        <tr><td>Avancé</td><td>Centre / groupe</td><td>70 € / mois</td></tr>
+        <tr><td>Hôpital / Établissement</td><td>Hôpital, clinique, GHT</td><td>~400–500 € / mois + 0,30–0,40 € / RDV confirmé</td></tr>
+        <tr><td>Pay-per-use</td><td>Volume variable</td><td>0,25–0,40 € / confirmation</td></tr>
+      </tbody>
+    </table>
+    <p class="mention">
+      Grille indicative destinée à faciliter le renseignement du champ
+      tarifaire ; le tarif contractuel est celui figurant dans le tableau
+      ci-dessus.
+    </p>
+  </section>
+
+  <section id="art-04">
+    <h2>04 — Sécurité, cybersécurité &amp; NIS2</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-05">
+    <h2>05 — Continuité, reprise d'activité &amp; disponibilité</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-06">
+    <h2>06 — Escalade, référents &amp; information client</h2>
+    <!-- TEXTE À REPRENDRE. Le référent client est {{referentEmail}}. -->
+  </section>
+
+  <section id="art-07">
+    <h2>07 — Durée, renouvellement &amp; résiliation</h2>
+    <p>Conditions rédigées dans un sens favorable au Client.</p>
+
+    <h3>7.1 Durée</h3>
+    <ul>
+      <li>
+        Période ferme initiale de <strong>{{commitmentMonths}} mois</strong> à
+        compter de la mise en production.
+      </li>
+      <li>
+        Au-delà, tacite reconduction par périodes de {{renewalMonths}} mois,
+        résiliable dans les conditions ci-dessous.
+      </li>
+    </ul>
+
+    <h3>7.2 Renouvellement</h3>
+    <ul>
+      <li>
+        <strong>Information préalable.</strong> Nosho informe le Client de la
+        reconduction au moins 2 mois avant l'échéance, avec rappel de la faculté
+        de résiliation.
+      </li>
+      <li>
+        <strong>Évolution tarifaire.</strong> Toute évolution est notifiée
+        ≥ 3 mois à l'avance et ouvre un droit de résiliation sans frais si non
+        acceptée.
+      </li>
+    </ul>
+
+    <h3>7.3 Résiliation</h3>
+    <ul>
+      <li>
+        <strong>Par le Client, pour convenance.</strong> À tout moment après la
+        période ferme, préavis de {{noticeDays}} jours par email — sans
+        pénalité.
+      </li>
+      <li>
+        <strong>Pour manquement grave.</strong> Par l'une ou l'autre Partie,
+        après mise en demeure restée sans effet 30 jours.
+      </li>
+      <li>
+        <strong>Effets.</strong> Déclenchement de la réversibilité (art. 08) ;
+        restitution ou suppression des données ; factures des prestations
+        réalisées restent dues.
+      </li>
+    </ul>
+  </section>
+
+  <section id="art-08">
+    <h2>08 — Réversibilité, restitution &amp; continuité open source</h2>
+    <p>
+      Engagements étendus garantissant que le Client ne soit jamais captif de la
+      solution.
+    </p>
+    <h3>8.1 Restitution des données</h3>
+    <ul>
+      <li>
+        <strong>Format ouvert.</strong> Restitution de l'intégralité des données
+        (historique RDV, statuts, journaux d'appels et SMS) en format structuré,
+        standard, lisible par machine (CSV / JSON).
+      </li>
+      <li>
+        <strong>Gratuité &amp; délai.</strong> Sans surcoût, sous 15 jours à
+        compter de la demande.
+      </li>
+    </ul>
+    <h3>8.2 Assistance à la réversibilité</h3>
+    <ul>
+      <li>
+        <strong>Assistance prolongée.</strong> Assistance aux opérations de
+        réversibilité (export, migration, vérification) jusqu'à 12 mois après la
+        fin du Contrat.
+      </li>
+      <li>
+        <strong>Maintien d'accès.</strong> Accès en lecture au tableau de bord
+        et aux exports maintenu pendant la réversibilité.
+      </li>
+    </ul>
+    <h3>8.3 Continuité open source (engagement anti-captivité)</h3>
+    <!-- TEXTE À REPRENDRE : licence MIT, dépôt open source, documentation
+         d'interopérabilité, périmètre. -->
+  </section>
+
+  <section id="art-09">
+    <h2>09 — Données personnelles &amp; usage par l'IA</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-10">
+    <h2>10 — Responsabilités, garanties &amp; assurances</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-11">
+    <h2>11 — Propriété intellectuelle &amp; confidentialité</h2>
+    <!-- TEXTE À REPRENDRE -->
+  </section>
+
+  <section id="art-12">
+    <h2>12 — Mise en production</h2>
+    <!-- TEXTE À REPRENDRE.
+
+         Article important pour le CRM : c'est la mise en production qui fait
+         courir la période ferme de l'article 7, pas la signature. Le CRM la
+         stocke à part (`production_start_date`), renseignée après coup. -->
+  </section>
+
+  <section id="art-13">
+    <h2>13 — Signature</h2>
+    <p>
+      Le présent document, annexes comprises, vaut Contrat de service pour la
+      prestation d'appels sortants de confirmation et de réduction des
+      rendez-vous non honorés, au tarif renseigné à l'art. 03, pour une durée
+      ferme de {{commitmentMonths}} mois. Les annexes 1 à 7 font partie
+      intégrante du Contrat.
+    </p>
+
+    <div class="signatures">
+      <div class="signature-bloc">
+        <h3>{{client.name}}</h3>
+        <p>{{signatory.firstName}} {{signatory.lastName}}</p>
+        <p>{{signatory.jobTitle}}</p>
+        <p>{{client.address}}, {{client.zipcode}} {{client.city}}</p>
+        <p class="lieu-date">Fait à ……………………, le ………………</p>
+        <!-- Zone de signature : c'est ici que se pose le champ eSignature de
+             Google Drive. Ne pas la remplir côté gabarit. -->
+        <p class="zone-signature">Signature (« Bon pour accord ») :</p>
+      </div>
+
+      <div class="signature-bloc">
+        <h3>Nosho S.A.S.</h3>
+        <p>{{noshoSignatoryName}}</p>
+        <p>{{noshoSignatoryJobTitle}}</p>
+        <p>390 avenue du Prado, 13008 Marseille</p>
+        <p class="lieu-date">Fait à ……………………, le ………………</p>
+        <p class="zone-signature">Signature (« Bon pour accord ») :</p>
+      </div>
+    </div>
+
+    <p class="annexes-rappel">
+      <strong>Annexes au présent contrat (parties intégrantes).</strong>
+      A1 — DPA (art. 28) · A2 — Mesures techniques &amp; organisationnelles ·
+      A3 — Sous-traitants ultérieurs &amp; référents · A4 — SLA &amp; PCA/PRA ·
+      A5 — Procédure violations de données · A6 — Clause d'information patients ·
+      A7 — Registre des activités de traitement.
+    </p>
+  </section>
+
+  <!--
+    Le mandat SEPA n'est PAS une annexe de ce contrat : il part comme second
+    document de la même demande de signature. Voir mandat-sepa.html.
+    Sa référence pour ce contrat : {{sepaMandateReference}}.
+  -->
+</article>

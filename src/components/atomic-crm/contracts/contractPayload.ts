@@ -41,6 +41,14 @@ export interface ContractClientPayload {
   rcsNumber?: string;
   rcsCity?: string;
   apeCode?: string;
+  /**
+   * Le client signe en nom propre — un praticien en entreprise individuelle,
+   * comme Aboulker dans le contrat POC de reference.
+   *
+   * Le bloc « parties » s ecrit alors sans capital ni representant : il n y a
+   * pas de personne morale a representer.
+   */
+  isIndividual?: boolean;
 }
 
 /** La personne qui engage le client. Son e-mail reçoit la demande de signature. */
@@ -63,6 +71,15 @@ export interface ContractOfferPayload {
   unit?: string;
 }
 
+/** Les bornes de la periode d essai. Le POC en a, le contrat cadre non. */
+export interface ContractTrialPayload {
+  /** « lundi 31 aout 2026 » : le jour de la semaine figure au contrat. */
+  startDate?: string;
+  endDate?: string;
+  /** « deux (2) », ecrit en toutes lettres suivi du chiffre. */
+  weeks?: string;
+}
+
 export interface ContractPayload {
   /** `poc` ou `cadre` : le service choisit le gabarit là-dessus. */
   kind: string;
@@ -81,6 +98,17 @@ export interface ContractPayload {
   commitmentMonths?: number;
   renewalMonths?: number;
   noticeDays?: number;
+  /**
+   * Contrat POC seulement.
+   *
+   * Le POC a de vraies bornes — « prend effet le lundi 31 août 2026 […]
+   * jusqu'au dimanche 13 septembre 2026 inclus » — là où le contrat cadre n'a
+   * pas de fin, sa période ferme courant depuis la mise en production.
+   *
+   * Lacune révélée en écrivant les gabarits : le modèle ne prévoyait que les
+   * durées du contrat cadre.
+   */
+  trial?: ContractTrialPayload;
   /** Contrat cadre seulement. L'ICS reste une constante du gabarit. */
   sepaMandateReference?: string;
 }
