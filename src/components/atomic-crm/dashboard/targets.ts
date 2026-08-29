@@ -1,4 +1,5 @@
 import type { Deal, Target } from "../types";
+import type { MonthlyRevenue } from "./revenueActuals";
 
 /**
  * ---------------------------------------------------------------------------
@@ -20,6 +21,23 @@ export const TARGET_METRIC_LABELS: Record<TargetMetric, string> = {
   mrr: "MRR",
   arr: "ARR",
 };
+
+/**
+ * L'encaisse des mois COMPLETS couverts par la période de l'objectif.
+ *
+ * Les mois incomplets sont écartés : un mois entamé au tiers ferait paraître
+ * l'objectif en retard alors qu'il ne l'est pas encore. C'est la même règle
+ * que le KPI « Encaissé », et elle doit l'être — deux chiffres tirés de la
+ * même table qui compteraient des mois différents recréeraient exactement
+ * l'écart que ce changement corrige.
+ */
+function sumActualsInPeriod(actuals: MonthlyRevenue[], target: Target): number {
+  const start = target.period_start.slice(0, 10);
+  const end = target.period_end.slice(0, 10);
+  return actuals
+    .filter((month) => month.month >= start && month.month <= end)
+    .reduce((sum, month) => sum + month.amount, 0);
+}
 
 export interface TargetProgress {
   target: Target;
@@ -94,12 +112,35 @@ export function computeTargetProgress(
   target: Target,
   deals: Deal[],
   now: Date = new Date(),
+  /**
+   * Encaisse reelle, quand elle est disponible (NOS-1181).
+   *
+   * Simon : « le montant dans objectif equipe n'est pas le meme que dans
+   * encaisse ». Il avait raison de s'en etonner : deux chiffres presentes
+   * comme du MRR, sur un meme ecran, qui ne concordent pas.
+   *
+   * Ils ne mesuraient pas la meme chose. L'objectif comptait le MRR des
+   * opportunites marquees gagnees dans le CRM ; l'encaisse compte ce qui est
+   * arrive en banque. La saisie et la realite.
+   *
+   * L'objectif d'EQUIPE se mesure desormais sur l'encaisse : « 25 k EUR de MRR
+   * d'ici la fin de l'annee » parle d'argent recu, pas de cases cochees.
+   *
+   * Un objectif PERSONNEL ne le peut pas -- un virement bancaire ne porte pas
+   * de commercial. Il reste donc mesure sur les affaires signees du CRM, et
+   * l'interface le dit, faute de quoi on croirait comparer deux chiffres
+   * comparables.
+   */
+  actuals?: MonthlyRevenue[],
 ): TargetProgress {
   const metric = (target.metric ?? "mrr") as TargetMetric;
 
-  const achieved = deals
-    .filter((deal) => countsTowardTarget(deal, target))
-    .reduce((sum, deal) => sum + dealValue(deal, metric), 0);
+  const achieved =
+    actuals && target.sales_id == null
+      ? sumActualsInPeriod(actuals, target)
+      : deals
+          .filter((deal) => countsTowardTarget(deal, target))
+          .reduce((sum, deal) => sum + dealValue(deal, metric), 0);
 
   const amount = Number(target.amount) || 0;
 
