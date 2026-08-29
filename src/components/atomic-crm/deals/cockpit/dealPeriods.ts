@@ -255,6 +255,18 @@ export const isWithinPeriod = (
 export interface PeriodBucket {
   key: string;
   label: string;
+  /**
+   * L'étiquette de l'axe horizontal (NOS-1176, demandé par Simon).
+   *
+   * « Août » plutôt que « Août 2026 » : douze colonnes qui répètent la même
+   * année douze fois usent la largeur pour ne rien dire, et forcent les
+   * libellés à s'incliner.
+   *
+   * L'année revient dès que les colonnes en couvrent plusieurs — sur un
+   * décembre → février, « Décembre, Janvier, Février » ne dirait pas lequel
+   * précède lequel. Voir `getPeriodBuckets`.
+   */
+  shortLabel: string;
   start: Date;
   end: Date;
 }
@@ -286,11 +298,38 @@ export const getPeriodBuckets = (
       key: toISODateString(cursor),
       label:
         granularity === "month" ? monthLabel(cursor) : quarterLabel(cursor),
+      // Rempli juste après, une fois l'étendue connue.
+      shortLabel: "",
       start: cursor,
       end: bucketEnd,
     });
     cursor = addMonths(cursor, step);
   }
 
-  return buckets;
+  /*
+   * L'année n'est écrite que si les colonnes en couvrent plusieurs.
+   *
+   * Le cas courant — une année, ou un trimestre — répétait « 2026 » douze
+   * fois sur l'axe : de la largeur dépensée pour une information constante,
+   * qui forçait les libellés à s'incliner.
+   *
+   * Le cas à cheval, lui, en a besoin : « Décembre, Janvier, Février » ne dit
+   * pas lequel précède lequel.
+   */
+  const years = new Set(buckets.map((bucket) => bucket.start.getFullYear()));
+  const withYear = years.size > 1;
+
+  return buckets.map((bucket) => ({
+    ...bucket,
+    shortLabel:
+      granularity === "month"
+        ? capitalize(
+            new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(
+              bucket.start,
+            ),
+          ) +
+          (withYear ? ` ${String(bucket.start.getFullYear()).slice(2)}` : "")
+        : `T${Math.floor(bucket.start.getMonth() / 3) + 1}` +
+          (withYear ? ` ${String(bucket.start.getFullYear()).slice(2)}` : ""),
+  }));
 };

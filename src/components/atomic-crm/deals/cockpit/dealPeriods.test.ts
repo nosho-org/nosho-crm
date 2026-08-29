@@ -208,3 +208,52 @@ describe("période personnalisée (NOS-1083)", () => {
     expect(isPeriodId(null)).toBe(false);
   });
 });
+
+describe("getPeriodBuckets — l'étiquette de l'axe", () => {
+  it("omet l'année quand les colonnes tiennent dans une seule", () => {
+    // Douze colonnes qui répètent « 2026 » dépensent de la largeur pour une
+    // information constante, et forcent les libellés à s'incliner.
+    const buckets = getPeriodBuckets(
+      {
+        id: "current-year",
+        label: "Année en cours",
+        start: new Date(2026, 0, 1),
+        end: new Date(2026, 11, 31),
+      },
+      "month",
+      new Date(2026, 7, 15),
+    );
+    expect(buckets[0].shortLabel).toBe("Janv.");
+    expect(buckets[0].label).toContain("2026");
+  });
+
+  it("écrit l'année dès que les colonnes en couvrent plusieurs", () => {
+    // « Décembre, Janvier, Février » ne dit pas lequel précède lequel.
+    const buckets = getPeriodBuckets(
+      {
+        id: "custom",
+        label: "Période personnalisée",
+        start: new Date(2026, 11, 1),
+        end: new Date(2027, 1, 28),
+      },
+      "month",
+      new Date(2026, 11, 15),
+    );
+    expect(buckets[0].shortLabel).toBe("Déc. 26");
+    expect(buckets[2].shortLabel).toBe("Févr. 27");
+  });
+
+  it("raccourcit aussi les trimestres", () => {
+    const buckets = getPeriodBuckets(
+      {
+        id: "current-year",
+        label: "Année en cours",
+        start: new Date(2026, 0, 1),
+        end: new Date(2026, 11, 31),
+      },
+      "quarter",
+      new Date(2026, 7, 15),
+    );
+    expect(buckets.map((b) => b.shortLabel)).toEqual(["T1", "T2", "T3", "T4"]);
+  });
+});

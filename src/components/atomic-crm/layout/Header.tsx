@@ -32,6 +32,7 @@ import {
 import { ImportPage } from "../misc/ImportPage";
 import { CreateViewDialog } from "../deals/CreateViewDialog";
 import { APP_VERSION } from "../../../version";
+import { NotificationBell } from "../notifications/NotificationBell";
 import { ChangelogModal } from "./ChangelogModal";
 
 const Header = () => {
@@ -165,6 +166,9 @@ const Header = () => {
                 </nav>
               </div>
               <div className="flex items-center">
+                {/* La cloche avant les réglages : c'est ce qu'on vient
+                    consulter, pas ce qu'on vient régler (NOS-1172). */}
+                <NotificationBell />
                 <ThemeModeToggle />
                 <RefreshButton />
                 <UserMenu>

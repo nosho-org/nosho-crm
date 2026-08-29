@@ -7,7 +7,6 @@ import { DashboardFilters } from "./DashboardFilters";
 import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
 import { BlurFade } from "@/components/ui/motion";
-import { CockpitNotifications } from "./CockpitNotifications";
 import { CockpitQueue } from "./CockpitQueue";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
@@ -62,27 +61,21 @@ import { Welcome } from "./Welcome";
  * dans l'ordre où l'écran doit être lu. Il joue une fois, jamais au re-render.
  */
 const Cockpit = () => (
-  <div className="flex flex-col gap-4">
-    {/*
-      « À faire maintenant » et « Ma journée » sont devenues des notifications
-      fermables (NOS-1172). Elles prenaient chacune une pleine largeur pour une
-      phrase, et l'une des deux annonçait souvent « Rien à traiter
-      aujourd'hui » — une carte entière pour dire qu'il n'y a rien à dire.
-    */}
-    <BlurFade>
-      <CockpitNotifications />
-    </BlurFade>
-
-    <BlurFade delayMs={60}>
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
-        <CockpitQueue />
-        <div className="flex flex-col gap-4">
-          <PipelineHealthBanner />
-          <TargetsCard />
-        </div>
-      </div>
-    </BlurFade>
-  </div>
+  /*
+   * « À faire maintenant » et « Ma journée » ont quitté cet écran (NOS-1172).
+   *
+   * Elles sont passées en notifications, puis les notifications elles-mêmes
+   * sont passées dans la cloche de l'en-tête : une pile de cartes prenait la
+   * moitié de l'écran pour trois phrases, et l'une d'elles annonçait souvent
+   * « Rien à traiter aujourd'hui » — une carte entière pour dire qu'il n'y a
+   * rien à dire.
+   */
+  <BlurFade>
+    <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
+      <CockpitQueue />
+      <PipelineHealthBanner />
+    </div>
+  </BlurFade>
 );
 
 /**
@@ -164,6 +157,19 @@ export const Dashboard = () => {
         <div className="sticky top-16 z-30 -mx-[50px] px-[50px] py-2 bg-background border-b">
           <DashboardKpiBanner />
         </div>
+
+        {/*
+          Les objectifs au même niveau que les KPI (NOS-1171, demandé par
+          Simon), et non plus dans la colonne du cockpit.
+
+          C'est leur place : ce sont eux qui donnent un référentiel aux six
+          chiffres du dessus. « 912 k€ » ne dit pas si l'on est en avance ; à
+          côté de l'objectif, si.
+
+          Hors du bandeau collant, en revanche : la carte porte deux à quatre
+          lignes, et la figer doublerait la hauteur perdue au défilement.
+        */}
+        <TargetsCard />
 
         <Pilotage />
 

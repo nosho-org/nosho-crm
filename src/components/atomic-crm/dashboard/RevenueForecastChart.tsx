@@ -63,6 +63,11 @@ export const RevenueForecastChart = () => {
 
   const countsByBucket = new Map<string, BucketCounts>();
 
+  // Libellé complet → libellé d'axe. Voir `axisBottom` plus bas.
+  const shortLabels = new Map(
+    buckets.map((bucket) => [bucket.label, bucket.shortLabel]),
+  );
+
   const data: ChartDatum[] = buckets.map((bucket, index) => {
     const column = forecast.columns[index];
 
@@ -203,7 +208,19 @@ export const RevenueForecastChart = () => {
               tickPadding: 8,
               format: (value: number) => formatCurrencyCompact(Math.abs(value)),
             }}
-            axisBottom={{ tickSize: 0, tickPadding: 8 }}
+            /*
+             * L'axe écrit « Août », le survol écrit « Août 2026 » (NOS-1176).
+             *
+             * L'index des barres reste le libellé complet : c'est lui qui sert
+             * de clé au relevé des effectifs et à l'infobulle. Seul l'affichage
+             * de l'axe est raccourci, par correspondance — de sorte que
+             * raccourcir l'axe ne puisse pas désaligner les données.
+             */
+            axisBottom={{
+              tickSize: 0,
+              tickPadding: 8,
+              format: (value: string) => shortLabels.get(value) ?? value,
+            }}
             theme={{
               text: { fill: "var(--color-muted-foreground)" },
               axis: {
