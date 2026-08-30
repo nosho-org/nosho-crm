@@ -17,8 +17,6 @@ import type { Deal } from "../../types";
 import { GenerateProposalAction } from "../GenerateProposalAction";
 import { ContractAction } from "../../contracts/ContractAction";
 import { ContractsBlock } from "../../contracts/ContractsBlock";
-import { DealPriorityField } from "../DealPriorityField";
-import { DealProductBadges } from "../shared/DealBadges";
 import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
@@ -132,10 +130,9 @@ const DealHeader = () => {
       */}
       <DealStageStepper />
 
-      <div className="flex items-center gap-3 flex-wrap [&>span]:text-sm [&>span>span]:text-sm">
-        <DealPriorityField />
-        <DealProductBadges products={record.products} />
-      </div>
+      {/* Priorité et produits ont rejoint la synthèse (NOS-1195) : ils y
+          étaient déjà, et les répéter ici en faisait la même information
+          à trois endroits. */}
     </header>
   );
 };

@@ -8,7 +8,6 @@ import type { Deal } from "../../types";
 import { UNKNOWN, formatPercent } from "../cockpit/dealFormat";
 import { getDealProbability } from "../cockpit/dealWeighting";
 import { formatISODateString } from "../dealUtils";
-import { DealProductBadges } from "../shared/DealBadges";
 import { DealClientCard } from "./DealClientCard";
 import { DealNextMeetingCard } from "./DealNextMeetingCard";
 
@@ -157,16 +156,6 @@ export const DealSidePanel = () => {
         </Row>
       </Card>
 
-      <Card className="p-4 flex flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Produits concernés
-        </span>
-        {record.products?.length ? (
-          <DealProductBadges products={record.products} />
-        ) : (
-          <span className="text-sm text-muted-foreground">{UNKNOWN}</span>
-        )}
-      </Card>
 
       <StageHistory />
     </div>

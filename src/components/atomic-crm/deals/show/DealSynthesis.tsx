@@ -9,6 +9,7 @@ import type { Deal } from "../../types";
 import { UNKNOWN } from "../cockpit/dealFormat";
 import { isClosedStage } from "../cockpit/dealFields";
 import { formatISODateString } from "../dealUtils";
+import { DealPriorityField } from "../DealPriorityField";
 import { DealProductBadges } from "../shared/DealBadges";
 
 /**
@@ -152,6 +153,17 @@ export const DealSynthesis = () => {
           )}
         </Field>
         <Field label="Catégorie">{category || UNKNOWN}</Field>
+        {/*
+          La priorité rejoint la nature du deal (NOS-1195).
+
+          Elle vivait sous l'en-tête, à côté des produits, qui vivaient
+          aussi ici ET dans un bloc latéral : la même information à trois
+          endroits. Trois endroits, c'est trois occasions de se contredire
+          quand un seul est mis à jour.
+        */}
+        <Field label="Priorité">
+          <DealPriorityField />
+        </Field>
       </SubBlock>
 
       <SubBlock title="Origine du deal">
