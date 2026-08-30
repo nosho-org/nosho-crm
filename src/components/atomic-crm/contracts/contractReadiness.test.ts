@@ -80,33 +80,42 @@ describe("checkContractReadiness", () => {
     expect(etat.ready).toBe(true);
   });
 
-  it("refuse et nomme la ville du RCS manquante", () => {
+  it("génère SANS la ville du RCS", () => {
+    /*
+     * Simon : « c'est quoi la ville du RCS, c'est même pas un champ au niveau
+     * de l'objet société, faut pas que ça bloque ».
+     *
+     * Il a raison sur les deux points. C'est le greffe d'immatriculation, il
+     * ne se saisit nulle part dans le CRM, et un contrat se tient sans lui :
+     * « immatriculée au RCS sous le numéro 123456789 » reste exact.
+     */
     const etat = verifier(contratComplet, {
       ...societeComplete,
       rcs_city: null,
     } as Company);
-    expect(etat.ready).toBe(false);
-    expect(etat.aCorriger).toContain(
-      "la ville du RCS — bouton Compléter depuis le registre",
-    );
+    expect(etat.aCorriger, etat.aCorriger.join(", ")).toEqual([]);
+    expect(etat.ready).toBe(true);
   });
 
-  it("refuse et nomme la fonction du signataire manquante", () => {
+  it("génère SANS la fonction du signataire", () => {
+    // La mention disparaît de la phrase plutôt que de laisser un blanc — et
+    // surtout plutôt que d'empêcher le document de sortir.
     const etat = verifier({ ...contratComplet, signatory_job_title: null });
+    expect(etat.aCorriger, etat.aCorriger.join(", ")).toEqual([]);
+    expect(etat.ready).toBe(true);
+  });
+
+  it("refuse toujours sans signataire client", () => {
+    // La limite : quelqu'un doit signer. Un contrat sans nom de signataire
+    // n'est pas un contrat degradé, c'est un contrat vide.
+    const etat = verifier({
+      ...contratComplet,
+      signatory_first_name: null,
+      signatory_last_name: null,
+    });
     expect(etat.ready).toBe(false);
-    expect(etat.aCorriger).toContain("la fonction du signataire client");
+    expect(etat.aCorriger).toContain("le prénom du signataire client");
   });
-
-  it("cumule les manques plutôt que d'en signaler un seul", () => {
-    // Corriger un champ pour en découvrir un autre au clic suivant est le
-    // défaut que ce module supprime.
-    const etat = verifier(
-      { ...contratComplet, signatory_job_title: null },
-      { ...societeComplete, rcs_city: null } as Company,
-    );
-    expect(etat.aCorriger.length).toBeGreaterThanOrEqual(2);
-  });
-
   it("refuse un genre de contrat sans gabarit", () => {
     const etat = verifier({ ...contratComplet, kind: "inconnu" });
     expect(etat.ready).toBe(false);

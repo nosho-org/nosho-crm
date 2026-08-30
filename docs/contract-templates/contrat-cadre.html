@@ -99,8 +99,8 @@
         {{#client.vatNumber}}<p>TVA {{client.vatNumber}}</p>{{/client.vatNumber}}
         <p>{{client.address}}, {{client.zipcode}} {{client.city}}</p>
         <p>
-          Représenté par {{signatory.firstName}} {{signatory.lastName}},
-          {{signatory.jobTitle}}
+          Représenté par {{signatory.firstName}} {{signatory.lastName}}{{#signatory.jobTitle}},
+          {{signatory.jobTitle}}{{/signatory.jobTitle}}
         </p>
         {{#referentEmail}}<p>Référent : {{referentEmail}}</p>{{/referentEmail}}
       </div>
@@ -782,7 +782,7 @@
       <div class="signature-bloc">
         <h3>{{client.name}}</h3>
         <p>{{signatory.firstName}} {{signatory.lastName}}</p>
-        <p>{{signatory.jobTitle}}</p>
+        {{#signatory.jobTitle}}<p>{{signatory.jobTitle}}</p>{{/signatory.jobTitle}}
         <p>{{client.address}}, {{client.zipcode}} {{client.city}}</p>
         <p class="lieu-date">Fait à ……………………, le ………………</p>
         <!-- Zone de signature : c'est ici que se pose le champ eSignature de

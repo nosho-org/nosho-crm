@@ -52,8 +52,8 @@
     <p>
       {{signatory.firstName}} {{signatory.lastName}}{{#signatory.jobTitle}},
       {{signatory.jobTitle}}{{/signatory.jobTitle}}, exerçant sous forme
-      d'entreprise individuelle, immatriculé au RCS de
-      {{client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du siège :
+      d'entreprise individuelle, immatriculé au RCS{{#client.rcsCity}} de
+      {{client.rcsCity}}{{/client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du siège :
       {{client.siret}}{{#client.apeCode}}, code APE
       {{client.apeCode}}{{/client.apeCode}}), dont l'établissement est situé
       {{client.address}}, {{client.zipcode}} {{client.city}}, agissant en son
@@ -66,12 +66,12 @@
       La société {{client.name}}{{#client.legalForm}},
       {{client.legalForm}}{{/client.legalForm}}{{#client.shareCapital}} au
       capital de {{client.shareCapital}}{{/client.shareCapital}}, immatriculée
-      au RCS de {{client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du
+      au RCS{{#client.rcsCity}} de {{client.rcsCity}}{{/client.rcsCity}} sous le numéro {{client.rcsNumber}} (SIRET du
       siège : {{client.siret}}{{#client.apeCode}}, code APE
       {{client.apeCode}}{{/client.apeCode}}), dont l'établissement est situé
       {{client.address}}, {{client.zipcode}} {{client.city}}, représentée par
-      {{signatory.firstName}} {{signatory.lastName}}, en qualité de
-      {{signatory.jobTitle}},
+      {{signatory.firstName}} {{signatory.lastName}}{{#signatory.jobTitle}}, en qualité de
+      {{signatory.jobTitle}}{{/signatory.jobTitle}},
     </p>
     {{/client.isIndividual}}
 
@@ -349,7 +349,7 @@
       <div class="signature-bloc">
         <h3>Le Client</h3>
         <p>Nom : {{signatory.firstName}} {{signatory.lastName}}</p>
-        <p>Fonction : {{signatory.jobTitle}}</p>
+        {{#signatory.jobTitle}}<p>Fonction : {{signatory.jobTitle}}</p>{{/signatory.jobTitle}}
         <p class="zone-signature">Signature :</p>
       </div>
     </div>

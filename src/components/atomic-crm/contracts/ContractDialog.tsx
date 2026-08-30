@@ -165,9 +165,15 @@ export const ContractDialog = ({
    * L'identité légale, qui ouvre le contrat (NOS-1190).
    *
    * « La société X, [FORME] au capital de [CAPITAL] EUR, immatriculée au RCS
-   * de [VILLE], code APE [APE] ». Ces quatre valeurs bloquent la génération si
-   * elles manquent — mais elles ne bloquent PAS l'enregistrement : on doit
-   * pouvoir saisir un contrat le temps que le registre réponde.
+   * de [VILLE], code APE [APE] ».
+   *
+   * Elles ne bloquent RIEN (NOS-1196). Le gabarit les efface de la phrase
+   * quand elles manquent : « immatriculée au RCS sous le numéro 123456789 »
+   * reste exact. Elles rendent le bloc « parties » plus complet, voilà tout.
+   *
+   * Elles ne se saisissent nulle part dans le CRM — la ville du RCS est le
+   * greffe d'immatriculation, personne ne l'a en tête. D'où le bouton, et
+   * d'où le refus d'en faire une condition.
    *
    * Le bouton de reprise au registre était jusqu'ici réservé au cas « adresse
    * manquante ». Une société complète en adresse mais sans forme juridique
@@ -563,10 +569,15 @@ export const ContractDialog = ({
                     : !hasAddress
                       ? "Adresse incomplète. Le bloc « parties » écrit « dont l'établissement est situé …, … … »."
                       : /*
-                          Un avertissement, pas un blocage : le contrat
-                          s'enregistre, seule sa GÉNÉRATION sera refusée.
+                          Une invitation, pas un blocage (NOS-1196).
+
+                          Ces quatre valeurs n'empechent plus de generer : le
+                          gabarit les efface de la phrase quand elles manquent,
+                          et « immatriculee au RCS sous le numero 123456789 »
+                          reste exact. Elles rendent seulement le bloc
+                          « parties » plus complet.
                         */
-                        "Identité légale incomplète — forme juridique, capital, greffe ou code APE. Le contrat s'enregistre, mais le document ne pourra pas être généré."}
+                        "Identité légale incomplète — forme juridique, capital, greffe ou code APE. Le document sortira sans ces mentions ; un clic les récupère."}
                 </span>
               </span>
               {!siret ? (
