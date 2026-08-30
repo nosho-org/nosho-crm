@@ -170,22 +170,45 @@ describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle"
     { month: "2026-07-01", amount: 3874.31, transactionCount: 9, bySource: [] },
   ];
 
-  it("mesure un objectif d'équipe sur ce qui est arrivé en banque", () => {
-    // Le motif du changement : « le montant dans objectif équipe n'est pas le
-    // même que dans encaissé ». Deux chiffres présentés comme du MRR, sur un
-    // même écran, qui ne concordaient pas.
+  it("mesure un MRR sur le dernier mois complet, pas sur le cumul", () => {
+    // « Le MRR c'est ce qui rentre chaque mois. » Cumuler juin et juillet
+    // donnerait 6 997 €, soit 28 % d'un objectif dont on est à 15 %.
     const progress = computeTargetProgress(
       target({ amount: 25000 }),
       [deal({ mrr: 9999 })],
       now,
       actuals,
     );
-    expect(progress.achieved).toBeCloseTo(6997.52, 2);
+    expect(progress.achieved).toBeCloseTo(3874.31, 2);
+    expect(progress.ratio).toBeCloseTo(0.155, 3);
+  });
+
+  it("annualise le même mois pour un objectif en ARR", () => {
+    // Les deux objectifs doivent afficher le même avancement : c'est le
+    // même argent, exprimé dans deux unités.
+    const progress = computeTargetProgress(
+      target({ metric: "arr", amount: 300000 }),
+      [],
+      now,
+      actuals,
+    );
+    expect(progress.achieved).toBeCloseTo(46491.72, 2);
+    expect(progress.ratio).toBeCloseTo(0.155, 3);
+  });
+
+  it("écarte le mois en cours", () => {
+    // Un mois entamé ferait lire une chute tous les 10 du mois.
+    const progress = computeTargetProgress(
+      target({ amount: 25000 }),
+      [],
+      now,
+      [...actuals, { month: "2026-08-01", amount: 412, transactionCount: 1, bySource: [] }],
+    );
+    expect(progress.achieved).toBeCloseTo(3874.31, 2);
   });
 
   it("laisse un objectif personnel sur les affaires signées du CRM", () => {
-    // Un virement bancaire ne porte pas de commercial : il n'y a rien à
-    // attribuer.
+    // Un virement bancaire ne porte pas de commercial : rien à attribuer.
     const progress = computeTargetProgress(
       target({ sales_id: 9, amount: 12000 }),
       [deal({ sales_id: 9, mrr: 1500 })],
@@ -195,13 +218,13 @@ describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle"
     expect(progress.achieved).toBe(1500);
   });
 
-  it("ne compte que les mois couverts par la période", () => {
+  it("rend zéro quand aucun mois complet ne tombe dans la période", () => {
     const progress = computeTargetProgress(
-      target({ period_start: "2026-07-01", period_end: "2026-12-31" }),
+      target({ period_start: "2026-09-01", period_end: "2026-12-31" }),
       [],
       now,
       actuals,
     );
-    expect(progress.achieved).toBeCloseTo(3874.31, 2);
+    expect(progress.achieved).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 import type { Deal, Target } from "../types";
-import type { MonthlyRevenue } from "./revenueActuals";
+import { type MonthlyRevenue, currentMonthStart } from "./revenueActuals";
 
 /**
  * ---------------------------------------------------------------------------
@@ -23,20 +23,46 @@ export const TARGET_METRIC_LABELS: Record<TargetMetric, string> = {
 };
 
 /**
- * L'encaisse des mois COMPLETS couverts par la période de l'objectif.
+ * Le regime mensuel constate, et non le cumul (NOS-1182).
  *
- * Les mois incomplets sont écartés : un mois entamé au tiers ferait paraître
- * l'objectif en retard alors qu'il ne l'est pas encore. C'est la même règle
- * que le KPI « Encaissé », et elle doit l'être — deux chiffres tirés de la
- * même table qui compteraient des mois différents recréeraient exactement
- * l'écart que ce changement corrige.
+ * Simon : « le MRR c'est ce qui rentre chaque mois ». Il a raison, et la
+ * premiere version avait tort : elle ADDITIONNAIT les mois de la periode.
+ * Sur « 25 k EUR de MRR d'ici la fin de l'annee », cela affichait 20 548 EUR
+ * apres sept mois -- 82 % d'un objectif dont on est en realite a 15 %.
+ *
+ * L'erreur n'etait pas arithmetique mais semantique : un MRR est un DEBIT,
+ * pas un volume. Cumuler des debits mensuels donne un encaissement annuel,
+ * qui se compare a un ARR, jamais a un MRR.
+ *
+ * On prend donc le dernier mois COMPLET de la periode. Le mois en cours est
+ * ecarte ici comme il l'est partout ailleurs : entame au tiers, il ferait
+ * lire une chute de deux tiers tous les 10 du mois.
+ *
+ * En ARR, le meme mois est annualise (x12) : c'est la definition, et cela
+ * garde les deux objectifs coherents entre eux -- 3 874 EUR de MRR et
+ * 46 492 EUR d'ARR affichent le meme pourcentage d'avancement.
  */
-function sumActualsInPeriod(actuals: MonthlyRevenue[], target: Target): number {
+function runRateInPeriod(
+  actuals: MonthlyRevenue[],
+  target: Target,
+  metric: TargetMetric,
+  now: Date,
+): number {
   const start = target.period_start.slice(0, 10);
   const end = target.period_end.slice(0, 10);
-  return actuals
-    .filter((month) => month.month >= start && month.month <= end)
-    .reduce((sum, month) => sum + month.amount, 0);
+  const current = currentMonthStart(now);
+
+  const complete = actuals
+    .filter(
+      (month) =>
+        month.month >= start && month.month <= end && month.month < current,
+    )
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  const last = complete[complete.length - 1];
+  if (!last) return 0;
+
+  return metric === "arr" ? last.amount * 12 : last.amount;
 }
 
 export interface TargetProgress {
@@ -137,7 +163,7 @@ export function computeTargetProgress(
 
   const achieved =
     actuals && target.sales_id == null
-      ? sumActualsInPeriod(actuals, target)
+      ? runRateInPeriod(actuals, target, metric, now)
       : deals
           .filter((deal) => countsTowardTarget(deal, target))
           .reduce((sum, deal) => sum + dealValue(deal, metric), 0);

@@ -297,6 +297,19 @@ const CashKpiCard = () => {
  * utile ici. Des `div` en pourcentage sont plus courts que la configuration
  * qu'il faudrait lui ecrire.
  */
+/** « janv. », « juil. » — l'axe horizontal, sans l'annee (NOS-1180). */
+/** Le montant exact, en euros entiers. */
+const EUR = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+const SHORT_MONTH = new Intl.DateTimeFormat("fr-FR", {
+  month: "short",
+  timeZone: "UTC",
+});
+
 const CashHistoryDialog = ({
   rows,
   onClose,
@@ -335,40 +348,64 @@ const CashHistoryDialog = ({
           </p>
         ) : (
           <>
-            <div className="flex items-end gap-2 h-40 pt-2">
+            {/*
+              Chaque colonne porte une hauteur DEFINIE (`h-full` dans un
+              conteneur `h-44`), sans quoi le `height: x%` de la barre n'a
+              rien a quoi se rapporter et se resout a zero : le graphique
+              s'affichait avec ses etiquettes et sans aucune barre.
+
+              D'ou aussi le `flex-1 min-h-0` de la zone de trace : c'est lui
+              qui donne au pourcentage une reference stable, quelle que soit
+              la hauteur des etiquettes au-dessus et en dessous.
+            */}
+            <div className="flex items-stretch gap-2 h-44 pt-2">
               {months.map((month) => {
                 const partial = month.month >= current;
                 return (
                   <div
                     key={month.month}
-                    className="flex-1 flex flex-col items-center gap-1 min-w-0"
-                    title={`${formatMonth(month.month)} — ${formatCurrencyCompact(month.amount)}${
+                    className="flex-1 h-full flex flex-col items-center gap-1 min-w-0"
+                    title={`${formatMonth(month.month)} — ${month.amount.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })}${
                       partial ? " (mois en cours)" : ""
                     }`}
                   >
-                    <span className="text-[10px] tabular-nums text-muted-foreground">
-                      {formatCurrencyCompact(month.amount)}
+                    {/*
+                      Le montant exact, pas arrondi au millier : entre 1 639 €
+                      en janvier et 3 874 € en juillet, un affichage en « k€ »
+                      montre « 2 k€ » puis « 4 k€ » et efface la progression
+                      que ce graphique existe precisement pour montrer.
+                    */}
+                    <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
+                      {month.amount.toLocaleString("fr-FR", {
+                        maximumFractionDigits: 0,
+                      })}
                     </span>
-                    <div
-                      className={`w-full rounded-t ${
-                        partial
-                          ? "bg-[var(--muted)] border border-dashed border-[var(--deal-status-won)]"
-                          : "bg-[var(--deal-status-won)]"
-                      }`}
-                      style={{
-                        // 8 % de plancher : une barre a zero disparait, et une
-                        // barre absente se lit comme une donnee manquante.
-                        height: `${Math.max(8, (month.amount / max) * 100)}%`,
-                      }}
-                    />
+
+                    <div className="flex-1 min-h-0 w-full flex items-end">
+                      <div
+                        className={`w-full rounded-t ${
+                          partial
+                            ? "bg-[var(--muted)] border border-dashed border-[var(--deal-status-won)]"
+                            : "bg-[var(--deal-status-won)]"
+                        }`}
+                        style={{
+                          // 8 % de plancher : une barre a zero disparait, et
+                          // une barre absente se lit comme une donnee
+                          // manquante.
+                          height: `${Math.max(8, (month.amount / max) * 100)}%`,
+                        }}
+                      />
+                    </div>
+
                     <span className="text-[10px] text-muted-foreground truncate w-full text-center">
-                      {formatMonth(month.month).slice(0, 4)}
+                      {SHORT_MONTH.format(
+                        new Date(`${month.month.slice(0, 7)}-01T12:00:00Z`),
+                      )}
                     </span>
                   </div>
                 );
               })}
             </div>
-
             {growth != null && first && lastComplete && (
               <p className="text-sm text-muted-foreground border-t pt-3">
                 De {formatMonth(first.month)} à{" "}
@@ -377,8 +414,7 @@ const CashHistoryDialog = ({
                   {growth > 0 ? "+" : ""}
                   {growth} %
                 </b>{" "}
-                — {formatCurrencyCompact(first.amount)} →{" "}
-                {formatCurrencyCompact(lastComplete.amount)}.
+                — {EUR.format(first.amount)} → {EUR.format(lastComplete.amount)}.
               </p>
             )}
           </>
