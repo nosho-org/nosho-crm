@@ -29,6 +29,7 @@ import { DealEmailHistory } from "./DealEmailHistory";
 import { DealKeyContacts } from "./DealKeyContacts";
 import { DealSidePanel } from "./DealSidePanel";
 import { DealSynthesis } from "./DealSynthesis";
+import { DealProposalBlock } from "./DealProposalBlock";
 import { DealTasksBlock } from "./DealTasksBlock";
 
 /**
@@ -234,6 +235,9 @@ const DealShowLayout = () => (
       <div className="flex flex-col gap-4 min-w-0">
         <DealTasksBlock />
         <DealSynthesis />
+        {/* La proposition d abord : c est le document qui part en
+            premier chez le prospect, le contrat vient apres. */}
+        <DealProposalBlock />
         <ContractsBlock />
         <DealCompanyGroup />
         <DealKeyContacts />
