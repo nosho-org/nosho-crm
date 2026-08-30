@@ -82,8 +82,7 @@ const STYLES = `
     justify-content: space-between;
     break-after: page;
   }
-  .couverture .marque { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; }
-  .couverture .marque .barres { letter-spacing: -0.12em; margin-right: 2pt; }
+  .couverture .marque { width: 42mm; height: auto; display: block; }
   .couverture .titre {
     font-size: 13pt;
     font-weight: 700;
@@ -120,14 +119,7 @@ const STYLES = `
     text-transform: uppercase;
     color: #8a8a82;
   }
-  .bandeau .marque {
-    font-size: 9pt;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    text-transform: none;
-    color: #1c1c1b;
-  }
-  .bandeau .marque .barres { color: #f4883c; letter-spacing: -0.12em; }
+  .bandeau .marque { width: 17mm; height: auto; color: #1c1c1b; }
 
   .pied {
     margin-top: 16pt;
@@ -257,9 +249,28 @@ const STYLES = `
   }
 `;
 
-/** La marque, en typographie : le dépôt ne porte pas encore le logo Nosho. */
+/**
+ * La marque Nosho : trois ellipses orange, puis le mot en noir.
+ *
+ * Reconstruite en SVG faute du fichier d origine -- le depot ne porte que
+ * l icone Atomic CRM. Les ellipses sont fideles ; le mot est compose dans une
+ * grotesque geometrique, au plus pres sans etre la fonte de la marque.
+ *
+ * `currentColor` sur le texte : la meme fonction sert la couverture (blanc sur
+ * degrade) et le bandeau (noir sur blanc). Les ellipses gardent leur orange
+ * dans les deux cas -- c est la seule couleur de la marque.
+ *
+ * A remplacer par le vrai fichier des qu il est depose dans `public/logos/`.
+ */
 function marque(): string {
-  return `<span class="marque"><span class="barres">|||</span>nosho</span>`;
+  return `<svg class="marque" viewBox="0 0 300 80" role="img" aria-label="nosho" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="14" cy="40" rx="11" ry="27" fill="#F07F3C"/>
+  <ellipse cx="38" cy="40" rx="10" ry="24" fill="#F07F3C"/>
+  <ellipse cx="58" cy="40" rx="7" ry="17" fill="#F07F3C"/>
+  <text x="72" y="61" fill="currentColor"
+        font-family="Poppins, Montserrat, Futura, Century Gothic, sans-serif"
+        font-size="58" font-weight="500" letter-spacing="-1">nosho</text>
+</svg>`;
 }
 
 /** Enveloppe un fragment rendu dans un document complet, prêt à imprimer. */
