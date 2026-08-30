@@ -133,6 +133,22 @@ export function computeHealthAlerts(
     if (!deal.expected_closing_date) missingClosingDate.push(deal);
   }
 
+  /*
+   * Les etapes REELLEMENT comptees, relevees sur les opportunites retenues.
+   *
+   * C'est ce qui empeche le lien « Voir » de diverger du chiffre affiche a
+   * cote : il est construit a partir des memes lignes. Auparavant
+   * « 4 opportunites sans prochaine action » ouvrait une liste de 15, leads
+   * et affaires closes compris.
+   *
+   * Deduire les etapes plutot que les declarer evite d'avoir a reproduire
+   * ici la regle de `getDealNextAction` -- et de la voir rediverger au
+   * prochain changement de configuration.
+   */
+  const stagesOf = (list: DealRecord[]): string[] => [
+    ...new Set(list.map((deal) => deal.stage).filter(Boolean)),
+  ];
+
   const sumArr = (list: DealRecord[]): number =>
     list.reduce((total, deal) => total + (deal.amount ?? 0), 0);
 
@@ -144,7 +160,7 @@ export function computeHealthAlerts(
       criterion: "Date dépassée et action non terminée",
       count: overdue.length,
       amount: sumArr(overdue),
-      filter: HEALTH_FILTERS.overdueAction(),
+      filter: HEALTH_FILTERS.overdueAction(stagesOf(overdue)),
     },
     {
       id: "dormant",
@@ -153,7 +169,7 @@ export function computeHealthAlerts(
       criterion: `Aucune activité depuis plus de ${inactivityThresholdDays} jours`,
       count: dormant.length,
       amount: sumArr(dormant),
-      filter: HEALTH_FILTERS.dormant(inactivityThresholdDays),
+      filter: HEALTH_FILTERS.dormant(inactivityThresholdDays, stagesOf(dormant)),
     },
     {
       id: "missing-next-action",
@@ -162,7 +178,7 @@ export function computeHealthAlerts(
       criterion: "Prochaine action ou date manquante",
       count: missingNextAction.length,
       amount: sumArr(missingNextAction),
-      filter: HEALTH_FILTERS.missingNextAction(),
+      filter: HEALTH_FILTERS.missingNextAction(stagesOf(missingNextAction)),
     },
     {
       id: "missing-closing-date",
@@ -171,7 +187,7 @@ export function computeHealthAlerts(
       criterion: "Date de clôture prévue manquante",
       count: missingClosingDate.length,
       amount: sumArr(missingClosingDate),
-      filter: HEALTH_FILTERS.missingClosingDate(),
+      filter: HEALTH_FILTERS.missingClosingDate(stagesOf(missingClosingDate)),
     },
   ];
 

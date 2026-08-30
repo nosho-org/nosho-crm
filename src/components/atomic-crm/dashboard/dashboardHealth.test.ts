@@ -201,6 +201,40 @@ describe("computeHealthAlerts", () => {
 
     expect(toListFilter(alerts[0].filter, { today: TODAY })).toEqual({
       "last_activity_at@lt": "2026-07-24",
+      // L'étape voyage avec l'alerte : sans elle le lien ouvrait aussi les
+      // affaires closes et les leads (NOS-1184).
+      "stage@in": "(qualified)",
     });
+  });
+
+  it("restreint le lien aux étapes réellement comptées", () => {
+    /*
+     * Le cas signalé par Simon : « 4 opportunités sans prochaine action »
+     * ouvrait une liste de 15.
+     *
+     * Le compteur exempte les étapes en deçà de `dealNextActionFromStage` —
+     * un lead sans prochaine action n'est pas négligé, il est en amont. Le
+     * lien, lui, ne restreignait rien : il remontait les leads exemptés en
+     * plus des opportunités comptées.
+     */
+    const alerts = computeHealthAlerts(
+      [
+        // Comptée : au-delà du seuil, aucune action datée.
+        healthy({ stage: "qualified", next_action: null, next_action_date: null }),
+        // Exemptée : en deçà du seuil. Elle ne doit apparaître ni dans le
+        // compteur, ni dans la liste que le lien ouvre.
+        healthy({ stage: "lead", next_action: null, next_action_date: null }),
+      ],
+      options(),
+    );
+
+    const missing = alerts.find((alert) =>
+      alert.title.includes("sans prochaine action"),
+    );
+    expect(missing?.count).toBe(1);
+
+    const filter = toListFilter(missing!.filter, { today: TODAY });
+    expect(filter["stage@in"]).toBe("(qualified)");
+    expect(filter["stage@in"]).not.toContain("lead");
   });
 });

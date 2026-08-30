@@ -116,7 +116,7 @@ export const CockpitQueue = () => {
                   {total > 0 && ` · ${amount(total)} en jeu`}
                 </div>
 
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-1.5">
                   {/* L'entrée décalée dit l'ordre du tri : le retard le plus
                       ancien d'abord, puis l'enjeu décroissant. Coupée au-delà
                       de huit lignes — voir `AnimatedListItem`. */}
@@ -128,7 +128,18 @@ export const CockpitQueue = () => {
                     >
                       <Task task={entry.task} showContact showTime={false} />
                       {(entry.deal || entry.daysOverdue > 0) && (
-                        <div className="ml-9 -mt-2 mb-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        /*
+                          `ml-9` aligne sous le texte de la tache, en deca de
+                          la case a cocher.
+
+                          Pas de marge negative ici. Elle valait `-mt-2` pour
+                          resserrer la ligne, en supposant un ecart fixe qui
+                          n'existe pas : la hauteur d'une tache varie selon
+                          qu'elle porte un type ou un contact, et le bouton
+                          d'actions fait a lui seul 32 px. Sur les taches
+                          courtes, les deux blocs se chevauchaient.
+                        */
+                        <div className="ml-9 flex items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground flex-wrap">
                           {entry.deal && (
                             <Link
                               to={`/deals/${entry.deal.id}/show`}

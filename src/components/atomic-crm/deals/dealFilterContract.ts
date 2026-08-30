@@ -166,12 +166,9 @@ export function toListFilter(
     filter["next_action_date@is"] = null;
     filter["next_task_date@is"] = null;
 
-    // Divergence connue et assumée : `dashboardHealth` exclut en plus les
-    // étapes qui n'attendent pas encore d'action (`not-expected`, en deçà de
-    // `dealNextActionFromStage`). Ce contrat ne connaît pas la configuration,
-    // donc la liste remonte aussi les Leads. Le compteur du dashboard reste
-    // donc plus petit que la liste qu'il ouvre — beaucoup moins faux qu'avant,
-    // pas encore identique.
+    // La restriction d'étape ne se décide PAS ici : ce contrat ne connaît pas
+    // `dealNextActionFromStage`. C'est `HEALTH_FILTERS` qui la reçoit de
+    // `dashboardHealth`, lequel sait quelles étapes il a réellement comptées.
   }
 
   return filter;
@@ -257,11 +254,36 @@ export const LIST_FILTER_KEYS = [
  * `dormant` is a function because its threshold is configurable
  * (`dealInactivityAlertDays`, 14 by default).
  */
+/**
+ * Chaque alerte porte AUSSI les etapes qu'elle a comptees (NOS-1184).
+ *
+ * Sans elles, « 4 opportunites sans prochaine action » ouvrait une liste de
+ * 15 : le compteur ne regarde que les affaires ouvertes, et seulement a partir
+ * de `dealNextActionFromStage`, tandis que le lien ne restreignait rien du
+ * tout -- ni les leads, ni les affaires closes.
+ *
+ * Le contrat ne connait pas la configuration, et n'a pas a la connaitre :
+ * c'est `dashboardHealth` qui passe les etapes REELLEMENT retenues, relevees
+ * sur les opportunites qu'il vient de compter. Le lien ne peut donc pas
+ * diverger du chiffre affiche a cote -- il est construit a partir de lui.
+ */
 export const HEALTH_FILTERS = {
-  dormant: (days: number): DealFilterState => ({ staleForDays: days }),
-  overdueAction: (): DealFilterState => ({ overdueAction: true }),
-  missingClosingDate: (): DealFilterState => ({ missingClosingDate: true }),
-  missingNextAction: (): DealFilterState => ({ missingNextAction: true }),
+  dormant: (days: number, stages?: string[]): DealFilterState => ({
+    staleForDays: days,
+    ...(stages?.length ? { stage: stages } : {}),
+  }),
+  overdueAction: (stages?: string[]): DealFilterState => ({
+    overdueAction: true,
+    ...(stages?.length ? { stage: stages } : {}),
+  }),
+  missingClosingDate: (stages?: string[]): DealFilterState => ({
+    missingClosingDate: true,
+    ...(stages?.length ? { stage: stages } : {}),
+  }),
+  missingNextAction: (stages?: string[]): DealFilterState => ({
+    missingNextAction: true,
+    ...(stages?.length ? { stage: stages } : {}),
+  }),
 } as const;
 
 export type DealHealthAlert = keyof typeof HEALTH_FILTERS;
