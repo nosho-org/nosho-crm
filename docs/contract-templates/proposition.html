@@ -1,0 +1,280 @@
+<!--
+  Gabarit : PROPOSITION COMMERCIALE
+  Voir README.md pour les variables.
+
+  ── Pourquoi ce fichier existe ─────────────────────────────────────────────
+
+  La proposition etait produite par doc.nosho.org, a qui le CRM n'envoyait que
+  six champs : nom du client, secteur, contact, reference, date, commercial.
+
+  TOUT le reste etait invente par le generateur. Le document parti chez la
+  clinique de Bonneveine affichait 400 rendez-vous par mois, 12 % de no-shows,
+  80 EUR le rendez-vous et un gain de 32 256 EUR — sous la mention "estimation
+  basee sur vos volumes declares", alors qu'aucun volume n'avait ete declare
+  nulle part.
+
+  Ce gabarit ne rend que ce que le CRM porte reellement.
+
+  ── La section "benefices attendus" ────────────────────────────────────────
+
+  Elle n'apparait QUE si les trois hypotheses sont renseignees : rendez-vous
+  par mois, taux de no-show, valeur d'un rendez-vous. Sans elles, la section
+  disparait entierement — en-tetes compris.
+
+  C'est deliberement plus strict que l'ancien generateur : mieux vaut une
+  proposition sans chiffrage qu'une proposition qui en invente un.
+-->
+<article class="proposition">
+  <header>
+    <h1>Proposition commerciale</h1>
+    <p class="sous-titre">Pour {{client.name}}</p>
+  </header>
+
+  <!-- ── 01 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-01">
+    <h2>01 — Introduction</h2>
+    <p>{{#contact.name}}Cher·e {{contact.name}},{{/contact.name}}{{^contact.name}}Madame, Monsieur,{{/contact.name}}</p>
+    <p>
+      Merci pour le temps que vous nous avez accordé. Cette proposition résume
+      la solution que nous déploierions pour <strong>{{client.name}}</strong> :
+      un agent vocal intelligent qui confirme vos rendez-vous, libère les
+      créneaux annulés, et vous redonne un temps précieux.
+    </p>
+    <p>
+      Notre promesse est simple : réduire vos rendez-vous non honorés, sans
+      alourdir le travail de votre secrétariat — tout en respectant
+      scrupuleusement le cadre réglementaire de l'hébergement des données de
+      santé (HDS, RGPD).
+    </p>
+    <p>
+      Les pages qui suivent détaillent le périmètre, la tarification et le
+      planning de déploiement. Nous restons à votre entière disposition pour
+      toute précision.
+    </p>
+    <p>Cordialement,</p>
+    <p>
+      <strong>{{sender.name}}</strong><br />
+      {{#sender.jobTitle}}{{sender.jobTitle}}, {{/sender.jobTitle}}Nosho.ai
+    </p>
+  </section>
+
+  <!-- ── 02 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-02">
+    <h2>02 — Notre solution</h2>
+    <p>Quatre étapes, zéro charge supplémentaire.</p>
+    <ul>
+      <li>
+        <strong>Intégration.</strong> Connexion sécurisée à votre agenda
+        (Doctolib, Google Calendar, télésecrétariat) via une autorisation
+        native. Mise en service en 24–48 h.
+      </li>
+      <li>
+        <strong>Déclenchement automatique.</strong> L'agent identifie chaque
+        rendez-vous à venir et planifie l'appel de confirmation avant le
+        rendez-vous.
+      </li>
+      <li>
+        <strong>Conversation intelligente.</strong> L'agent vocal comprend les
+        réponses nuancées et s'adapte : confirmation, report, ou annulation.
+      </li>
+      <li>
+        <strong>Synchronisation instantanée.</strong> Le statut (confirmé,
+        annulé, reporté) est mis à jour en temps réel dans votre agenda. Zéro
+        action manuelle.
+      </li>
+    </ul>
+    <div class="encadre">
+      <p class="encadre-titre">Tableau de bord inclus</p>
+      <p>
+        Vous suivez en temps réel les rendez-vous non honorés évités et le temps
+        médical sauvé, via un tableau de bord simple et partageable.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── 03 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-03">
+    <h2>03 — Périmètre</h2>
+    <p>Ce que nous mettons en place pour {{client.name}}.</p>
+    <ul>
+      <li>
+        <strong>Appels sortants de confirmation.</strong> Appel automatisé avant
+        chaque rendez-vous, avec confirmation, report ou annulation.
+      </li>
+      <li>
+        <strong>Reprise des créneaux annulés.</strong> Libération immédiate du
+        créneau dans l'agenda en cas d'annulation.
+      </li>
+      <li>
+        <strong>Intégration agenda.</strong> Connexion native à Doctolib /
+        Google Calendar / télésecrétariat.
+      </li>
+      <li>
+        <strong>Tableau de bord &amp; reporting.</strong> Suivi en temps réel
+        des rendez-vous récupérés et du temps médical sauvé.
+      </li>
+      <li>
+        <strong>Onboarding &amp; formation.</strong> Formation de votre équipe,
+        documentation et scripts personnalisables.
+      </li>
+      <li>
+        <strong>Support dédié.</strong> Support français par email et téléphone,
+        temps de réponse sous 4 h ouvrées.
+      </li>
+    </ul>
+
+    {{#scope}}
+    <p class="perimetre-specifique">
+      <strong>Périmètre spécifique convenu.</strong> {{scope}}
+    </p>
+    {{/scope}}
+  </section>
+
+  <!--
+    ── 04 ───────────────────────────────────────────────────────────────────
+    Rendue UNIQUEMENT si les trois hypotheses existent. Voir l'en-tete.
+  -->
+  {{#gains}}
+  <section id="prop-04">
+    <h2>04 — Bénéfices attendus</h2>
+    <p>
+      Estimation établie à partir des volumes que vous nous avez communiqués.
+    </p>
+    <table>
+      <tbody>
+        <tr>
+          <th>Rendez-vous par mois</th>
+          <td class="montant">{{gains.appointmentsPerMonth}}</td>
+        </tr>
+        <tr>
+          <th>Taux de non-présentation actuel</th>
+          <td class="montant">{{gains.noShowRate}}</td>
+        </tr>
+        <tr>
+          <th>Valeur moyenne d'un rendez-vous</th>
+          <td class="montant">{{gains.appointmentValue}}</td>
+        </tr>
+        <tr>
+          <th>Réduction visée</th>
+          <td class="montant">{{gains.targetReduction}}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="encadre">
+      <p class="encadre-titre">Gain estimé</p>
+      <p>
+        <strong>{{gains.annualGain}}</strong> récupérés par an, soit environ
+        {{gains.recoveredPerMonth}} rendez-vous sauvés chaque mois.
+      </p>
+    </div>
+    <p class="note">
+      Estimation basée sur les volumes que vous avez déclarés. Hors TVA. Les
+      bénéfices réels peuvent varier selon le mix patient.
+    </p>
+  </section>
+  {{/gains}}
+
+  <!-- ── 05 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-05">
+    <h2>05 — Tarification</h2>
+
+    {{#services}}
+    <table>
+      <thead>
+        <tr>
+          <th>Prestation</th>
+          <th class="montant">Prix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            {{label}}
+            {{#comment}}<br /><small>{{comment}}</small>{{/comment}}
+          </td>
+          <td class="montant">
+            {{#unitPrice}}{{unitPrice}}{{#unit}} {{unit}}{{/unit}}{{/unitPrice}}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    {{/services}}
+
+    {{#monthlyTotal}}
+    <p class="total">
+      <strong>Total mensuel HT : {{monthlyTotal}}</strong>
+    </p>
+    {{/monthlyTotal}}
+
+    <h3>Conditions</h3>
+    <ul>
+      <li>Abonnement mensuel, sans engagement de durée.</li>
+      <li>Facturation mensuelle à terme échu.</li>
+      <li>Prix hors TVA (20 % applicable).</li>
+    </ul>
+
+    <h3>Inclus</h3>
+    <ul>
+      <li>Intégration et paramétrage de l'agenda.</li>
+      <li>Personnalisation du script vocal.</li>
+      <li>Tableau de bord et reporting mensuel.</li>
+      <li>Support français par email et téléphone.</li>
+    </ul>
+  </section>
+
+  <!-- ── 06 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-06">
+    <h2>06 — Planning</h2>
+    <p>Opérationnel en 7 jours.</p>
+    <ul>
+      <li><strong>J+0 — Signature.</strong> Validation de la proposition et du périmètre.</li>
+      <li><strong>J+2 — Intégration.</strong> Connexion à votre agenda et paramétrage initial.</li>
+      <li><strong>J+5 — Personnalisation.</strong> Script vocal adapté à votre établissement, recette.</li>
+      <li><strong>J+7 — Mise en production.</strong> Premiers appels sortants, monitoring actif.</li>
+    </ul>
+  </section>
+
+  <!-- ── 07 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-07">
+    <h2>07 — Sécurité &amp; conformité</h2>
+    <p>Au niveau d'exigence de la e-santé.</p>
+    <ul>
+      <li>
+        <strong>Hébergement HDS.</strong> Scaleway, certifié Hébergeur de
+        Données de Santé, serveurs en France.
+      </li>
+      <li>
+        <strong>RGPD.</strong> DPA signé, flux chiffrés TLS 1.3, repos AES-256,
+        clauses contractuelles types.
+      </li>
+      <li>
+        <strong>Accès contrôlés.</strong> SSH/RSA-4096, cloisonnement par rôles,
+        audits réguliers.
+      </li>
+    </ul>
+  </section>
+
+  <!-- ── 08 ─────────────────────────────────────────────────────────────── -->
+  <section id="prop-08">
+    <h2>08 — Signature</h2>
+    <p>Pour valider cette proposition.</p>
+    <div class="signatures">
+      <div class="bloc">
+        <h3>Pour le Client</h3>
+        <p>{{client.name}}</p>
+        {{#contact.name}}<p>{{contact.name}}</p>{{/contact.name}}
+        <p class="note">Date &amp; signature (« Bon pour accord »)</p>
+      </div>
+      <div class="bloc">
+        <h3>Pour Nosho.ai</h3>
+        <p>{{sender.name}}</p>
+        {{#sender.jobTitle}}<p>{{sender.jobTitle}}, Nosho.ai</p>{{/sender.jobTitle}}
+        <p class="note">Date &amp; signature</p>
+      </div>
+    </div>
+    <p class="note">
+      Proposition {{proposalRef}} — établie le {{proposalDate}}. Validité 30
+      jours.
+    </p>
+  </section>
+</article>
