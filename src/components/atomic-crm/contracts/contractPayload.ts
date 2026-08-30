@@ -260,11 +260,28 @@ export function buildContractRef(dealId: number, year: number): string {
  * forme juridique, capital et RCS changent sans que le CRM en soit informé, et
  * un contrat doit porter l'état du registre le jour où il est édité.
  */
+/** Les neuf premiers chiffres d un SIRET : le SIREN, donc le numero RCS. */
+function siren(taxIdentifier: string | null | undefined): string {
+  return (taxIdentifier ?? "").replace(/D/g, "").slice(0, 9);
+}
+
 export function buildContractPayload(args: {
   contract: Partial<Contract>;
   company: Pick<
     Company,
-    "name" | "tax_identifier" | "vat_number" | "address" | "zipcode" | "city"
+    | "name"
+    | "tax_identifier"
+    | "vat_number"
+    | "address"
+    | "zipcode"
+    | "city"
+    // L identite legale, celle qui ouvre le contrat (NOS-1186). Elle vient
+    // desormais de la fiche societe, alimentee par le registre.
+    | "legal_form"
+    | "share_capital"
+    | "rcs_city"
+    | "ape_code"
+    | "is_individual"
   > & { qualification?: string };
   noshoSignatory: Pick<Sale, "first_name" | "last_name"> & {
     job_title?: string | null;
@@ -293,6 +310,23 @@ export function buildContractPayload(args: {
       address: company.address || undefined,
       zipcode: company.zipcode || undefined,
       city: company.city || undefined,
+
+      legalForm: company.legal_form || undefined,
+      shareCapital: company.share_capital || undefined,
+      rcsCity: company.rcs_city || undefined,
+      apeCode: company.ape_code || undefined,
+      isIndividual: company.is_individual ?? undefined,
+      /*
+       * Le numero RCS EST le SIREN, soit les neuf premiers chiffres du SIRET.
+       *
+       * Deduit plutot que stocke : deux colonnes pour un meme fait divergent
+       * a la premiere correction, et c est le genre de divergence qu on ne
+       * remarque qu une fois le contrat parti.
+       */
+      rcsNumber: siren(company.tax_identifier) || undefined,
+
+      // Un appelant peut encore forcer une valeur -- une societe etrangere
+      // n a ni SIREN ni greffe.
       ...legal,
     },
     signatory: {

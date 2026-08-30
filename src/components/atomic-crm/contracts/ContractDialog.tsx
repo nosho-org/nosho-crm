@@ -195,12 +195,32 @@ export const ContractDialog = ({
             zipcode: data.zipcode || company.zipcode,
             city: data.city || company.city,
             vat_number: company.vat_number || data.vat_number || null,
+
+            /*
+              L identite legale, celle qui ouvre le contrat (NOS-1186).
+
+              « La societe X, [FORME] au capital de [CAPITAL] EUR,
+              immatriculee au RCS de [VILLE], code APE [APE] ». Ces quatre
+              valeurs viennent du registre et de nulle part ailleurs : les
+              faire saisir a la main serait demander a un commercial de
+              recopier un extrait Kbis.
+
+              Meme regle que ci-dessus : le registre prime, mais ne vide rien.
+            */
+            legal_form: data.legal_form || company.legal_form,
+            share_capital: data.share_capital || company.share_capital,
+            rcs_city: data.rcs_city || company.rcs_city,
+            ape_code: data.ape_code || company.ape_code,
+            is_individual:
+              typeof data.is_individual === "boolean"
+                ? data.is_individual
+                : company.is_individual,
           },
           previousData: company,
         },
         { returnPromise: true },
       );
-      notify("Adresse reprise du registre", { type: "success" });
+      notify("Identite legale reprise du registre", { type: "success" });
       refetchCompany();
     } catch (e) {
       notify(

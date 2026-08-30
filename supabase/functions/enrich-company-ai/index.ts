@@ -82,6 +82,21 @@ interface Enrichment {
   tax_identifier?: string;
   vat_number?: string;
   revenue?: string;
+  /*
+   * Identite legale, pour la completude des contrats (NOS-1186).
+   *
+   * Le gabarit de periode d essai ouvre sur "la societe X, [FORME] au capital
+   * de [CAPITAL] EUR, immatriculee au RCS de [VILLE], code APE [APE]". Pappers
+   * renvoie deja ces champs sur l appel qu on faisait : on n en gardait
+   * qu une partie, et le contrat sortait avec quatre trous.
+   *
+   * Pas de `rcs_number` : c est le SIREN, deja porte par `tax_identifier`.
+   */
+  legal_form?: string;
+  share_capital?: string;
+  rcs_city?: string;
+  ape_code?: string;
+  is_individual?: boolean;
   not_found?: boolean;
   /**
    * Etablissements proposes quand le nom ne tranche pas (NOS-1152).
@@ -167,6 +182,22 @@ async function fetchLegalBySiren(
       country: str(siege["pays"]) ?? "France",
       revenue: typeof ca === "number" && ca > 0 ? formatRevenue(ca) : undefined,
       size: sizeFromHeadcount(d["effectif_max"]),
+
+      // Identite legale (NOS-1186). Le capital passe en texte : il figure au
+      // contrat tel que publie, et un contrat n est pas l endroit ou arrondir.
+      legal_form: str(d["forme_juridique"]),
+      share_capital:
+        typeof d["capital"] === "number" && d["capital"] > 0
+          ? String(d["capital"])
+          : (str(d["capital"]) ?? undefined),
+      // Le greffe, pas la ville du siege : les deux different assez souvent
+      // pour qu on ne puisse pas deduire l un de l autre.
+      rcs_city: str(d["greffe"]),
+      ape_code: str(d["code_naf"]) ?? str(siege["code_naf"]),
+      is_individual:
+        typeof d["entreprise_individuelle"] === "boolean"
+          ? (d["entreprise_individuelle"] as boolean)
+          : undefined,
     };
   } catch (e) {
     console.warn("[enrich-company-ai] Pappers detail indisponible:", e);

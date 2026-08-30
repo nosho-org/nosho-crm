@@ -95,6 +95,23 @@ export type Company = {
   tax_identifier: string;
   /** TVA intracommunautaire, renseignee par Pappers (NOS-1151). */
   vat_number?: string | null;
+
+  /*
+   * Identite legale, celle qui ouvre un contrat (NOS-1186).
+   *
+   * "La societe X, [legal_form] au capital de [share_capital] EUR,
+   * immatriculee au RCS de [rcs_city] sous le numero [SIREN], code APE
+   * [ape_code]". Alimentees par Pappers depuis le SIREN.
+   *
+   * Pas de numero RCS : c est le SIREN, soit les neuf premiers chiffres de
+   * `tax_identifier`. Le dupliquer creerait deux sources pour un meme fait.
+   */
+  legal_form?: string | null;
+  share_capital?: string | null;
+  rcs_city?: string | null;
+  ape_code?: string | null;
+  /** Une entreprise individuelle signe en son nom propre, sans mandataire. */
+  is_individual?: boolean | null;
   country: string;
   context_links?: string[];
   nb_contacts?: number;

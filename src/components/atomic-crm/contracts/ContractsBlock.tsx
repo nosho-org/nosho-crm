@@ -9,6 +9,7 @@ import {
   useUpdate,
 } from "ra-core";
 import { Button } from "@/components/ui/button";
+import { GenerateContractAction } from "./GenerateContractAction";
 import { Card } from "@/components/ui/card";
 
 import type { Contract, Deal } from "../types";
@@ -226,6 +227,11 @@ export const ContractsBlock = () => {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                                    {/* Generer d abord : c est l action qui fait avancer le contrat. */}
+                  <GenerateContractAction
+                    contract={contract}
+                    dealId={Number(record.id)}
+                  />
                   <Button
                     type="button"
                     variant="ghost"
