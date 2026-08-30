@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Target as TargetIcon, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import {
   useCreate,
   useDelete,
@@ -59,49 +59,68 @@ import {
  * confirmation avant suppression.
  */
 
+/**
+ * Une ligne par titulaire, ses metriques cote a cote (NOS-1183).
+ *
+ * Avant : une ligne par objectif. Simon ayant un MRR et un ARR, l'equipe
+ * occupait deux lignes qui disaient la meme chose dans deux unites, chacune
+ * repetant la periode. La carte faisait quatre lignes pour deux titulaires.
+ *
+ * La periode est remontee en chapeau de la carte -- elle est commune, et
+ * repetee quatre fois elle ne renseignait plus rien.
+ */
 const TargetRow = ({
-  target,
+  targets,
   deals,
   actuals,
   owner,
   onEdit,
   emphasis = false,
 }: {
-  target: Target;
+  /** Les objectifs d'un meme titulaire, une metrique chacun. */
+  targets: Target[];
   deals: Deal[];
-  /** Encaisse reelle. Seul l'objectif d'equipe s'en sert -- voir ci-dessous. */
+  /** Encaisse reelle. Seul l'objectif d'equipe s'en sert. */
   actuals: MonthlyRevenue[];
   owner?: string;
-  onEdit: () => void;
+  onEdit: (target: Target) => void;
   emphasis?: boolean;
 }) => {
+  const isTeam = targets[0]?.sales_id == null;
+
   /*
    * L'objectif d'EQUIPE se mesure sur l'encaisse reelle, le personnel sur les
-   * affaires signees du CRM (NOS-1181).
+   * affaires signees du CRM.
    *
-   * Simon a releve que l'objectif equipe et le KPI « Encaisse » n'affichaient
-   * pas le meme montant. Ils ne mesuraient pas la meme chose : la saisie d'un
-   * cote, la banque de l'autre.
-   *
-   * Un virement bancaire ne porte pas de commercial, un objectif personnel ne
-   * peut donc pas s'y mesurer -- d'ou la ligne « source » ecrite sous chaque
-   * objectif, faute de quoi on croirait comparer deux chiffres comparables.
+   * Un virement bancaire ne porte pas de commercial : un objectif personnel
+   * ne peut pas s'y mesurer.
    */
-  const isTeam = target.sales_id == null;
-  const progress = computeTargetProgress(
-    target,
-    deals,
-    undefined,
-    isTeam ? actuals : undefined,
-  );
-  const metric = (target.metric ?? "mrr") as TargetMetric;
-  const percent = Math.round(progress.ratio * 100);
+  const measured = targets
+    .map((target) => ({
+      target,
+      metric: (target.metric ?? "mrr") as TargetMetric,
+      progress: computeTargetProgress(
+        target,
+        deals,
+        undefined,
+        isTeam ? actuals : undefined,
+      ),
+    }))
+    // Le MRR d'abord : c'est la metrique de pilotage, l'ARR en est la
+    // projection.
+    .sort((a, b) => (a.metric === "mrr" ? -1 : b.metric === "mrr" ? 1 : 0));
+
+  if (measured.length === 0) return null;
+
+  // L'anneau suit le MRR, ou la premiere metrique disponible : un seul
+  // anneau pour deux chiffres doit suivre celui qu'on pilote.
+  const primary = measured[0];
 
   return (
     <div
       className={`flex items-center gap-3 ${emphasis ? "" : "border-t pt-3"}`}
     >
-      <AnimatedRing ratio={progress.ratio} />
+      <AnimatedRing ratio={primary.progress.ratio} />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 flex-wrap">
@@ -112,62 +131,78 @@ const TargetRow = ({
           >
             {owner ?? "Équipe"}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {TARGET_METRIC_LABELS[metric]} · {formatTargetPeriod(target)} ·{" "}
-            {/* Nommer la source : sans elle, deux chiffres de MRR qui ne
-                concordent pas se lisent comme une erreur. */}
-            {isTeam ? "encaissé en banque" : "signé dans le CRM"}
-          </span>
+          {!isTeam && (
+            <span className="text-xs text-muted-foreground">
+              signé dans le CRM
+            </span>
+          )}
         </div>
 
-        <div
-          className={`${emphasis ? "text-lg" : "text-sm"} font-medium tabular-nums`}
-        >
-          {formatCurrency(progress.achieved)}
-          <span className="text-muted-foreground font-normal">
-            {" "}
-            / {formatCurrency(Number(target.amount))} · {percent} %
-          </span>
+        {/* Les metriques sur une seule ligne, qui se replie sur mobile. */}
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-0.5">
+          {measured.map(({ target, metric, progress }) => (
+            <span
+              key={target.id}
+              className="inline-flex items-baseline gap-1.5 group"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {TARGET_METRIC_LABELS[metric]}
+              </span>
+              <span
+                className={`${emphasis ? "text-lg" : "text-sm"} font-medium tabular-nums`}
+              >
+                {formatCurrency(progress.achieved)}
+                <span className="text-muted-foreground font-normal">
+                  {" "}
+                  / {formatCurrency(Number(target.amount))} ·{" "}
+                  {Math.round(progress.ratio * 100)} %
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => onEdit(target)}
+                aria-label={`Modifier l'objectif ${TARGET_METRIC_LABELS[metric]} ${owner ?? "de l'équipe"}`}
+                title="Modifier"
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <Pencil className="w-3 h-3" aria-hidden />
+              </button>
+            </span>
+          ))}
         </div>
 
+        {/*
+          Un seul reste-a-faire, celui du MRR : les deux metriques mesurent le
+          meme argent, et afficher deux manques ferait croire a deux dettes.
+        */}
         <p className="text-xs text-muted-foreground">
-          {progress.isOver ? (
-            // Une période close ne « reste » plus : on dit ce qui s'est passé,
-            // pas ce qu'il faudrait faire.
-            progress.remaining > 0 ? (
+          {primary.progress.isOver ? (
+            primary.progress.remaining > 0 ? (
               <>
-                Période terminée — {formatCurrency(progress.remaining)}{" "}
-                manquants.
+                Période terminée — {formatCurrency(primary.progress.remaining)}{" "}
+                manquants en {TARGET_METRIC_LABELS[primary.metric]}.
               </>
             ) : (
               <>Période terminée — objectif atteint.</>
             )
-          ) : progress.remaining > 0 ? (
+          ) : primary.progress.remaining > 0 ? (
             <>
               Il manque{" "}
               <b className="text-[var(--deal-status-serious)] font-medium">
-                {formatCurrency(progress.remaining)}
+                {formatCurrency(primary.progress.remaining)}
               </b>{" "}
-              et il reste {progress.daysLeft} jour
-              {progress.daysLeft > 1 ? "s" : ""}.
+              de {TARGET_METRIC_LABELS[primary.metric]} et il reste{" "}
+              {primary.progress.daysLeft} jour
+              {primary.progress.daysLeft > 1 ? "s" : ""}.
             </>
           ) : (
             <span className="text-[var(--deal-status-won)]">
-              Objectif atteint, {progress.daysLeft} jour
-              {progress.daysLeft > 1 ? "s" : ""} avant la fin.
+              Objectif atteint, {primary.progress.daysLeft} jour
+              {primary.progress.daysLeft > 1 ? "s" : ""} avant la fin.
             </span>
           )}
         </p>
       </div>
-
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={onEdit}
-        aria-label={`Modifier l'objectif ${owner ?? "de l'équipe"}`}
-      >
-        <Pencil className="w-3.5 h-3.5" aria-hidden />
-      </Button>
     </div>
   );
 };
@@ -417,21 +452,54 @@ export const TargetsCard = () => {
   const team = all.filter((t) => t.sales_id == null);
   const personal = all.filter((t) => t.sales_id != null);
 
-  const ownerName = (target: Target) => {
-    const sale = (sales ?? []).find(
-      (s) => String(s.id) === String(target.sales_id),
-    );
+  const ownerName = (salesId: Target["sales_id"]) => {
+    const sale = (sales ?? []).find((s) => String(s.id) === String(salesId));
     return sale
       ? `${sale.first_name} ${sale.last_name}`
       : "Responsable inconnu";
   };
 
+  // Un titulaire, ses metriques. `Map` et non un objet : elle preserve
+  // l'ordre d'insertion, donc l'ordre de tri des commerciaux.
+  const byOwner = new Map<string, Target[]>();
+  for (const target of personal) {
+    const key = String(target.sales_id);
+    byOwner.set(key, [...(byOwner.get(key) ?? []), target]);
+  }
+
+  /*
+   * La periode en chapeau, si elle est commune (NOS-1183).
+   *
+   * Elle etait repetee sur chaque ligne, ou elle ne renseignait plus rien.
+   * Mais on ne la remonte QUE si tous les objectifs la partagent : affichee
+   * en tete alors que deux objectifs courent sur des periodes differentes,
+   * elle mentirait sur la moitie de la carte. Sinon, chaque ligne la reprend.
+   */
+  const periods = new Set(
+    all.map((t) => `${t.period_start.slice(0, 10)}|${t.period_end.slice(0, 10)}`),
+  );
+  const commonPeriod = periods.size === 1 && all[0] ? all[0] : null;
+
   return (
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-          <TargetIcon className="w-3.5 h-3.5" aria-hidden />
+          {/*
+            L'emoji plutot que le pictogramme monochrome : demande par Simon,
+            et c'est le seul endroit de la carte qui porte de la couleur.
+
+            `aria-hidden` parce que le mot « Objectifs » suit immediatement :
+            un lecteur d'ecran annoncerait sinon « cible directe, Objectifs ».
+          */}
+          <span aria-hidden className="text-sm leading-none">
+            🎯
+          </span>
           Objectifs
+          {commonPeriod && (
+            <span className="font-normal normal-case tracking-normal">
+              · {formatTargetPeriod(commonPeriod)}
+            </span>
+          )}
         </span>
         <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
           <Plus className="w-3.5 h-3.5" aria-hidden />
@@ -447,8 +515,6 @@ export const TargetsCard = () => {
       ) : (
         <div className="flex flex-col gap-3">
           {/*
-            Les deux natures, nommées et séparées (NOS-1178).
-
             L'objectif d'équipe d'abord et en grand : c'est celui qui engage
             l'entreprise, les objectifs personnels en sont la décomposition.
             Sans intitulé, un commercial qui n'a pas d'objectif personnel
@@ -459,32 +525,29 @@ export const TargetsCard = () => {
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Équipe
               </span>
-              {team.map((target) => (
-                <TargetRow
-                  key={target.id}
-                  target={target}
-                  deals={deals}
-                  actuals={actuals}
-                  onEdit={() => setEditing(target)}
-                  emphasis
-                />
-              ))}
+              <TargetRow
+                targets={team}
+                deals={deals}
+                actuals={actuals}
+                onEdit={setEditing}
+                emphasis
+              />
             </>
           )}
 
-          {personal.length > 0 && (
+          {byOwner.size > 0 && (
             <>
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground border-t pt-3">
                 Par commercial
               </span>
-              {personal.map((target) => (
+              {[...byOwner.entries()].map(([salesId, owned]) => (
                 <TargetRow
-                  key={target.id}
-                  target={target}
+                  key={salesId}
+                  targets={owned}
                   deals={deals}
                   actuals={actuals}
-                  owner={ownerName(target)}
-                  onEdit={() => setEditing(target)}
+                  owner={ownerName(owned[0].sales_id)}
+                  onEdit={setEditing}
                 />
               ))}
             </>
@@ -497,7 +560,7 @@ export const TargetsCard = () => {
               Aucun objectif d'équipe. C'est celui qui engage l'entreprise.
             </p>
           )}
-          {personal.length === 0 && (
+          {byOwner.size === 0 && (
             <p className="text-xs text-muted-foreground border-t pt-3">
               Aucun objectif individuel défini.
             </p>
