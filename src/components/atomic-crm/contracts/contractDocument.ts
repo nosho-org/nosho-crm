@@ -1,10 +1,17 @@
 /**
  * ---------------------------------------------------------------------------
- * Du fragment au document signable (NOS-1186)
+ * Du fragment au document signable, à la charte Nosho (NOS-1191)
  * ---------------------------------------------------------------------------
- * Les gabarits sont des fragments `<article>` : ils ont été écrits pour que
- * `doc.nosho.org` les habille. Simon veut désormais les télécharger depuis le
- * CRM et les envoyer en signature lui-même — il manquait donc l'enveloppe.
+ * Les gabarits sont des fragments `<article>`. Ce module les habille.
+ *
+ * Simon : « je n'arrive toujours pas à comprendre pourquoi ça ne reprend pas
+ * mes templates de contrat ». La cause n'était pas le texte — il est transcrit
+ * mot pour mot — mais la MISE EN FORME : le document sortait en A4 blanc, sans
+ * couverture, sans couleur, sans bandeau. Rien à voir avec ses PDF.
+ *
+ * La charte est reprise du contrat de référence HEM v2 et du contrat Aboulker :
+ * couverture en dégradé, numéros d'article en orange, bandeau et pied de page
+ * sur chaque page, encadrés crème à filet orange.
  *
  * ## Pourquoi du HTML et pas un PDF
  *
@@ -12,21 +19,24 @@
  * centaines de kilooctets, qui rendrait le texte en pixels ou en polices
  * embarquées, avec ses propres bugs de césure et de saut de page. Le navigateur
  * sait déjà faire : « Imprimer → Enregistrer au format PDF » produit un PDF
- * vectoriel, sélectionnable et cherchable, à partir de ce fichier.
- *
- * D'où deux sorties : le fichier, et l'impression directe.
+ * vectoriel, sélectionnable et cherchable.
  *
  * ## Les sauts de page sont le vrai sujet
  *
  * Un contrat coupé entre un article et son titre, ou pire entre la mention
  * « Fait à Marseille » et les cases de signature, est un document qu'on ne
- * signe pas. `break-inside: avoid` sur les articles et sur le bloc signature
- * coûte trois lignes de CSS et évite d'avoir à relire chaque génération.
+ * signe pas. D'où `break-inside: avoid` sur les articles et le bloc signature.
  */
 
 export interface DocumentOptions {
   /** Ce que le fichier portera comme titre, et comme nom. */
   title: string;
+  /** « Contrat de service — Période d'essai ». Repris dans le bandeau. */
+  kicker?: string;
+  /** Le nom du client, en gros sur la couverture. */
+  clientName?: string;
+  /** La date, sur la couverture. */
+  contractDate?: string;
 }
 
 /*
@@ -36,12 +46,15 @@ export interface DocumentOptions {
  * transiter par le CRM ferait de chaque contrat une occasion de les
  * contredire ». Reprises du contrat Aboulker du 25 août 2026.
  */
-const NOSHO_PIED =
-  "Nosho SAS · 390 avenue du Prado, 13008 Marseille · " +
-  "RCS Marseille 990 546 418";
+const NOSHO = {
+  raisonSociale: "NOSHO SAS",
+  adresse: "390 Avenue du Prado, 13008 Marseille",
+  rcs: "Immatriculée au RCS Marseille, numéro 990546418",
+  representant: "Représentée par Mr Thomas Guillaumin, Président",
+};
 
 const STYLES = `
-  @page { size: A4; margin: 18mm 16mm 20mm; }
+  @page { size: A4; margin: 16mm 15mm 18mm; }
 
   :root { color-scheme: light; }
 
@@ -49,84 +62,187 @@ const STYLES = `
     margin: 0;
     background: #fff;
     color: #1c1c1b;
-    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
-    font-size: 10.5pt;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
     line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .page { max-width: 190mm; margin: 0 auto; padding: 12mm 10mm 0; }
+  /* ── Couverture ────────────────────────────────────────────────────────── */
 
-  h1 { font-size: 17pt; line-height: 1.2; margin: 0 0 4pt; text-wrap: balance; }
+  .couverture {
+    /* Le degrade du contrat de reference : vert d eau vers orange. */
+    background: linear-gradient(160deg, #7ec8b8 0%, #a8cfa0 38%, #f4a25f 100%);
+    color: #fff;
+    min-height: 247mm;
+    padding: 20mm 18mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    break-after: page;
+  }
+  .couverture .marque { font-size: 22pt; font-weight: 700; letter-spacing: -0.02em; }
+  .couverture .marque .barres { letter-spacing: -0.12em; margin-right: 2pt; }
+  .couverture .titre {
+    font-size: 13pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+    max-width: 120mm;
+  }
+  .couverture .client { font-size: 20pt; font-weight: 700; margin-top: 4pt; }
+  .couverture .filet {
+    border-top: 0.8pt dotted rgba(255, 255, 255, 0.75);
+    margin: 10pt 0;
+  }
+  .couverture .etiquette {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  .couverture .mentions { font-size: 8.5pt; line-height: 1.7; }
+  .couverture .mentions strong { font-weight: 700; }
+
+  /* ── Bandeau & pied de page ────────────────────────────────────────────── */
+
+  .bandeau {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 5pt;
+    margin-bottom: 10pt;
+    font-size: 7pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8a8a82;
+  }
+  .bandeau .marque {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: #1c1c1b;
+  }
+  .bandeau .marque .barres { color: #f4883c; letter-spacing: -0.12em; }
+
+  .pied {
+    margin-top: 16pt;
+    padding-top: 6pt;
+    border-top: 0.5pt solid #e2e2de;
+    display: flex;
+    justify-content: space-between;
+    font-size: 7pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a9a92;
+  }
+
+  /* ── Corps ─────────────────────────────────────────────────────────────── */
+
+  .page { max-width: 180mm; margin: 0 auto; padding: 10mm 0 0; }
+
+  /*
+    Le gabarit porte son propre en-tete -- titre, client, date, reference. La
+    couverture les affiche deja, et le contrat de reference attaque sa page 2
+    directement sur "Entre les soussignes". On masque donc le doublon plutot
+    que de retirer l en-tete du gabarit : celui-ci reste utilisable seul, par
+    doc.nosho.org ou par tout autre habillage.
+  */
+  .contrat > header { display: none; }
+
+  h1 { font-size: 18pt; line-height: 1.15; margin: 0 0 3pt; text-wrap: balance; }
+  .sous-titre { color: #55554f; font-size: 11pt; margin: 0 0 14pt; }
+
+  /*
+    Le titre d article : gros numero orange, titre sombre, filet epais.
+    C est la signature visuelle du contrat de reference.
+  */
   h2 {
-    font-size: 11.5pt;
-    margin: 16pt 0 5pt;
-    padding-bottom: 3pt;
-    border-bottom: 0.6pt solid #d8d8d4;
+    font-size: 13pt;
+    font-weight: 700;
+    margin: 20pt 0 8pt;
+    padding-bottom: 5pt;
+    border-bottom: 1.4pt solid #1c1c1b;
     text-wrap: balance;
   }
-  h3 { font-size: 10.5pt; margin: 10pt 0 3pt; }
+  h3 { font-size: 10.5pt; font-weight: 700; margin: 12pt 0 4pt; color: #1c1c1b; }
+  h4 { font-size: 9.5pt; font-weight: 700; margin: 9pt 0 3pt; color: #33332f; }
 
-  /* Les annexes descendent d un niveau : DPA article par article, MTO 2.1 a
-     2.7, registre. Sans regle propre, h4 heritait du gras par defaut du
-     navigateur et se confondait avec h3. */
-  h4 { font-size: 9.5pt; margin: 8pt 0 2pt; color: #33332f; }
+  p, li { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 14pt; }
+  li { padding-left: 2pt; }
+  li::marker { color: #f4883c; }
 
-  /* L annexe 1 commence page neuve : c est un accord distinct, signe au titre
-     de l article 28 du RGPD, et l enchainer au corps le ferait lire comme une
-     suite du contrat. */
+  strong { font-weight: 700; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8pt 0;
+    font-size: 9pt;
+  }
+  th, td {
+    text-align: left;
+    padding: 5pt 7pt;
+    border-bottom: 0.5pt solid #e6e6e1;
+    vertical-align: top;
+  }
+  thead th {
+    font-size: 7.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: #f6f6f3;
+    border-bottom: 0.8pt solid #d8d8d2;
+  }
+  tbody th { font-weight: 700; background: transparent; width: 34%; }
+  td.montant, th.montant { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .encadre {
+    border-left: 2.5pt solid #f4883c;
+    background: #fdf4ec;
+    padding: 8pt 10pt;
+    margin: 10pt 0;
+  }
+  .encadre-titre {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #c86a22;
+    margin-bottom: 4pt;
+  }
+  .note { font-size: 8.5pt; color: #6a6a62; font-style: italic; }
+
+  /* ── Sauts de page ─────────────────────────────────────────────────────── */
+
+  section, .signatures, table, .encadre { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+
+  /*
+    L annexe 1 commence page neuve : c est un accord distinct, signe au titre de
+    l article 28 du RGPD, et l enchainer au corps le ferait lire comme une suite
+    du contrat.
+  */
   #annexes { break-before: page; }
   #annexes > section { break-before: page; }
   #annexes > section:first-of-type { break-before: auto; }
 
-  .encadre {
-    border-left: 2pt solid #1c1c1b;
-    background: #f8f8f5;
-    padding: 7pt 9pt;
-    margin: 8pt 0;
-  }
-  .encadre-titre {
-    font-size: 8.5pt;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 4pt;
-  }
-  .note { font-size: 9pt; color: #55554f; }
-  p, li { margin: 0 0 6pt; }
-  ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
-  .sous-titre { color: #55554f; font-size: 11pt; margin-bottom: 12pt; }
-
-  table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 10pt; }
-  th, td { text-align: left; padding: 5pt 6pt; border-bottom: 0.5pt solid #e2e2de; }
-  th { font-weight: 600; background: #f6f6f3; }
-  td.montant, th.montant { text-align: right; font-variant-numeric: tabular-nums; }
-
-  /*
-    Ce qui ne doit jamais etre coupe par un saut de page : un article separe de
-    son titre, et surtout la mention « Fait a » separee des cases de signature.
-  */
-  section, .signatures, table { break-inside: avoid; }
-  h1, h2, h3 { break-after: avoid; }
-
   .signatures {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10mm;
-    margin-top: 14pt;
+    gap: 12mm;
+    margin-top: 16pt;
   }
-  .signatures .bloc { border-top: 0.6pt solid #1c1c1b; padding-top: 5pt; }
+  .signatures .bloc { border-top: 0.8pt solid #1c1c1b; padding-top: 6pt; }
 
-  footer.pied {
-    margin-top: 18pt;
-    padding-top: 6pt;
-    border-top: 0.5pt solid #e2e2de;
-    color: #7a7a72;
-    font-size: 8pt;
-  }
+  /* ── Aide à l'écran, jamais imprimée ───────────────────────────────────── */
 
-  /* A l'ecran seulement : l'aide a l'impression ne doit pas finir sur le PDF. */
   .aide {
-    max-width: 190mm;
+    max-width: 180mm;
     margin: 8mm auto 0;
     padding: 8pt 10pt;
     background: #f2f6fb;
@@ -135,14 +251,24 @@ const STYLES = `
     font-size: 9pt;
     color: #33475e;
   }
-  @media print { .aide { display: none; } }
+  @media print {
+    .aide { display: none; }
+    .couverture { min-height: auto; height: 247mm; }
+  }
 `;
+
+/** La marque, en typographie : le dépôt ne porte pas encore le logo Nosho. */
+function marque(): string {
+  return `<span class="marque"><span class="barres">|||</span>nosho</span>`;
+}
 
 /** Enveloppe un fragment rendu dans un document complet, prêt à imprimer. */
 export function wrapContractDocument(
   fragment: string,
   options: DocumentOptions,
 ): string {
+  const kicker = options.kicker ?? options.title;
+
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -156,9 +282,40 @@ export function wrapContractDocument(
   Pour obtenir un PDF : <strong>Imprimer</strong> puis
   <strong>Enregistrer au format PDF</strong>. Ce bandeau ne sera pas imprimé.
 </p>
+
+<section class="couverture">
+  <div>${marque()}</div>
+  <div>
+    <p class="titre">${escapeAttribute(kicker)}</p>
+    ${
+      options.clientName
+        ? `<p class="client">${escapeAttribute(options.clientName)}</p>`
+        : ""
+    }
+    <div class="filet"></div>
+    ${
+      options.contractDate
+        ? `<p class="etiquette">Date</p><p>${escapeAttribute(options.contractDate)}</p><div class="filet"></div>`
+        : ""
+    }
+    <p class="mentions">
+      <strong>${NOSHO.raisonSociale} :</strong> ${NOSHO.adresse}<br>
+      ${NOSHO.rcs}<br>
+      ${NOSHO.representant}
+    </p>
+  </div>
+</section>
+
 <main class="page">
+  <div class="bandeau">
+    ${marque()}
+    <span>${escapeAttribute(kicker)}</span>
+  </div>
 ${fragment}
-<footer class="pied">${NOSHO_PIED}</footer>
+  <div class="pied">
+    <span>nosho.ai — ${escapeAttribute(kicker)}</span>
+    <span>${escapeAttribute(options.contractDate ?? "")}</span>
+  </div>
 </main>
 </body>
 </html>`;

@@ -165,11 +165,21 @@ export const GenerateContractAction = ({
       return null;
     }
 
+    const intitule =
+      contract.kind === "cadre"
+        ? "Contrat de service"
+        : "Contrat de service — Période d'essai";
+
     return {
       html: wrapContractDocument(html, {
         title: `${
           contract.kind === "cadre" ? "Contrat cadre" : "Contrat POC"
         } — ${company.name}`,
+        // La charte du contrat de reference : intitule en bandeau, client en
+        // gros sur la couverture, date sous le filet (NOS-1191).
+        kicker: intitule,
+        clientName: company.name,
+        contractDate: payload.contractDate,
       }),
       nom: contractFileName(contract.kind, company.name, new Date()),
     };

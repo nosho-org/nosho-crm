@@ -20,7 +20,9 @@ describe("wrapContractDocument", () => {
 
   it("cache l'aide à l'impression sur le document imprimé", () => {
     const html = wrapContractDocument("", { title: "x" });
-    expect(html).toContain("@media print { .aide { display: none; } }");
+    // La règle, pas sa mise en forme : le CSS a été reformaté depuis.
+    const bloc = html.slice(html.indexOf("@media print"));
+    expect(bloc).toContain(".aide { display: none; }");
   });
 
   it("échappe le titre plutôt que de le recopier", () => {
@@ -32,7 +34,39 @@ describe("wrapContractDocument", () => {
     // Les faire transiter par le CRM ferait de chaque contrat une occasion de
     // les contredire.
     const html = wrapContractDocument("", { title: "x" });
-    expect(html).toContain("RCS Marseille 990 546 418");
+    expect(html).toContain("990546418");
+    expect(html).toContain("390 Avenue du Prado");
+  });
+
+  it("ouvre sur une couverture, comme le contrat de référence", () => {
+    // « Ça ne reprend pas mes templates » : le texte était le bon, la mise en
+    // forme absente. Le document sortait en A4 blanc sans couverture.
+    const html = wrapContractDocument("<article>x</article>", {
+      title: "Contrat POC — HEM",
+      kicker: "Contrat de service — Période d'essai",
+      clientName: "Hôpital Européen",
+      contractDate: "30 août 2026",
+    });
+    expect(html).toContain('class="couverture"');
+    expect(html).toContain("Hôpital Européen");
+    expect(html).toContain("30 août 2026");
+    // Le degrade du contrat de reference.
+    expect(html).toContain("linear-gradient");
+  });
+
+  it("répète bandeau et pied de page", () => {
+    const html = wrapContractDocument("", {
+      title: "x",
+      kicker: "Contrat de service",
+    });
+    expect(html).toContain('class="bandeau"');
+    expect(html).toContain('class="pied"');
+  });
+
+  it("se passe de couverture quand rien ne la nourrit", () => {
+    // Une couverture avec un client vide serait pire que pas de couverture.
+    const html = wrapContractDocument("", { title: "x" });
+    expect(html).not.toContain('class="client"');
   });
 });
 
