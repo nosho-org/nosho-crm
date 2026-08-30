@@ -1,13 +1,26 @@
 import { useState } from "react";
-import { Download, FileText, Loader2, Printer } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  FileText,
+  Loader2,
+  Printer,
+} from "lucide-react";
 import { useGetList, useGetOne, useNotify, useRecordContext } from "ra-core";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import {
   contractFileName,
   wrapContractDocument,
 } from "../contracts/contractDocument";
 import { renderTemplate } from "../contracts/renderTemplate";
+import { isClosedStage } from "./cockpit/dealFields";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Contact, Deal, Sale } from "../types";
 import { buildProposalPayload } from "./proposalPayload";
@@ -51,7 +64,7 @@ export const GenerateProposalAction = ({
 } = {}) => {
   const record = useRecordContext<Deal>();
   const notify = useNotify();
-  const { dealProducts } = useConfigurationContext();
+  const { dealProducts, dealPipelineStatuses } = useConfigurationContext();
   const [busy, setBusy] = useState<"download" | "print" | null>(null);
 
   const { data: company } = useGetOne<Company>(
@@ -75,6 +88,17 @@ export const GenerateProposalAction = ({
   );
 
   if (!record) return null;
+
+  /*
+   * Rien a proposer sur une affaire close (NOS-1197).
+   *
+   * Simon : "tu penses pas que le bouton proposition il sert a rien ?".
+   * Pas en Demo/POC, ou c est justement l action principale -- mais en
+   * Close Won, Lost et Churn, si : on ne propose rien a un client deja
+   * signe, ni a une affaire perdue. Le CRM ne faisait que le METTRE EN
+   * AVANT selon l etape, sans jamais le cacher.
+   */
+  if (isClosedStage(record.stage, dealPipelineStatuses)) return null;
 
   const construire = (): { html: string; nom: string } | null => {
     if (!company) {
@@ -166,34 +190,45 @@ export const GenerateProposalAction = ({
     }
   };
 
+  /*
+   * Un menu, pas deux boutons.
+   *
+   * Le second n etait qu une icone d imprimante sans libelle -- illisible.
+   * Et « Editer un contrat », juste en dessous, est deja un menu : deux
+   * documents, deux menus, meme forme.
+   */
   return (
-    <>
-      <Button
-        size="sm"
-        variant={variant}
-        onClick={telecharger}
-        disabled={busy !== null || !company}
-        className="h-9"
-      >
-        {busy === "download" ? (
-          <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-        ) : (
-          <FileText className="w-4 h-4" aria-hidden />
-        )}
-        Proposition
-        <Download className="w-3.5 h-3.5 opacity-60" aria-hidden />
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={imprimer}
-        disabled={busy !== null || !company}
-        className="h-9"
-        title="Ouvre la proposition, puis Imprimer → Enregistrer au format PDF"
-        aria-label="Proposition en PDF"
-      >
-        <Printer className="w-3.5 h-3.5" aria-hidden />
-      </Button>
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant={variant}
+          disabled={busy !== null || !company}
+          className="h-9"
+        >
+          {busy !== null ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : (
+            <FileText className="w-4 h-4" aria-hidden />
+          )}
+          Proposition
+          <ChevronDown className="w-3.5 h-3.5 opacity-50" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={telecharger}>
+          <Download className="w-4 h-4" aria-hidden />
+          Télécharger
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={imprimer}>
+          <Printer className="w-4 h-4" aria-hidden />
+          PDF
+          <span className="ml-2 text-xs text-muted-foreground">
+            via Imprimer
+          </span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
