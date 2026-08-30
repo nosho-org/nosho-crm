@@ -160,6 +160,26 @@ export const ContractDialog = ({
   const hasAddress = !!(company?.address && company?.zipcode && company?.city);
   const missing = !siret || !hasAddress;
 
+  /*
+   * L'identité légale, qui ouvre le contrat (NOS-1190).
+   *
+   * « La société X, [FORME] au capital de [CAPITAL] EUR, immatriculée au RCS
+   * de [VILLE], code APE [APE] ». Ces quatre valeurs bloquent la génération si
+   * elles manquent — mais elles ne bloquent PAS l'enregistrement : on doit
+   * pouvoir saisir un contrat le temps que le registre réponde.
+   *
+   * Le bouton de reprise au registre était jusqu'ici réservé au cas « adresse
+   * manquante ». Une société complète en adresse mais sans forme juridique
+   * laissait donc l'utilisateur sans aucun moyen de la remplir, face à un
+   * message de génération qui le renvoyait vers un bouton invisible.
+   */
+  const legalIncomplete =
+    !!company &&
+    (!company.legal_form ||
+      !company.share_capital ||
+      !company.rcs_city ||
+      !company.ape_code);
+
   /**
    * Reprend l'adresse au registre, depuis le SIREN déduit du SIRET.
    *
@@ -477,7 +497,7 @@ export const ContractDialog = ({
             l'enrichissement à la création ; l'adresse peut être reprise au
             registre d'un clic, puisque le SIRET la désigne.
           */}
-          {missing && (
+          {(missing || legalIncomplete) && (
             <div className="mt-1 flex flex-col gap-2 rounded-md border border-[var(--deal-status-warning)] bg-[color-mix(in_oklch,var(--deal-status-warning)_8%,transparent)] p-2.5">
               <span className="flex items-start gap-1.5 text-xs text-[var(--deal-status-warning)]">
                 <AlertTriangle
@@ -487,7 +507,13 @@ export const ContractDialog = ({
                 <span>
                   {!siret
                     ? "SIRET manquant. Le contrat écrit « immatriculée au RCS de … sous le numéro … (SIRET du siège : …) » : il ne peut pas être édité sans."
-                    : "Adresse incomplète. Le bloc « parties » écrit « dont l'établissement est situé …, … … »."}
+                    : !hasAddress
+                      ? "Adresse incomplète. Le bloc « parties » écrit « dont l'établissement est situé …, … … »."
+                      : /*
+                          Un avertissement, pas un blocage : le contrat
+                          s'enregistre, seule sa GÉNÉRATION sera refusée.
+                        */
+                        "Identité légale incomplète — forme juridique, capital, greffe ou code APE. Le contrat s'enregistre, mais le document ne pourra pas être généré."}
                 </span>
               </span>
               {!siret ? (
@@ -509,7 +535,7 @@ export const ContractDialog = ({
                   ) : (
                     <Download className="w-3.5 h-3.5" aria-hidden />
                   )}
-                  Reprendre l'adresse du registre
+                  Compléter depuis le registre
                 </Button>
               )}
             </div>
