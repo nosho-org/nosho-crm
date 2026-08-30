@@ -77,19 +77,20 @@ export const DealProposalBlock = () => {
     <>
       <Card className="p-4 flex flex-col gap-3">
         {/*
-          "Ancienne" : depuis NOS-1192, une proposition se genere en local et
-          ne se stocke plus. Ce bloc ne montre donc QUE les documents produits
-          par doc.nosho.org avant la coupure. Le dire evite de croire que le
-          bouton "Proposition" de l en-tete alimente cette carte.
+          Un vestige, et rien d autre (NOS-1198).
+
+          La proposition commerciale n existe plus dans le CRM : chez Nosho le
+          contrat POC EST l offre. Ce bloc ne subsiste que pour donner acces
+          aux documents reellement envoyes a des prospects avant la
+          suppression. Rien ne peut en produire de nouveaux.
         */}
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Ancienne proposition
         </span>
         <p className="text-xs text-muted-foreground -mt-1">
-          Produite par doc.nosho.org avant que le CRM ne génère lui-même ses
-          propositions. Conservée pour référence ; le bouton
-          {" "}<strong>Proposition</strong> de l'en-tête produit désormais un
-          document local.
+          Produite par doc.nosho.org, avant que le contrat POC ne devienne
+          l'unique document commercial. Conservée pour référence : rien n'en
+          génère de nouvelles. Supprimez-la et le bloc disparaît.
         </p>
 
         <div className="flex items-center justify-between gap-3 flex-wrap">

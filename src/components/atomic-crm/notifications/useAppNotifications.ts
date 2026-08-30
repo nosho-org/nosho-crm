@@ -22,7 +22,12 @@ import type { AppNotification } from "./notifications";
  *
  * **Il ne suit pas les filtres du tableau de bord.** C'est voulu : une
  * notification qui disparaîtrait parce qu'on a restreint une période ne
- * notifierait plus rien. Le périmètre est le pipeline ouvert, point.
+ * notifierait plus rien.
+ *
+ * **Mais il ne sort pas de son responsable.** Le périmètre est le pipeline
+ * ouvert DE L'UTILISATEUR (NOS-1199) : une cloche qui annonce « à faire : X »
+ * sur l'affaire d'un collègue demande une action qu'on ne peut pas mener, et
+ * dilue les deux seules qui nous concernent.
  *
  * **Il tourne sur toutes les pages.** Deux requêtes, mises en cache par
  * react-query et partagées avec le reste de l'écran quand les clés coïncident.
@@ -46,17 +51,36 @@ export function useAppNotifications(): AppNotification[] {
   const today = startOfToday();
 
   /*
-   * Les affaires ouvertes, toutes responsables confondus.
+   * Les affaires ouvertes DONT ON EST RESPONSABLE (NOS-1199).
+   *
+   * Simon : « faut que les notifications soient par user, je dois pas avoir
+   * une notification pour les opportunités de Marc-Henri ».
+   *
+   * Les tâches étaient déjà filtrées sur l'utilisateur ; les deux
+   * notifications tirées des opportunités, non. La cloche annonçait donc « à
+   * faire : X » sur une affaire qu'on ne peut pas traiter, et comptait dans
+   * « sans prochaine action » des lignes dont quelqu'un d'autre répond.
+   *
+   * `enabled` attend l'identité : sans lui, le premier rendu interrogerait
+   * tout le pipeline et ferait clignoter une notification sur l'affaire d'un
+   * collègue avant de se corriger.
    *
    * `archived_at@is: null` plutôt qu'un filtre d'étape : les étapes closes
    * sont écartées par `rankDealsByFocus`, qui connaît la configuration. Les
    * dupliquer ici en dur donnerait deux définitions de « ouverte ».
    */
-  const { data: deals } = useGetList<DealRecord>("deals", {
-    pagination: { page: 1, perPage: 500 },
-    sort: { field: "last_activity_at", order: "ASC" },
-    filter: { "archived_at@is": null },
-  });
+  const { data: deals } = useGetList<DealRecord>(
+    "deals",
+    {
+      pagination: { page: 1, perPage: 500 },
+      sort: { field: "last_activity_at", order: "ASC" },
+      filter: {
+        "archived_at@is": null,
+        ...(identity?.id != null ? { sales_id: identity.id } : {}),
+      },
+    },
+    { enabled: !!identity },
+  );
 
   const { data: tasks } = useGetList<Task>(
     "tasks",
