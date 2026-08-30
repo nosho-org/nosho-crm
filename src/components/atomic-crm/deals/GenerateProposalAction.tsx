@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useGetMany, useNotify, useRecordContext } from "ra-core";
 import { ChevronDown, ExternalLink, FileText, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "../misc/formatDate";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,6 +132,22 @@ const ProposalUrlsDisplay = ({ deal }: { deal: Deal }) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {/*
+            Ce que le menu taisait : qu un document existe deja, et depuis
+            quand (NOS-1187). Sans cet en-tete, trois entrees apparaissent
+            sans contexte, et "Regenerer -- ecrase le document" se lit comme
+            une menace sur un document fantome.
+          */}
+          <div className="px-2 py-1.5 border-b mb-1">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Document existant
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              {deal.proposal_generated_at
+                ? `Généré le ${formatDate(deal.proposal_generated_at)}`
+                : "Date de génération inconnue"}
+            </span>
+          </div>
           <DropdownMenuItem asChild>
             <a
               href={deal.proposal_public_url ?? "#"}

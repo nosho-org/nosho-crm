@@ -64,7 +64,7 @@ async function handler(req: Request, user: User): Promise<Response> {
   const { data: deal, error: dealError } = await supabase
     .from("deals")
     .select(
-      "id, company_id, contact_ids, sales_id, proposal_edit_url, proposal_public_url",
+      "id, company_id, contact_ids, sales_id, proposal_edit_url, proposal_public_url, proposal_generated_at",
     )
     .eq("id", dealId)
     .maybeSingle();
@@ -206,6 +206,10 @@ async function handler(req: Request, user: User): Promise<Response> {
     .update({
       proposal_edit_url: noshoData.editUrl,
       proposal_public_url: noshoData.publicUrl,
+      // Une URL dit qu un document existe, pas depuis quand -- et le menu
+      // proposait "Regenerer" sans jamais montrer ce qu il ecraserait
+      // (NOS-1187).
+      proposal_generated_at: new Date().toISOString(),
     })
     .eq("id", dealId);
   if (updateErr) {

@@ -379,6 +379,17 @@ export type Deal = {
   proposal_edit_url?: string;
   proposal_public_url?: string;
   /**
+   * Date de la derniere generation de la proposition (NOS-1187).
+   *
+   * Une URL dit qu un document existe, pas depuis quand. Sans elle, le
+   * menu proposait "Regenerer -- ecrase le document" sans jamais montrer
+   * ce qu il ecraserait.
+   *
+   * Absente sur les propositions generees avant cette colonne :
+   * l interface dit alors "document genere" sans date, ce qui est exact.
+   */
+  proposal_generated_at?: string | null;
+  /**
    * Last real activity: the latest of `updated_at`, the newest deal note and
    * the newest linked call. Computed by `deals_summary`, so it is present on
    * every read through the data provider but never writable.
