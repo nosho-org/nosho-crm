@@ -45,17 +45,19 @@ export const ContractAction = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {/*
+            Sans mention de durée ni de tarif.
+
+            Elles annonçaient « deux semaines, gratuit » et « 12 mois + mandat
+            SEPA », alors que la durée du POC et sa gratuité se choisissent dans
+            la fenêtre qui suit. Un menu qui affirme ce que le formulaire va
+            démentir vaut moins qu'un menu qui se tait.
+          */}
           <DropdownMenuItem onSelect={() => setKind("poc")}>
             Contrat POC
-            <span className="ml-2 text-xs text-muted-foreground">
-              deux semaines, gratuit
-            </span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setKind("cadre")}>
             Contrat cadre
-            <span className="ml-2 text-xs text-muted-foreground">
-              12 mois + mandat SEPA
-            </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
