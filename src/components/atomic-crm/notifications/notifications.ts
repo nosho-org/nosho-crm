@@ -37,7 +37,13 @@ export interface AppNotification {
   /** Ligne fine sous le corps — le calcul, la source, le détail chiffré. */
   detail?: string;
   /** Lien interne. Absent quand il n'y a rien à ouvrir. */
-  to?: string;
+  /**
+   * Un chemin, ou une cible construite par `toDealsLink` (NOS-1193).
+   *
+   * La forme objet porte la chaine de filtres : sans elle, "5 opportunites
+   * sans prochaine action" ouvrait la liste entiere.
+   */
+  to?: string | { pathname: string; search: string };
   actionLabel?: string;
   /**
    * Ce qui est tu quand on ferme.

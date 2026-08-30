@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 import type { Company, Contract, Sale } from "../types";
 import { buildContractPayload } from "./contractPayload";
+import { checkContractReadiness } from "./contractReadiness";
 import { contractFileName, wrapContractDocument } from "./contractDocument";
 import { renderTemplate } from "./renderTemplate";
 
@@ -44,26 +45,6 @@ const GABARITS: Record<string, string> = {
   cadre: gabaritCadre,
 };
 
-/** Ce que `missing` renvoie, traduit en ce que l'utilisateur doit corriger. */
-const OU_CORRIGER: Record<string, string> = {
-  "client.name": "le nom de la société",
-  "client.siret": "le SIRET, sur la fiche société",
-  "client.address": "l'adresse, sur la fiche société",
-  "client.zipcode": "le code postal, sur la fiche société",
-  "client.city": "la ville, sur la fiche société",
-  "client.legalForm": "la forme juridique — bouton Compléter depuis le registre",
-  "client.shareCapital": "le capital social — bouton Compléter depuis le registre",
-  "client.rcsCity": "la ville du RCS — bouton Compléter depuis le registre",
-  "client.rcsNumber": "le numéro RCS, déduit du SIRET",
-  "client.apeCode": "le code APE — bouton Compléter depuis le registre",
-  "signatory.firstName": "le prénom du signataire",
-  "signatory.lastName": "le nom du signataire",
-  noshoSignatoryName: "le signataire Nosho",
-  noshoSignatoryJobTitle: "la fonction du signataire Nosho",
-  "trial.startDate": "la date de début de la période d'essai",
-  "trial.endDate": "la date de fin de la période d'essai",
-  sepaMandateReference: "la référence du mandat SEPA",
-};
 
 export const GenerateContractAction = ({
   contract,
@@ -114,57 +95,40 @@ export const GenerateContractAction = ({
       now: new Date(),
     });
 
-    const { html, missing } = renderTemplate(
+    const { html } = renderTemplate(
       gabarit,
       payload as unknown as Record<string, unknown>,
     );
 
-    if (missing.length > 0) {
-      /*
-       * On refuse, et on nomme. Une notification « document incomplet » sans la
-       * liste obligerait à comparer le document au gabarit ligne à ligne.
-       */
-      const quoi = missing
-        .map((cle) => OU_CORRIGER[cle] ?? cle)
-        .filter((valeur, index, toutes) => toutes.indexOf(valeur) === index);
-      notify(
-        `Document incomplet, rien n'a été généré. À renseigner : ${quoi.join(" · ")}.`,
-        { type: "warning", autoHideDuration: 12000 },
-      );
-      return null;
-    }
-
     /*
-     * Le second garde-fou : les articles restes vides (NOS-1189).
+     * Le refus, en dernier recours.
      *
-     * `renderTemplate` ne signale que les VARIABLES non resolues. Un article
-     * dont la prose n a jamais ete reprise ne porte aucune variable -- il
-     * porte un commentaire "TEXTE A REPRENDRE", que le rendu laisse passer
-     * sans rien dire.
-     *
-     * Le gabarit du contrat cadre est dans ce cas sur six de ses treize
-     * articles, securite, continuite, RGPD et responsabilites compris. Sans
-     * ce controle, il se telechargerait silencieusement ampute -- et un
-     * contrat sans article de responsabilite se signe tout aussi bien qu un
-     * autre, jusqu au litige.
+     * La fenetre de saisie previent deja pendant qu on remplit -- meme
+     * fonction, meme regle (NOS-1194). Ce controle reste parce qu un contrat
+     * peut avoir ete enregistre avant qu elle n existe, ou parce que la fiche
+     * societe a change depuis.
      */
-    const NON_REDIGE = /TEXTE\s+[ÀA]\s+REPRENDRE/i;
-    const vides = [
-      ...html.matchAll(
-        /<h2>([^<]*)<\/h2>\s*<!--\s*TEXTE\s+[ÀA]\s+REPRENDRE/gi,
-      ),
-    ].map((m) => m[1].replace(/&amp;/g, "&").trim());
+    const etat = checkContractReadiness({
+      contract,
+      company,
+      noshoSignatory: {
+        first_name: signatory?.first_name ?? "",
+        last_name: signatory?.last_name ?? "",
+        job_title: contract.nosho_signatory_job_title,
+      },
+      dealId,
+    });
 
-    if (NON_REDIGE.test(html)) {
-      notify(
-        vides.length > 0
-          ? `Gabarit incomplet, rien n a ete genere. Articles sans texte : ${vides.join(" · ")}.`
-          : "Gabarit incomplet : il reste des sections non redigees. Rien n a ete genere.",
-        { type: "error", autoHideDuration: 15000 },
-      );
+    if (!etat.ready) {
+      const raison = etat.articlesVides.length
+        ? `Articles sans texte : ${etat.articlesVides.join(" · ")}.`
+        : `À renseigner : ${etat.aCorriger.join(" · ")}.`;
+      notify(`Document incomplet, rien n'a été généré. ${raison}`, {
+        type: "warning",
+        autoHideDuration: 15000,
+      });
       return null;
     }
-
     const intitule =
       contract.kind === "cadre"
         ? "Contrat de service"

@@ -5,6 +5,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { DealRecord } from "../deals/cockpit/dealFields";
 import { startOfToday } from "../deals/cockpit/dealDates";
 import type { Task } from "../types";
+import { toDealsLink } from "../deals/dealFilterContract";
 import { bucketFor } from "../dashboard/actionQueue";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
 import type { AppNotification } from "./notifications";
@@ -137,7 +138,20 @@ export function useAppNotifications(): AppNotification[] {
       severity: "warning",
       title: `${missing.length} opportunité${missing.length > 1 ? "s" : ""} sans prochaine action`,
       body: `${amount(stake)} qui n'avancent plus`,
-      to: "/deals",
+      /*
+       * Les cinq opportunites nommees, pas un lien vers la liste entiere.
+       *
+       * Simon : « quand je clique sur 5 opportunites j arrive sur l ensemble
+       * des opportunites ». Le lien etait un `/deals` nu, sans le moindre
+       * filtre (NOS-1193).
+       *
+       * Et redecrire le critere ne suffirait pas : ce hook compte les actions
+       * ABSENTES (`status !== "missing"`), le tableau de bord les actions
+       * absentes OU non datees, et le filtre de liste celles dont les deux
+       * colonnes de date sont nulles. Trois definitions du meme mot. Nommer
+       * les lignes est le seul lien qui ne puisse pas mentir sur son chiffre.
+       */
+      to: toDealsLink({ ids: missing.map((candidate) => candidate.deal.id) }),
       dismissKey: `missing-next-action-${missing.length}`,
     });
   }

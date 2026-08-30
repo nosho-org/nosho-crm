@@ -51,6 +51,20 @@ export interface DealFilterState {
   missingClosingDate?: boolean | null;
   /** No next action at all: no open task, and no imported typed value. */
   missingNextAction?: boolean | null;
+
+  /**
+   * Les opportunités visées, une par une (NOS-1193).
+   *
+   * Le seul filtre qui ne peut pas diverger de ce qui l a produit. Les autres
+   * REDECRIVENT un critère : « sans prochaine action » se traduit ici en deux
+   * colonnes nulles, alors que la cloche compte les actions ABSENTES et le
+   * tableau de bord les actions absentes OU non datées. Trois definitions,
+   * trois ensembles, et un lien qui ment sur son propre chiffre.
+   *
+   * Un producteur qui connait deja ses lignes les nomme donc, plutot que de
+   * tenter de reformuler son critere dans le vocabulaire de la liste.
+   */
+  ids?: (string | number)[] | null;
 }
 
 /**
@@ -89,6 +103,10 @@ export function toListFilter(
   options: { today?: Date } = {},
 ): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
+
+  // Nommer les lignes rend tout autre critere superflu : on sait deja
+  // lesquelles on veut.
+  assignIn(filter, "id", state.ids ?? undefined);
 
   if (state.periodStart) {
     filter["expected_closing_date@gte"] = state.periodStart;

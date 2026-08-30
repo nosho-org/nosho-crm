@@ -43,6 +43,7 @@ import {
   weeksBetween,
 } from "./contractOffers";
 import { buildSepaMandateReference } from "./contractPayload";
+import { checkContractReadiness } from "./contractReadiness";
 
 /**
  * ---------------------------------------------------------------------------
@@ -358,6 +359,58 @@ export const ContractDialog = ({
   };
 
   const noshoSignatory = sales?.find((s) => String(s.id) === noshoSignatoryId);
+
+  /*
+   * Ce qui empecherait de generer, calcule PENDANT la saisie (NOS-1194).
+   *
+   * Simon : « faudrait que ca bloque avant la generation du document ». Un
+   * contrat s enregistrait, semblait complet, et ne revelait ses trous qu au
+   * clic sur Telecharger -- parfois des jours plus tard, devant un client qui
+   * attend.
+   *
+   * La regle vient de `contractReadiness`, la meme que celle du bouton :
+   * elle rend le gabarit a blanc et regarde ce qui n a pas pu etre rempli.
+   * Deduire plutot que declarer evite qu une liste de champs obligatoires se
+   * desynchronise du gabarit a la premiere clause ajoutee.
+   */
+  const etat = company
+    ? checkContractReadiness({
+        contract: {
+          kind,
+          signatory_first_name: signatoryFirstName.trim() || null,
+          signatory_last_name: signatoryLastName.trim() || null,
+          signatory_job_title: signatoryJobTitle.trim() || null,
+          nosho_signatory_job_title: noshoSignatory?.job_title ?? null,
+          services: rows
+            .filter((row) => row.label.trim())
+            .map((row) => ({
+              service: row.service,
+              label: row.label.trim(),
+              unitPriceCents: toCents(row.price),
+              unit: row.unit || null,
+              comment: row.comment.trim() || null,
+            })),
+          is_free: isFree,
+          trial_start_date: kind === "poc" ? trialStart || null : null,
+          trial_end_date: kind === "poc" ? trialEnd || null : null,
+          trial_weeks: kind === "poc" ? (weeks ?? null) : null,
+          sepa_mandate_reference:
+            kind === "cadre"
+              ? buildSepaMandateReference(
+                  Number(deal.id),
+                  new Date().getFullYear(),
+                )
+              : null,
+        },
+        company,
+        noshoSignatory: {
+          first_name: noshoSignatory?.first_name ?? "",
+          last_name: noshoSignatory?.last_name ?? "",
+          job_title: noshoSignatory?.job_title,
+        },
+        dealId: Number(deal.id),
+      })
+    : null;
 
   const handleSubmit = () => {
     const services: ContractService[] = rows
@@ -753,6 +806,27 @@ export const ContractDialog = ({
             chez le client avec `[SIREN / FINESS HEM]` page 3, jamais rempli.
             Une fois signé, il n'y a plus rien à corriger.
           */}
+          {/*
+            Ce qui empechera de generer, dit PENDANT la saisie (NOS-1194).
+
+            Il n empeche pas d enregistrer : on doit pouvoir poser un contrat
+            en attendant une information qui viendra du client ou du registre.
+            Mais on ne doit pas l apprendre au moment de le telecharger, une
+            semaine plus tard, devant quelqu un qui attend.
+          */}
+          {etat && !etat.ready && etat.aCorriger.length > 0 && (
+            <div className="flex items-start gap-1.5 text-xs text-[var(--deal-status-warning)] mr-auto max-w-md text-left">
+              <AlertTriangle
+                className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                aria-hidden
+              />
+              <span>
+                Le document ne pourra pas être généré tant qu'il manque :{" "}
+                {etat.aCorriger.join(" · ")}. L'enregistrement, lui, reste
+                possible.
+              </span>
+            </div>
+          )}
           <Button
             type="button"
             onClick={handleSubmit}

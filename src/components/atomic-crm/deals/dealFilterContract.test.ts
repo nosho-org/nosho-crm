@@ -281,3 +281,23 @@ describe("HEALTH_FILTERS", () => {
     }
   });
 });
+
+describe("toListFilter — viser des lignes nommées (NOS-1193)", () => {
+  it("écrit un id@in", () => {
+    expect(toListFilter({ ids: [12, 33, 41] })).toEqual({
+      "id@in": "(12,33,41)",
+    });
+  });
+
+  it("n'écrit rien sur une liste vide", () => {
+    // `in.()` est rejeté par PostgREST avec un 400, et « aucune ligne »
+    // signifierait ici « toutes », soit exactement le bug corrigé.
+    expect(toListFilter({ ids: [] })).toEqual({});
+  });
+
+  it("se combine avec les autres critères", () => {
+    const filtre = toListFilter({ ids: [7], salesId: 9 });
+    expect(filtre["id@in"]).toBe("(7)");
+    expect(filtre["sales_id"]).toBe(9);
+  });
+});
