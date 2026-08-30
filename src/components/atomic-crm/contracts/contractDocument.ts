@@ -65,6 +65,33 @@ const STYLES = `
     text-wrap: balance;
   }
   h3 { font-size: 10.5pt; margin: 10pt 0 3pt; }
+
+  /* Les annexes descendent d un niveau : DPA article par article, MTO 2.1 a
+     2.7, registre. Sans regle propre, h4 heritait du gras par defaut du
+     navigateur et se confondait avec h3. */
+  h4 { font-size: 9.5pt; margin: 8pt 0 2pt; color: #33332f; }
+
+  /* L annexe 1 commence page neuve : c est un accord distinct, signe au titre
+     de l article 28 du RGPD, et l enchainer au corps le ferait lire comme une
+     suite du contrat. */
+  #annexes { break-before: page; }
+  #annexes > section { break-before: page; }
+  #annexes > section:first-of-type { break-before: auto; }
+
+  .encadre {
+    border-left: 2pt solid #1c1c1b;
+    background: #f8f8f5;
+    padding: 7pt 9pt;
+    margin: 8pt 0;
+  }
+  .encadre-titre {
+    font-size: 8.5pt;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 4pt;
+  }
+  .note { font-size: 9pt; color: #55554f; }
   p, li { margin: 0 0 6pt; }
   ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
   .sous-titre { color: #55554f; font-size: 11pt; margin-bottom: 12pt; }

@@ -1,28 +1,34 @@
 <!--
   Gabarit : CONTRAT DE SERVICE — CONTRAT CADRE
-  Destiné à doc.nosho.org. Voir README.md pour les variables.
+  Voir README.md pour les variables.
 
-  ── INCOMPLET, et il faut le savoir avant de s'en servir ───────────────────
+  ── Provenance du texte ────────────────────────────────────────────────────
 
-  Ce fichier porte la STRUCTURE et l'EMPLACEMENT DES VARIABLES, relevés en
-  lisant les 26 pages du contrat HEM rendues à l'écran. Il ne porte PAS le
-  texte juridique des articles.
+  Les treize articles sont transcrits du contrat de reference HEM v2 (26
+  pages, juillet 2026), page par page, a l ecran. Ce PDF n existe qu en
+  images : 35 fichiers media, aucune police embarquee, 320 caracteres
+  extractibles pour 8,9 Mo. Le .docx est dans le meme etat.
 
-  Raison : ces 26 pages n'existent qu'en images, dans le PDF comme dans le
-  .docx — 35 fichiers média, aucune police embarquée, 320 caractères
-  extractibles pour 8,9 Mo. Recopier des clauses à l'œil expose à une erreur de
-  chiffre ou de formulation que personne ne rattraperait avant l'envoi.
+  La transcription est donc une LECTURE, pas une extraction. Elle a ete faite
+  clause par clause en conservant les chiffres tels quels — 99,5 %, RTO 4 h,
+  RPO 24 h, 24 h de notification, 72 h CNIL, plafond aux 12 derniers mois,
+  confidentialite 5 ans, mise en production J+7.
 
-  Les articles marqués « TEXTE À REPRENDRE » attendent donc leur contenu. Les
-  valeurs chiffrées qui figurent ci-dessous (12 mois, 30 jours, 2 mois, 3 mois,
-  15 jours, 12 mois de réversibilité) ont été relevées directement sur les
-  pages et sont fiables ; elles sont là pour que les variables aient un sens,
-  pas pour remplacer la relecture.
+  Elle n a PAS ete relue par un juriste depuis. La fiche Nosho Brain
+  (wiki/legal/2026-07-01_legal_contrat-service-reference-v2.md) indique que la
+  version d origine l a ete ; cette transcription doit l etre avant le premier
+  envoi, ne serait-ce que pour verifier qu aucune clause n a saute.
 
-  Avant de transcrire : vérifier que ce document ne sort pas déjà de
-  doc.nosho.org. Pied de page « nosho.ai — CONTRAT DE RÉFÉRENCE · HEM · JUILLET
-  2026 », mise en page aux couleurs Nosho, PDF produit par « Chrome Helper » —
-  si le gabarit existe déjà, il ne reste qu'à y poser les variables.
+  ── Ce qui manque encore ───────────────────────────────────────────────────
+
+  Les sept ANNEXES A1 a A7. Le contrat les declare "parties integrantes" a
+  l article 13, et elles portent le DPA article 28, les mesures techniques, la
+  liste des sous-traitants, les SLA chiffres, la procedure de violation, la
+  clause d information des patients et le registre.
+
+  Un contrat qui annonce sept annexes et n en contient aucune est incomplet au
+  sens propre. Tant qu elles ne sont pas la, ce gabarit produit un document a
+  faire relire avant tout envoi.
 -->
 <article class="contrat contrat--cadre">
   <header>
@@ -100,14 +106,87 @@
       </div>
     </div>
 
-    <!-- TEXTE À REPRENDRE : paragraphe de présentation de la plateforme et
-         qualification du Client en responsable de traitement, puis l'encadré
-         « Contexte de cette version de référence ». -->
+    <p>
+      Nosho développe et opère une plateforme d'agents conversationnels IA
+      destinée à optimiser la gestion des rendez-vous médicaux (confirmation,
+      rappel, modification) et à réduire l'absentéisme dans les établissements de
+      santé. Le Client est un professionnel ou un établissement de santé
+      agissant en qualité de <strong>responsable de traitement</strong> au sens
+      du RGPD.
+    </p>
+
+    <div class="encadre">
+      <p class="encadre-titre">Contexte de cette version de référence</p>
+      <p>
+        Ce Contrat intègre un socle de sécurité et de conformité renforcé, en
+        réponse aux exigences des directions numériques et RSSI hospitalières :
+        cybersécurité (anticipation NIS2), hébergement HDS v2, continuité
+        d'activité, réversibilité étendue et encadrement strict de l'usage des
+        données par l'IA. L'essentiel des dispositions techniques et juridiques
+        détaillées figure en annexes, parties intégrantes du Contrat.
+      </p>
+    </div>
   </section>
 
   <section id="art-02">
     <h2>02 — Objet &amp; périmètre d'intervention</h2>
-    <!-- TEXTE À REPRENDRE -->
+    <p>
+      La prestation est cadrée sur les <strong>appels sortants de
+      confirmation</strong> des rendez-vous du Client, avec les fonctions et
+      garanties suivantes.
+    </p>
+
+    <ul class="perimetre">
+      <li>
+        <strong>Appels sortants de confirmation.</strong> Appels automatisés
+        avant chaque rendez-vous : confirmation, report ou annulation, avec
+        script vocal personnalisé à l'établissement.
+      </li>
+      <li>
+        <strong>Reprise des créneaux annulés.</strong> Libération immédiate du
+        créneau dans l'agenda, pour réattribution à un autre patient.
+      </li>
+      <li>
+        <strong>Rappels multicanaux.</strong> Rappels par SMS et/ou appels
+        vocaux, orientation des demandes de report ou d'annulation.
+      </li>
+      <li>
+        <strong>Intégration à l'agenda.</strong> Connexion native à l'agenda du
+        Client (Doctolib et autres selon interopérabilité) ; mise à jour des
+        statuts en temps réel, sans saisie manuelle.
+      </li>
+      <li>
+        <strong>Tableau de bord &amp; reporting.</strong> Suivi en temps réel des
+        no-shows évités, du temps machine récupéré et du ROI ; reporting mensuel.
+      </li>
+      <li>
+        <strong>Onboarding, formation &amp; support.</strong> Formation des
+        équipes, recette avant démarrage, support français (email/téléphone) avec
+        matrice d'escalade (art. 06).
+      </li>
+    </ul>
+
+    {{#comment}}
+    <p class="perimetre-specifique">
+      <strong>Périmètre spécifique convenu avec le Client.</strong> {{comment}}
+    </p>
+    {{/comment}}
+
+    <h3>Exclusions</h3>
+    <ul>
+      <li>
+        Diagnostics médicaux, conseils thérapeutiques et gestion des urgences
+        médicales.
+      </li>
+      <li>
+        Appels entrants, sauf option de rappel immédiat suite à message
+        répondeur.
+      </li>
+      <li>
+        Toute finalité non prévue au présent Contrat sans accord écrit préalable
+        du Client.
+      </li>
+    </ul>
   </section>
 
   <section id="art-03">
@@ -193,17 +272,229 @@
 
   <section id="art-04">
     <h2>04 — Sécurité, cybersécurité &amp; NIS2</h2>
-    <!-- TEXTE À REPRENDRE -->
+    <p>
+      Ce chapitre anticipe les obligations de la directive <strong>NIS2</strong>
+      (transposée par la loi Résilience, en cours d'adoption en droit français).
+      Nosho s'engage à faire évoluer ses dispositions au rythme de la
+      publication des textes et du Référentiel Cyber France (ReCyF) de l'ANSSI.
+      Les mesures techniques détaillées figurent en Annexe 2.
+    </p>
+
+    <h3>4.1 Gestion &amp; notification des incidents de cybersécurité</h3>
+    <ul>
+      <li>
+        <strong>Détection &amp; qualification.</strong> Supervision continue
+        (monitoring, journalisation centralisée, alertes), détection et
+        qualification de tout incident affectant le Service.
+      </li>
+      <li>
+        <strong>Notification au Client.</strong> Tout incident significatif est
+        notifié au référent du Client sans délai injustifié, au plus tard sous
+        <strong>24 heures</strong> après qualification (nature, périmètre,
+        données concernées, mesures immédiates).
+      </li>
+      <li>
+        <strong>Violation de données personnelles.</strong> Assistance au Client
+        pour la notification CNIL sous 72 h (art. 33 RGPD) ; procédure détaillée
+        en Annexe 5.
+      </li>
+      <li>
+        <strong>Anticipation NIS2.</strong> Alignement prévu sur la notification
+        en plusieurs temps (alerte précoce / notification / rapport final) dès
+        applicabilité.
+      </li>
+    </ul>
+
+    <h3>4.2 Vulnérabilités, correctifs &amp; mises à jour</h3>
+    <ul>
+      <li>
+        <strong>Veille &amp; patch management.</strong> Veille CVE, correctifs
+        priorisés par criticité — critiques : remédiation/contournement visé
+        sous 48 h ; élevées : sous 15 jours ; moyennes : cycle planifié.
+      </li>
+      <li>
+        <strong>Gestion des changements.</strong> Évolutions impactant
+        sécurité/disponibilité communiquées au Client au préalable.
+      </li>
+      <li>
+        <strong>Durcissement.</strong> Cloisonnement dev/test/prod, MFA, RBAC
+        (moindre privilège), secrets centralisés et chiffrés.
+      </li>
+    </ul>
+
+    <h3>4.3 Sécurité de la chaîne de sous-traitance</h3>
+    <ul>
+      <li>
+        <strong>Hébergement souverain.</strong> Données de santé hébergées par
+        Scaleway (France), certifié HDS v2 (référentiel avril 2024) ;
+        sous-traitants HDS situés en France / EEE.
+      </li>
+      <li>
+        <strong>Cascade contractuelle.</strong> Chaque sous-traitant ultérieur
+        lié par un contrat art. 28 RGPD à garanties au moins équivalentes
+        (liste en Annexe 3).
+      </li>
+      <li>
+        <strong>Opposition accès extra-UE.</strong> Opposition systématique
+        (art. 48 RGPD) à toute demande d'autorité d'un État tiers, sauf décision
+        reconnue et exécutoire dans l'UE.
+      </li>
+    </ul>
+
+    <h3>4.4 Hébergement HDS v2 &amp; mesures socle</h3>
+    <ul class="socle">
+      <li>
+        <strong>HDS v2 — hébergement certifié données de santé.</strong>
+        Infrastructure Scaleway certifiée HDS v2 (arrêté du 26 avril 2024),
+        datacenters en France (zone Paris Île-de-France). Aucune donnée de santé
+        ne quitte l'EEE.
+      </li>
+      <li>
+        <strong>RGPD — DPA &amp; souveraineté.</strong> Accord de traitement
+        signé (art. 28 RGPD, Annexe 1), flux TLS 1.3, données au repos AES-256.
+        Hébergement et sous-traitants dans l'EEE.
+      </li>
+      <li>
+        <strong>Accès — cloisonnement &amp; contrôle.</strong> SSH / RSA-4096,
+        RBAC, MFA, journalisation et audits réguliers. Séparation stricte des
+        environnements.
+      </li>
+      <li>
+        <strong>PGSSI-S — référentiels santé.</strong> Engagement de conformité
+        à la PGSSI-S pour le périmètre relevant de Nosho.
+      </li>
+    </ul>
+
+    <h3>4.5 Audits</h3>
+    <p>
+      Le Client peut auditer le Service (ou le faire auditer par un tiers
+      indépendant) afin de vérifier le respect des engagements de sécurité, dans
+      les conditions de l'art. 12 de l'Annexe 1, sous réserve d'un préavis
+      raisonnable et de la préservation de la confidentialité des éléments
+      mutualisés. Nosho communique sur demande les synthèses managériales des
+      audits et tests d'intrusion de moins de 3 ans portant sur son périmètre.
+    </p>
   </section>
 
   <section id="art-05">
     <h2>05 — Continuité, reprise d'activité &amp; disponibilité</h2>
-    <!-- TEXTE À REPRENDRE -->
+    <p>
+      Engagements de disponibilité et de continuité. Le détail chiffré (SLA,
+      PCA/PRA) figure en Annexe 4.
+    </p>
+
+    <h3>5.1 Engagement de disponibilité (SLA)</h3>
+    <table>
+      <thead>
+        <tr><th>Indicateur</th><th>Engagement</th><th>Périmètre</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Disponibilité du Service</td>
+          <td><strong>99,5 % / mois</strong></td>
+          <td>
+            Plateforme Nosho hors maintenance programmée et hors indisponibilité
+            des sous-traitants (agenda, télécom, hébergeur).
+          </td>
+        </tr>
+        <tr>
+          <td>Disponibilité hébergement</td>
+          <td>SLA HDS Scaleway</td>
+          <td>Répercussion des engagements de l'hébergeur HDS.</td>
+        </tr>
+        <tr>
+          <td>Maintenance programmée</td>
+          <td>Préavis ≥ 48 h</td>
+          <td>
+            Notifiée au référent, planifiée en heures creuses autant que
+            possible.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Objectifs de reprise</h3>
+    <table>
+      <thead>
+        <tr><th>Objectif</th><th>Cible</th><th>Signification</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>RTO</td>
+          <td><strong>≤ 4 h ouvrées</strong></td>
+          <td>Délai de reprise visé du Service après incident majeur.</td>
+        </tr>
+        <tr>
+          <td>RPO</td>
+          <td><strong>≤ 24 h</strong></td>
+          <td>Perte de données maximale visée (dernière sauvegarde exploitable).</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">
+      Sauvegardes quotidiennes chiffrées (conservation 30 jours, tests de
+      restauration périodiques), infrastructure redondée (électricité, réseau,
+      équipements critiques) opérée par l'hébergeur HDS. Objectifs de reprise
+      réexaminés annuellement. Nosho ne prend pas d'engagement sur le volume de
+      ressources disponibles chez l'hébergeur, que les Parties anticipent
+      conjointement.
+    </p>
   </section>
 
   <section id="art-06">
     <h2>06 — Escalade, référents &amp; information client</h2>
-    <!-- TEXTE À REPRENDRE. Le référent client est {{referentEmail}}. -->
+
+    <h3>6.1 Référents contractuels</h3>
+    <p>
+      Chaque Partie désigne un référent (coordonnées en Annexe 3 / fiche
+      référents). Le référent du Client peut être contacté pour tout incident
+      affectant les données de santé et doit pouvoir désigner un professionnel
+      de santé si nécessaire.{{#referentEmail}} Référent du Client :
+      {{referentEmail}}.{{/referentEmail}}
+    </p>
+
+    <h3>6.2 Matrice de support &amp; d'escalade</h3>
+    <table>
+      <thead>
+        <tr><th>Niveau</th><th>Prise en charge</th><th>Canal / escalade</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>N1 — Standard</td>
+          <td>&lt; 4 h ouvrées</td>
+          <td>
+            Email &amp; téléphone support. Questions fonctionnelles, demandes
+            courantes.
+          </td>
+        </tr>
+        <tr>
+          <td>N2 — Majeur</td>
+          <td>&lt; 2 h ouvrées</td>
+          <td>Escalade équipe technique. Dégradation significative du Service.</td>
+        </tr>
+        <tr>
+          <td>N3 — Critique</td>
+          <td><strong>&lt; 1 h (24/7 sécurité)</strong></td>
+          <td>
+            Escalade direction technique + notification référent Client.
+            Interruption ou incident de sécurité.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>6.3 Information du Client en cas d'incident</h3>
+    <ul>
+      <li>
+        Notification au référent sans délai injustifié, au plus tard sous 24 h
+        après qualification.
+      </li>
+      <li>Points de situation réguliers pendant toute la durée de l'incident.</li>
+      <li>
+        Rapport post-incident (cause racine, mesures correctives et préventives)
+        après résolution.
+      </li>
+    </ul>
   </section>
 
   <section id="art-07">
@@ -286,32 +577,195 @@
       </li>
     </ul>
     <h3>8.3 Continuité open source (engagement anti-captivité)</h3>
-    <!-- TEXTE À REPRENDRE : licence MIT, dépôt open source, documentation
-         d'interopérabilité, périmètre. -->
+    <ul>
+      <li>
+        Les outils d'export, connecteurs et scripts d'interopérabilité
+        développés par Nosho pour le Client sont concédés sous
+        <strong>licence MIT</strong>, avec leur documentation.
+      </li>
+      <li>
+        <strong>Périmètre limité.</strong> Cet engagement porte sur les outils
+        d'export et d'interopérabilité, et <strong>non</strong> sur le moteur
+        d'agents vocaux, dont la propriété intellectuelle reste celle de Nosho
+        (art. 11).
+      </li>
+    </ul>
   </section>
 
   <section id="art-09">
     <h2>09 — Données personnelles &amp; usage par l'IA</h2>
-    <!-- TEXTE À REPRENDRE -->
+    <p>
+      Le détail de la sous-traitance figure dans le DPA (Annexe 1) ; le présent
+      article en pose les principes.
+    </p>
+
+    <h3>9.1 Rôles RGPD</h3>
+    <ul>
+      <li><strong>Client :</strong> responsable de traitement.</li>
+      <li>
+        <strong>Nosho :</strong> sous-traitant, agissant sur instructions
+        documentées du Client.
+      </li>
+    </ul>
+
+    <h3>9.2 Finalités &amp; interdictions</h3>
+    <ul>
+      <li>
+        Traitement exclusivement pour la gestion des rendez-vous (confirmation,
+        rappel, modification, libération de créneau).
+      </li>
+      <li>
+        <strong>
+          Aucune réutilisation commerciale ou marketing. Aucun transfert hors
+          EEE.
+        </strong>
+      </li>
+    </ul>
+
+    <h3>9.3 Usage pour l'IA — opt-out par défaut</h3>
+    <div class="encadre">
+      <p class="encadre-titre">Engagement Nosho</p>
+      <p>
+        Par défaut : <strong>aucune donnée du Client n'est utilisée pour
+        entraîner ou améliorer les modèles d'IA de Nosho.</strong> Les données ne
+        sont ni conservées à cette fin, ni réutilisées pour l'entraînement, ni
+        intégrées à des jeux d'apprentissage.
+      </p>
+    </div>
+    <ul>
+      <li>
+        <strong>Le cas échéant.</strong> Toute amélioration future ne pourrait
+        porter que sur des données strictement anonymisées et agrégées, et
+        uniquement après accord écrit préalable et spécifique du Client, libre
+        de le refuser.
+      </li>
+      <li>
+        <strong>Exclusion permanente.</strong> Le Client peut
+        confirmer/réaffirmer son exclusion à tout moment (rgpd@nosho.ai).
+      </li>
+    </ul>
+
+    <h3>9.4 Conservation &amp; droits</h3>
+    <ul>
+      <li>
+        Données RDV : supprimées ou restituées en fin de Contrat, au plus tard
+        après 3 ans d'inactivité. Logs : 12 mois puis anonymisation.
+      </li>
+      <li>
+        Nosho assiste le Client pour l'exercice des droits (accès, rectification,
+        effacement, limitation, opposition, portabilité — art. 15 à 22 RGPD ;
+        art. L1110-4 et L1111-7 CSP).
+      </li>
+    </ul>
   </section>
 
   <section id="art-10">
     <h2>10 — Responsabilités, garanties &amp; assurances</h2>
-    <!-- TEXTE À REPRENDRE -->
+
+    <h3>10.1 Garanties de Nosho</h3>
+    <ul>
+      <li>
+        Conformité RGPD des traitements réalisés pour le compte du Client ;
+        conformité HDS de l'hébergement (via sous-traitant certifié).
+      </li>
+      <li>
+        Disponibilité du Service selon SLA (art. 05 / Annexe 4) ; absence de code
+        malveillant connu dans ses logiciels.
+      </li>
+    </ul>
+
+    <h3>10.2 Limitations</h3>
+    <ul>
+      <li>
+        Nosho n'est pas responsable des erreurs dans les données fournies par le
+        Client, des défaillances des sous-traitants tiers, ni des conséquences
+        médicales d'un rendez-vous non honoré.
+      </li>
+      <li>
+        <strong>Plafond.</strong> La responsabilité de Nosho est plafonnée au
+        montant des factures des 12 derniers mois, sauf faute lourde ou dolosive
+        et cas d'ordre public.
+      </li>
+    </ul>
+
+    <h3>10.3 Assurance</h3>
+    <ul>
+      <li>
+        Nosho déclare être titulaire d'une assurance responsabilité civile
+        professionnelle couvrant les conséquences pécuniaires de sa
+        responsabilité, attestation communicable sur demande.
+      </li>
+    </ul>
+
+    <h3>10.4 Force majeure</h3>
+    <ul>
+      <li>
+        Suspension des obligations sans pénalité en cas de force majeure
+        (catastrophe naturelle, cyberattaque majeure, défaillance générale des
+        télécommunications), pendant la durée de l'événement.
+      </li>
+    </ul>
   </section>
 
   <section id="art-11">
     <h2>11 — Propriété intellectuelle &amp; confidentialité</h2>
-    <!-- TEXTE À REPRENDRE -->
+
+    <h3>11.1 Propriété intellectuelle</h3>
+    <ul>
+      <li>
+        Nosho demeure propriétaire du code source de la plateforme, du moteur
+        d'agents vocaux, de ses marques et logos.
+      </li>
+      <li>
+        Le Client conserve la propriété de ses données patients et des scripts
+        personnalisés développés à son compte (si prévus).
+      </li>
+      <li>
+        Les outils d'export/continuité open source sont concédés sous licence
+        MIT (art. 08).
+      </li>
+    </ul>
+
+    <h3>11.2 Confidentialité</h3>
+    <ul>
+      <li>
+        Chaque Partie s'engage à préserver la confidentialité des informations
+        échangées. Nosho ne divulgue aucune donnée patient sans autorisation,
+        sauf obligation légale (réquisition judiciaire).
+      </li>
+      <li>
+        L'obligation de confidentialité survit à la fin du Contrat pour une durée
+        de 5 ans.
+      </li>
+    </ul>
+
+    <h3>11.3 Droit applicable &amp; litiges</h3>
+    <ul>
+      <li>
+        <strong>Droit français.</strong> Tentative de médiation obligatoire avant
+        tout recours. Tribunal de commerce de Marseille compétent.
+      </li>
+    </ul>
   </section>
 
   <section id="art-12">
     <h2>12 — Mise en production</h2>
-    <!-- TEXTE À REPRENDRE.
-
-         Article important pour le CRM : c'est la mise en production qui fait
-         courir la période ferme de l'article 7, pas la signature. Le CRM la
-         stocke à part (`production_start_date`), renseignée après coup. -->
+    <p>
+      Solution opérationnelle en <strong>7 jours</strong>, qualité contrôlée à
+      chaque étape.
+    </p>
+    <ul class="jalons">
+      <li><strong>J+0.</strong> Validation du contrat et du périmètre.</li>
+      <li><strong>J+2.</strong> Connexion à l'agenda et paramétrage initial.</li>
+      <li>
+        <strong>J+5.</strong> Script vocal adapté à l'établissement et recette.
+      </li>
+      <li><strong>J+7.</strong> Premiers appels sortants et monitoring actif.</li>
+    </ul>
+    <p class="note">
+      C'est la mise en production, et non la signature, qui fait courir la
+      période ferme de l'article 07.
+    </p>
   </section>
 
   <section id="art-13">
@@ -360,4 +814,683 @@
     document de la même demande de signature. Voir mandat-sepa.html.
     Sa référence pour ce contrat : {{sepaMandateReference}}.
   -->
+  <!--
+    ── LES ANNEXES ────────────────────────────────────────────────────────────
+
+    L'article 13 les declare "parties integrantes du Contrat". Elles ne sont
+    donc pas documentaires : un contrat qui les annonce sans les contenir est
+    incomplet au sens propre, et c'etait l'etat de ce gabarit jusqu'ici.
+
+    Transcrites des pages 17 a 26 du contrat de reference HEM v2.
+  -->
+  <section id="annexes" class="annexes-corps">
+    <h2>Annexes — parties intégrantes du Contrat</h2>
+
+    <!-- ── A1 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-1">
+      <h3>Annexe 1 — Accord de sous-traitance des données à caractère personnel (DPA)</h3>
+      <p>
+        Conclu en application de l'article 28 du Règlement (UE) 2016/679 (RGPD).
+        Il encadre les traitements de données à caractère personnel réalisés par
+        Nosho (le « Sous-traitant ») pour le compte du Client (le « Responsable
+        de traitement »).
+      </p>
+
+      <h4>Art. 1 — Objet &amp; durée</h4>
+      <p>
+        Le présent accord définit les conditions dans lesquelles le Sous-traitant
+        traite, pour le compte du Responsable, les données personnelles
+        nécessaires à la prestation. Il s'applique pendant toute la durée du
+        Contrat.
+      </p>
+
+      <h4>Art. 2 — Description du traitement</h4>
+      <table>
+        <tbody>
+          <tr>
+            <th>Finalité</th>
+            <td>
+              Gestion des rendez-vous : confirmation, rappel, modification,
+              libération de créneau, réduction des no-shows.
+            </td>
+          </tr>
+          <tr>
+            <th>Nature des opérations</th>
+            <td>
+              Collecte (via agenda du Client), stockage, consultation,
+              appels/SMS, mise à jour de statut, effacement/restitution en fin de
+              contrat.
+            </td>
+          </tr>
+          <tr>
+            <th>Catégories de personnes</th>
+            <td>
+              Patients du Client ; personnel du Client utilisateur de la
+              plateforme.
+            </td>
+          </tr>
+          <tr>
+            <th>Catégories de données</th>
+            <td>
+              Identité (nom, prénom), coordonnées (téléphone, email), données de
+              rendez-vous (date, motif générique), logs d'appels/SMS,
+              enregistrements vocaux si activés.
+            </td>
+          </tr>
+          <tr>
+            <th>Données sensibles</th>
+            <td>
+              Données de santé indirectes (rendez-vous, motif générique) —
+              traitées au titre de l'art. 9.2.h RGPD, sous instructions du
+              Responsable.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Art. 3 — Obligations du Sous-traitant</h4>
+      <ul>
+        <li>
+          Traiter les données uniquement pour les finalités ci-dessus et sur
+          instructions documentées du Responsable (y compris pour les
+          transferts), sauf obligation légale.
+        </li>
+        <li>
+          Garantir la confidentialité ; s'assurer que les personnes autorisées à
+          traiter les données sont soumises à une obligation de confidentialité
+          appropriée.
+        </li>
+        <li>
+          Mettre en œuvre les mesures techniques et organisationnelles de
+          l'Annexe 2 (art. 32 RGPD).
+        </li>
+        <li>
+          Ne pas recourir à un sous-traitant ultérieur sans autorisation
+          (art. 7 ci-dessous).
+        </li>
+        <li>
+          Aider le Responsable à répondre aux demandes d'exercice de droits
+          (art. 6) et à respecter ses obligations (sécurité, notification de
+          violation, analyses d'impact — art. 32 à 36 RGPD).
+        </li>
+        <li>
+          À la fin de la prestation, restituer et/ou supprimer les données selon
+          le choix du Responsable (art. 8).
+        </li>
+        <li>
+          Mettre à disposition les informations nécessaires pour démontrer sa
+          conformité et permettre les audits (art. 12).
+        </li>
+      </ul>
+
+      <h4>Art. 4 — Obligations du Responsable de traitement</h4>
+      <ul>
+        <li>
+          Fournir des données exactes et à jour ; ne transmettre que les données
+          strictement nécessaires.
+        </li>
+        <li>
+          Documenter par écrit ses instructions ; informer les patients et
+          recueillir, le cas échéant, leur consentement (Annexe 6).
+        </li>
+        <li>
+          Désigner un référent et un point de contact RGPD ; superviser le
+          traitement, y compris les audits.
+        </li>
+      </ul>
+
+      <h4>Art. 5 — Registre &amp; documentation</h4>
+      <p>
+        Le Sous-traitant tient un registre des catégories d'activités de
+        traitement effectuées pour le compte du Responsable (art. 30.2 RGPD) —
+        modèle en Annexe 7.
+      </p>
+
+      <h4>Art. 6 — Droits des personnes concernées</h4>
+      <ul>
+        <li>
+          Le Sous-traitant met à disposition les procédures et moyens permettant
+          au Responsable de répondre aux demandes (accès, rectification,
+          effacement, limitation, opposition, portabilité), au titre des art. 15
+          à 22 RGPD et des art. L1110-4 et L1111-7 CSP.
+        </li>
+        <li>
+          Toute demande reçue directement par le Sous-traitant est transmise au
+          Responsable dans les meilleurs délais.
+        </li>
+      </ul>
+
+      <h4>Art. 7 — Sous-traitance ultérieure</h4>
+      <ul>
+        <li>
+          Le Responsable autorise le recours aux sous-traitants ultérieurs listés
+          en Annexe 3 (autorisation générale).
+        </li>
+        <li>
+          Le Sous-traitant informe le Responsable de tout ajout/remplacement avec
+          un préavis raisonnable, permettant l'opposition. En cas d'opposition
+          légitime, les Parties recherchent une solution ; à défaut, le
+          Responsable peut résilier.
+        </li>
+        <li>
+          Chaque sous-traitant ultérieur est lié par des obligations de
+          protection au moins équivalentes (art. 28.4 RGPD).
+        </li>
+      </ul>
+
+      <h4>Art. 8 — Sort des données en fin de contrat</h4>
+      <ul>
+        <li>
+          Au choix du Responsable : restitution (format ouvert CSV/JSON) puis
+          suppression, ou suppression pure. Réalisée sous 30 jours, avec
+          attestation de suppression sur demande.
+        </li>
+        <li>
+          Assistance à la réversibilité jusqu'à 12 mois (art. 08 du corps du
+          Contrat).
+        </li>
+      </ul>
+
+      <h4>Art. 9 — Notification des violations de données</h4>
+      <p>
+        Le Sous-traitant notifie au Responsable toute violation de données
+        personnelles sans délai injustifié, au plus tard sous 24 h après en avoir
+        pris connaissance, avec les informations de l'art. 33.3 RGPD (procédure
+        en Annexe 5).
+      </p>
+
+      <h4>Art. 10 — Transferts hors UE &amp; demandes d'autorités</h4>
+      <p>
+        Aucun transfert hors EEE. Toute demande d'une autorité d'un État tiers
+        fait l'objet d'une opposition (art. 48 RGPD), sauf décision reconnue et
+        exécutoire dans l'UE ; le Responsable en est informé sans délai lorsque
+        la loi le permet.
+      </p>
+
+      <h4>Art. 11 — Localisation &amp; hébergement</h4>
+      <p>
+        Hébergement des données de santé chez Scaleway (France), certifié HDS
+        v2 ; sous-traitants HDS en France / EEE (Annexe 3).
+      </p>
+
+      <h4>Art. 12 — Audits</h4>
+      <p>
+        Le Responsable peut réaliser (ou faire réaliser par un tiers indépendant
+        soumis à confidentialité) un audit annuel, sur préavis raisonnable, sans
+        accès aux éléments mutualisés à d'autres clients. Le Sous-traitant
+        fournit les synthèses d'audits et de tests d'intrusion de moins de 3 ans.
+      </p>
+    </section>
+
+    <!-- ── A2 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-2">
+      <h3>Annexe 2 — Mesures techniques &amp; organisationnelles (MTO)</h3>
+      <p>
+        Mesures mises en œuvre par Nosho au titre de l'art. 32 RGPD et du
+        référentiel HDS, susceptibles d'évoluer pour maintenir ou renforcer le
+        niveau de sécurité.
+      </p>
+
+      <h4>2.1 Chiffrement &amp; protection des flux</h4>
+      <ul>
+        <li>
+          <strong>Transit — TLS 1.3.</strong> Chiffrement de tous les flux en
+          transit (API, agenda, télécom, SMS).
+        </li>
+        <li>
+          <strong>Repos — AES-256.</strong> Chiffrement des données au repos
+          (bases, sauvegardes, stockage objet).
+        </li>
+        <li>
+          <strong>Secrets — coffre.</strong> Gestion centralisée et chiffrée des
+          secrets, rotation des clés, aucun secret en clair.
+        </li>
+      </ul>
+
+      <h4>2.2 Contrôle d'accès</h4>
+      <ul>
+        <li>
+          Authentification multifacteur (MFA) obligatoire pour les accès
+          d'administration.
+        </li>
+        <li>
+          Gestion des habilitations par rôles (RBAC) selon le principe du moindre
+          privilège ; revue périodique des accès.
+        </li>
+        <li>
+          Accès SSH par clés RSA-4096 ; pas d'accès par mot de passe sur les
+          systèmes de production.
+        </li>
+      </ul>
+
+      <h4>2.3 Cloisonnement &amp; architecture</h4>
+      <ul>
+        <li>
+          Séparation stricte des environnements de développement, de test et de
+          production.
+        </li>
+        <li>
+          Cloisonnement réseau (VPC), segmentation, exposition minimale des
+          services.
+        </li>
+        <li>Données de santé isolées des autres catégories de données.</li>
+      </ul>
+
+      <h4>2.4 Journalisation &amp; supervision</h4>
+      <ul>
+        <li>
+          Journalisation centralisée des accès et des événements de sécurité ;
+          horodatage et traçabilité.
+        </li>
+        <li>
+          Supervision continue (monitoring, alerting, détection d'anomalies,
+          suivi des erreurs).
+        </li>
+        <li>Conservation des logs 12 mois, puis anonymisation.</li>
+      </ul>
+
+      <h4>2.5 Sauvegardes &amp; continuité</h4>
+      <ul>
+        <li>
+          Sauvegardes quotidiennes chiffrées, conservées 30 jours, tests de
+          restauration périodiques.
+        </li>
+        <li>
+          Infrastructure redondée (électricité, réseau, équipements critiques)
+          opérée par l'hébergeur HDS ; plan de reprise (Annexe 4).
+        </li>
+      </ul>
+
+      <h4>2.6 Gestion des vulnérabilités &amp; des changements</h4>
+      <ul>
+        <li>
+          Veille CVE, patch management priorisé par criticité (critiques ≤ 48 h,
+          élevées ≤ 15 j).
+        </li>
+        <li>
+          Processus de gestion des changements ; revues de code ; analyse des
+          dépendances.
+        </li>
+      </ul>
+
+      <h4>2.7 Organisation &amp; sensibilisation</h4>
+      <ul>
+        <li>
+          Sensibilisation continue du personnel au RGPD et à la sécurité ;
+          engagements de confidentialité.
+        </li>
+        <li>
+          Gestion des incidents et procédure d'escalade (art. 06 du corps).
+        </li>
+        <li>
+          Sélection et suivi des sous-traitants selon des critères de sécurité
+          (Annexe 3).
+        </li>
+      </ul>
+    </section>
+
+    <!-- ── A3 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-3">
+      <h3>Annexe 3 — Sous-traitants ultérieurs &amp; référents contractuels</h3>
+
+      <h4>3.1 Liste des sous-traitants ultérieurs</h4>
+      <p>
+        Liste à jour des sous-traitants ultérieurs intervenant dans la fourniture
+        du Service (art. 28.4 RGPD). Toute évolution est notifiée au Client
+        conformément à l'art. 7 du DPA (Annexe 1).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Sous-traitant</th>
+            <th>Rôle</th>
+            <th>Localisation</th>
+            <th>Garanties</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Scaleway</td>
+            <td>Hébergement HDS (infra, stockage, calcul)</td>
+            <td>France (EEE)</td>
+            <td>Certifié HDS v2, ISO 27001, SOC 2 Type II</td>
+          </tr>
+          <tr>
+            <td>Voxwide</td>
+            <td>Opérateur SIP / téléphonie (appels sortants)</td>
+            <td>France (EEE)</td>
+            <td>Opérateur télécom déclaré, flux chiffrés</td>
+          </tr>
+          <tr>
+            <td>SMSMode</td>
+            <td>Envoi de SMS</td>
+            <td>France (EEE)</td>
+            <td>Prestataire français, conformité RGPD</td>
+          </tr>
+          <tr>
+            <td>Cloudflare</td>
+            <td>DNS / CDN / protection réseau</td>
+            <td>EEE (edge UE)</td>
+            <td>Pas d'hébergement de données de santé ; flux techniques</td>
+          </tr>
+          <tr>
+            <td>Mollie</td>
+            <td>Traitement des paiements</td>
+            <td>Pays-Bas (EEE)</td>
+            <td>
+              Certifié PCI-DSS, ISAE 3402 ; établissement de paiement agréé (DNB)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>3.2 Référents contractuels</h4>
+      <table>
+        <thead>
+          <tr><th>Rôle</th><th>Nosho</th><th>Client</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Référent contractuel</td>
+            <td>{{noshoSignatoryName}} — contact@nosho.io</td>
+            <td>
+              {{signatory.firstName}} {{signatory.lastName}}{{#referentEmail}} —
+              {{referentEmail}}{{/referentEmail}}
+            </td>
+          </tr>
+          <tr>
+            <td>Référent technique</td>
+            <td>Jean-Baptiste Bonnifay — jb@nosho.ai</td>
+            <td>[à compléter]</td>
+          </tr>
+          <tr>
+            <td>Point de contact RGPD / DPO</td>
+            <td>rgpd@nosho.ai</td>
+            <td>[DPO du Client à compléter]</td>
+          </tr>
+          <tr>
+            <td>Contact incident sécurité (24/7)</td>
+            <td>rgpd@nosho.ai / support Nosho</td>
+            <td>[astreinte Client à compléter]</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── A4 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-4">
+      <h3>Annexe 4 — Accord de niveau de service (SLA) &amp; Plan de continuité / reprise (PCA-PRA)</h3>
+
+      <h4>4.1 Indicateurs de niveau de service</h4>
+      <table>
+        <thead>
+          <tr><th>Indicateur</th><th>Engagement</th><th>Modalités de mesure</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Disponibilité mensuelle du Service</td>
+            <td><strong>99,5 %</strong></td>
+            <td>
+              Calculée sur le mois calendaire, hors maintenance programmée et
+              indisponibilité des sous-traitants tiers (agenda, télécom,
+              hébergeur).
+            </td>
+          </tr>
+          <tr>
+            <td>Disponibilité de l'hébergement</td>
+            <td>Selon SLA HDS Scaleway</td>
+            <td>Répercussion des engagements de l'hébergeur certifié.</td>
+          </tr>
+          <tr>
+            <td>Prise en charge support N1</td>
+            <td>&lt; 4 h ouvrées</td>
+            <td>Délai de première réponse.</td>
+          </tr>
+          <tr>
+            <td>Prise en charge incident critique N3</td>
+            <td>&lt; 1 h (24/7 sécurité)</td>
+            <td>
+              Délai de prise en charge d'un incident de sécurité ou d'une
+              interruption.
+            </td>
+          </tr>
+          <tr>
+            <td>Notification d'incident de sécurité</td>
+            <td>≤ 24 h</td>
+            <td>Après qualification de l'incident.</td>
+          </tr>
+          <tr>
+            <td>Maintenance programmée</td>
+            <td>Préavis ≥ 48 h</td>
+            <td>
+              Notifiée au référent, planifiée en heures creuses autant que
+              possible.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>4.2 Objectifs de reprise (RTO / RPO)</h4>
+      <table>
+        <thead>
+          <tr><th>Objectif</th><th>Cible</th><th>Signification</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>RTO (Recovery Time Objective)</td>
+            <td><strong>≤ 4 h ouvrées</strong></td>
+            <td>
+              Délai maximal visé de rétablissement du Service après un incident
+              majeur.
+            </td>
+          </tr>
+          <tr>
+            <td>RPO (Recovery Point Objective)</td>
+            <td><strong>≤ 24 h</strong></td>
+            <td>
+              Perte de données maximale visée (dernière sauvegarde exploitable).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>4.3 Mesures de continuité</h4>
+      <ul>
+        <li>
+          Redondance électrique, réseau et équipements critiques (hébergeur
+          HDS) ; groupes électrogènes du prestataire de colocation.
+        </li>
+        <li>
+          Redondance applicative de la plateforme Nosho ; monitoring et gestion
+          de crise/escalade.
+        </li>
+        <li>
+          Sauvegardes quotidiennes chiffrées (conservation 30 jours), tests de
+          restauration périodiques.
+        </li>
+      </ul>
+
+      <h4>4.4 Exclusions &amp; réserves</h4>
+      <ul>
+        <li>
+          Sont exclus du calcul de disponibilité : maintenance programmée
+          notifiée, cas de force majeure, indisponibilités imputables au Client
+          ou à un sous-traitant tiers hors périmètre Nosho.
+        </li>
+        <li>
+          Nosho ne garantit pas de volume de ressources chez l'hébergeur ; les
+          besoins sont anticipés conjointement.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ── A5 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-5">
+      <h3>Annexe 5 — Procédure de gestion des violations de données</h3>
+      <p>
+        Procédure appliquée en cas de violation de données personnelles
+        (destruction, perte, altération, divulgation ou accès non autorisés), en
+        application des art. 33 et 34 RGPD.
+      </p>
+
+      <h4>5.1 Étapes</h4>
+      <ol>
+        <li>
+          Détection &amp; qualification de l'incident (nature, périmètre, données
+          et personnes concernées, gravité).
+        </li>
+        <li>Mesures de confinement et de remédiation immédiates.</li>
+        <li>
+          Notification au référent du Client sans délai injustifié, au plus tard
+          sous 24 h après connaissance.
+        </li>
+        <li>
+          Assistance au Client (responsable) pour sa notification à la CNIL sous
+          72 h (art. 33) et, si nécessaire, aux personnes concernées (art. 34).
+        </li>
+        <li>
+          Documentation de l'incident et rapport post-incident (cause racine,
+          mesures correctives et préventives).
+        </li>
+        <li>Retour d'expérience et mise à jour des mesures (Annexe 2).</li>
+      </ol>
+
+      <h4>5.2 Contenu de la notification (art. 33.3 RGPD)</h4>
+      <ul>
+        <li>
+          Nature de la violation, catégories et nombre approximatif de personnes
+          et d'enregistrements concernés.
+        </li>
+        <li>Coordonnées du point de contact (DPO Nosho : rgpd@nosho.ai).</li>
+        <li>
+          Conséquences probables et mesures prises ou proposées pour y remédier /
+          en atténuer les effets.
+        </li>
+      </ul>
+
+      <div class="encadre">
+        <p class="encadre-titre">Canal de notification</p>
+        <p>
+          Notification par email au référent du Client (Annexe 3) avec copie à
+          rgpd@nosho.ai, complétée par un point téléphonique pour tout incident
+          critique.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── A6 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-6">
+      <h3>Annexe 6 — Clause type d'information des patients</h3>
+      <p>
+        Modèle de mention d'information à afficher par le Client (salle
+        d'attente, site web, documents de prise de rendez-vous), afin d'informer
+        les patients du traitement de leurs données pour la gestion des
+        rendez-vous. À adapter à la charte du Client.
+      </p>
+
+      <div class="encadre">
+        <p class="encadre-titre">Mention d'information (modèle)</p>
+        <p>
+          Vos rendez-vous sont gérés avec l'aide de Nosho, une solution d'agents
+          vocaux qui vous contacte pour confirmer, rappeler ou modifier vos
+          rendez-vous.
+        </p>
+        <p>
+          Les données utilisées (nom, coordonnées, informations de rendez-vous)
+          sont traitées par {{client.name}}, responsable de traitement, aux fins
+          de gestion de vos rendez-vous, sur la base de l'exécution de la
+          relation de soins.
+        </p>
+        <p>
+          Vos données sont hébergées en France sur une infrastructure certifiée
+          HDS et ne sont pas utilisées à des fins commerciales.
+        </p>
+        <p>
+          Vous disposez de droits d'accès, de rectification, d'effacement, de
+          limitation, d'opposition et de portabilité, que vous pouvez exercer
+          auprès de [CONTACT DPO ÉTABLISSEMENT]. Réclamation possible auprès de
+          la CNIL (www.cnil.fr).
+        </p>
+      </div>
+
+      <p class="note">
+        Base légale : exécution de la relation de soins / mission d'intérêt
+        public ; le cas échéant consentement pour certains canaux. Le Client
+        reste seul responsable du choix de la base légale et de l'information des
+        patients.
+      </p>
+    </section>
+
+    <!-- ── A7 ────────────────────────────────────────────────────────────── -->
+    <section id="annexe-7">
+      <h3>Annexe 7 — Registre des activités de traitement (art. 30.2 RGPD)</h3>
+      <p>
+        Registre tenu par Nosho en qualité de sous-traitant, pour les activités
+        réalisées pour le compte du Client. Modèle renseigné ci-dessous.
+      </p>
+      <table>
+        <tbody>
+          <tr>
+            <th>Sous-traitant</th>
+            <td>
+              Nosho S.A.S., RCS Marseille 990 546 418, 390 avenue du Prado, 13008
+              Marseille. DPO : rgpd@nosho.ai.
+            </td>
+          </tr>
+          <tr>
+            <th>Responsable(s) de traitement</th>
+            <td>
+              {{client.name}} et autres établissements clients (chacun pour ses
+              propres données).
+            </td>
+          </tr>
+          <tr>
+            <th>Catégories de traitements</th>
+            <td>
+              Gestion des rendez-vous : confirmation, rappel, modification,
+              libération de créneau.
+            </td>
+          </tr>
+          <tr>
+            <th>Catégories de données</th>
+            <td>
+              Identité, coordonnées, données de rendez-vous, logs d'appels/SMS,
+              enregistrements vocaux (si activés).
+            </td>
+          </tr>
+          <tr>
+            <th>Catégories de personnes</th>
+            <td>Patients ; personnel utilisateur du Client.</td>
+          </tr>
+          <tr>
+            <th>Destinataires</th>
+            <td>Sous-traitants ultérieurs (Annexe 3) ; aucun autre partage.</td>
+          </tr>
+          <tr>
+            <th>Transferts hors UE</th>
+            <td>Aucun.</td>
+          </tr>
+          <tr>
+            <th>Durées de conservation</th>
+            <td>
+              Données RDV : 3 ans après le dernier rendez-vous ou fin de
+              contrat ; logs : 12 mois puis anonymisation.
+            </td>
+          </tr>
+          <tr>
+            <th>Mesures de sécurité</th>
+            <td>
+              Voir Annexe 2 (chiffrement, MFA/RBAC, cloisonnement,
+              journalisation, sauvegardes, HDS v2).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Ce registre est tenu à la disposition de l'autorité de contrôle et mis à
+        jour à chaque évolution significative du traitement ou de la liste des
+        sous-traitants.
+      </p>
+    </section>
+  </section>
 </article>
