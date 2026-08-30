@@ -11,10 +11,36 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
+/*
+ * Les autorisations demandees a Google.
+ *
+ * Tout etait en lecture seule jusqu'ici. Le parcours contrat en ajoute deux,
+ * et deux seulement (NOS-1185) :
+ *
+ *   - `drive.file` depose le contrat genere dans le Drive. C'est le scope le
+ *     plus etroit qui existe pour ecrire : il ne donne acces QU'AUX fichiers
+ *     que l'application a elle-meme crees. `drive` ou `drive.readonly`
+ *     ouvriraient tout le Drive de l'utilisateur, ce dont on n'a aucun
+ *     besoin -- et ce qu'un ecran de consentement affiche en rouge.
+ *
+ *   - `gmail.send` envoie le contrat au signataire. Il n'autorise QUE
+ *     l'envoi : ni lecture, ni suppression, ni acces aux brouillons.
+ *
+ * La signature elle-meme n'est pas ici, et ne peut pas l'etre : la signature
+ * electronique Google Workspace est une fonction d'interface de Docs et
+ * Drive, sans API publique. Le parcours s'arrete donc au depot du document ;
+ * la signature se lance a la main depuis le Drive.
+ *
+ * Ajouter un scope invalide les autorisations deja accordees : chaque
+ * utilisateur devra reconnecter son compte une fois. `include_granted_scopes`
+ * evite de perdre les anciennes au passage.
+ */
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/contacts.readonly",
+  "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
