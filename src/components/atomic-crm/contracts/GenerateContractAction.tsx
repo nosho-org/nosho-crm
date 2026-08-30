@@ -134,6 +134,37 @@ export const GenerateContractAction = ({
       return null;
     }
 
+    /*
+     * Le second garde-fou : les articles restes vides (NOS-1189).
+     *
+     * `renderTemplate` ne signale que les VARIABLES non resolues. Un article
+     * dont la prose n a jamais ete reprise ne porte aucune variable -- il
+     * porte un commentaire "TEXTE A REPRENDRE", que le rendu laisse passer
+     * sans rien dire.
+     *
+     * Le gabarit du contrat cadre est dans ce cas sur six de ses treize
+     * articles, securite, continuite, RGPD et responsabilites compris. Sans
+     * ce controle, il se telechargerait silencieusement ampute -- et un
+     * contrat sans article de responsabilite se signe tout aussi bien qu un
+     * autre, jusqu au litige.
+     */
+    const NON_REDIGE = /TEXTE\s+[ÀA]\s+REPRENDRE/i;
+    const vides = [
+      ...html.matchAll(
+        /<h2>([^<]*)<\/h2>\s*<!--\s*TEXTE\s+[ÀA]\s+REPRENDRE/gi,
+      ),
+    ].map((m) => m[1].replace(/&amp;/g, "&").trim());
+
+    if (NON_REDIGE.test(html)) {
+      notify(
+        vides.length > 0
+          ? `Gabarit incomplet, rien n a ete genere. Articles sans texte : ${vides.join(" · ")}.`
+          : "Gabarit incomplet : il reste des sections non redigees. Rien n a ete genere.",
+        { type: "error", autoHideDuration: 15000 },
+      );
+      return null;
+    }
+
     return {
       html: wrapContractDocument(html, {
         title: `${
