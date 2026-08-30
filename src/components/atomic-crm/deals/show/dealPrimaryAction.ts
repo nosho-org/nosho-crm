@@ -25,7 +25,7 @@
  * l'administratif, et il reste accessible en contour.
  */
 
-export type DealPrimaryAction = "task" | "proposal" | "contract" | null;
+export type DealPrimaryAction = "task" | "contract" | null;
 
 /**
  * L'action principale par étape.
@@ -42,7 +42,15 @@ export type DealPrimaryAction = "task" | "proposal" | "contract" | null;
 const PRIMARY_BY_STAGE: Record<string, DealPrimaryAction> = {
   lead: "task",
   qualified: "task",
-  "demo-poc": "proposal",
+  /*
+   * Le contrat POC EST l offre commerciale (NOS-1198).
+   *
+   * Cette etape pointait vers une proposition commerciale distincte.
+   * Simon : "le chemin c est uniquement editer un contrat (POC ou cadre
+   * avec template specifique)". Chez Nosho le POC se contractualise
+   * directement -- il n y a pas de devis intermediaire.
+   */
+  "demo-poc": "contract",
   proposal: "contract",
   negociation: "contract",
   "closed-won": null,
@@ -68,10 +76,16 @@ export function getDealPrimaryAction(
     ? PRIMARY_BY_STAGE[stage]
     : "task";
 
-  // Un contrat identifie une personne morale : sans société, `ContractAction`
-  // ne rend rien du tout, et désigner comme principale une action absente
-  // laisserait la fiche sans bouton plein.
-  if (primary === "contract" && options.hasCompany === false) return "proposal";
+  /*
+   * Un contrat identifie une personne morale : sans société, `ContractAction`
+   * ne rend rien du tout, et désigner comme principale une action absente
+   * laisserait la fiche sans bouton plein.
+   *
+   * Le repli était « proposition » ; il devient « tâche » depuis que la
+   * proposition a disparu (NOS-1198). Un repli vers un bouton qui n'existe
+   * plus laisserait exactement le vide qu'il cherche à éviter.
+   */
+  if (primary === "contract" && options.hasCompany === false) return "task";
 
   return primary;
 }

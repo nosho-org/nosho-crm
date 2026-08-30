@@ -6,10 +6,13 @@ describe("getDealPrimaryAction", () => {
     expect(getDealPrimaryAction("qualified")).toBe("task");
   });
 
-  it("propose la proposition après la démo", () => {
-    // Le goulot relevé par l'audit : aucun deal n'a franchi Démo → Proposition
-    // ce trimestre.
-    expect(getDealPrimaryAction("demo-poc")).toBe("proposal");
+  it("propose le contrat dès la démo", () => {
+    /*
+     * Le contrat POC EST l'offre commerciale chez Nosho (NOS-1198) : il n'y
+     * a pas de devis intermédiaire, et cette étape pointait vers une
+     * proposition qui n'existe plus.
+     */
+    expect(getDealPrimaryAction("demo-poc")).toBe("contract");
   });
 
   it("propose le contrat une fois la proposition partie", () => {
@@ -35,8 +38,10 @@ describe("getDealPrimaryAction", () => {
   it("ne désigne pas le contrat quand il n'y a pas de société", () => {
     // `ContractAction` ne rend rien sans société : la fiche se retrouverait
     // sans aucun bouton plein.
+    // Le repli est « tâche » : renvoyer vers la proposition désignerait un
+    // bouton qui n'existe plus, donc exactement le vide qu'on évite.
     expect(getDealPrimaryAction("proposal", { hasCompany: false })).toBe(
-      "proposal",
+      "task",
     );
     expect(getDealPrimaryAction("proposal", { hasCompany: true })).toBe(
       "contract",

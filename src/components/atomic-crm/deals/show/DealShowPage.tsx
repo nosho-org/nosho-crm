@@ -14,7 +14,6 @@ import {
 
 import { CompanyAvatar } from "../../companies/CompanyAvatar";
 import type { Deal } from "../../types";
-import { GenerateProposalAction } from "../GenerateProposalAction";
 import { ContractAction } from "../../contracts/ContractAction";
 import { ContractsBlock } from "../../contracts/ContractsBlock";
 import { DealActivityTimeline } from "./DealActivityTimeline";
@@ -183,9 +182,7 @@ const DealActions = () => {
         variant={primary === "task" ? "default" : "outline"}
       />
       <EditButton />
-      <GenerateProposalAction
-        variant={primary === "proposal" ? "default" : "outline"}
-      />
+
       <ContractAction
         variant={primary === "contract" ? "default" : "outline"}
       />
