@@ -2,13 +2,17 @@ import { useGetIdentity, useGetList } from "ra-core";
 
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
-import type { DealRecord } from "../deals/cockpit/dealFields";
+import {
+  getDealNextAction,
+  isOpenStage,
+  type DealRecord,
+} from "../deals/cockpit/dealFields";
 import { startOfToday } from "../deals/cockpit/dealDates";
 import type { Task } from "../types";
 import { toDealsLink } from "../deals/dealFilterContract";
 import { bucketFor } from "../dashboard/actionQueue";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
-import { autresQueLaTete } from "./dedupeFocus";
+import { sansProchaineAction } from "./sansProchaineAction";
 import type { AppNotification } from "./notifications";
 
 /**
@@ -162,19 +166,30 @@ export function useAppNotifications(): AppNotification[] {
   }
 
   /*
-   * Les affaires sans prochaine action, MOINS celle que la notification de
-   * focus vient de nommer (NOS-1210). Voir `dedupeFocus.ts` : les deux
-   * messages avaient la même cause, et Simon en voyait deux pour un fait.
+   * Sur TOUTES les affaires ouvertes, pas sur le classement (NOS-1214).
+   *
+   * Le compte se faisait sur `ranked`, qui écarte au passage tout montant
+   * pondéré nul : il annonçait « 1 » quand la production en portait douze.
+   * Faux depuis l'origine, invisible tant que le chiffre restait non nul —
+   * puis, une fois la tête de classement retirée du compte (NOS-1210), la
+   * notification disparaissait purement et simplement.
+   *
+   * `top` reste exclu : la notification de focus le nomme déjà.
    */
-  const missing = autresQueLaTete(
-    ranked.filter((candidate) => !candidate.hasNextAction),
-    top,
-  );
+  const missing = sansProchaineAction({
+    deals: deals ?? [],
+    estOuverte: (deal) => isOpenStage(deal.stage, dealPipelineStatuses),
+    aUneProchaineAction: (deal) =>
+      getDealNextAction(deal, {
+        pipelineStatuses: dealPipelineStatuses,
+        dealStages,
+        fromStage: dealNextActionFromStage,
+        today,
+      }).status !== "missing",
+    exclure: top?.deal.id ?? null,
+  });
   if (missing.length > 0) {
-    const stake = missing.reduce(
-      (sum, candidate) => sum + (candidate.deal.amount ?? 0),
-      0,
-    );
+    const stake = missing.reduce((sum, deal) => sum + (deal.amount ?? 0), 0);
     notifications.push({
       id: "missing-next-action",
       severity: "warning",
@@ -201,7 +216,7 @@ export function useAppNotifications(): AppNotification[] {
        * colonnes de date sont nulles. Trois definitions du meme mot. Nommer
        * les lignes est le seul lien qui ne puisse pas mentir sur son chiffre.
        */
-      to: toDealsLink({ ids: missing.map((candidate) => candidate.deal.id) }),
+      to: toDealsLink({ ids: missing.map((deal) => deal.id) }),
       dismissKey: `missing-next-action-${missing.length}`,
     });
   }
