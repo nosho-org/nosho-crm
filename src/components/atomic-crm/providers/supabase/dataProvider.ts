@@ -33,6 +33,31 @@ import { ATTACHMENTS_BUCKET } from "../commons/attachments";
 import { getIsInitialized } from "./authProvider";
 import { getSupabaseClient } from "./supabase";
 
+/**
+ * Le message d'échec d'une fusion, en gardant ce que le serveur a dit.
+ *
+ * L'ancienne version jetait `error` et affichait une phrase fixe. Deux
+ * pannes de suite en sont sorties indiagnosticables depuis l'écran : la cause
+ * réelle — « cannot cast type integer to jsonb » — n'existait que dans les
+ * journaux de la fonction edge, qu'un utilisateur ne lit pas.
+ *
+ * `functions.invoke` range la réponse HTTP dans `error.context` ; le corps
+ * porte le message levé côté serveur. On le lit, et on retombe sur la phrase
+ * générique quand il n'y en a pas — un échec réseau, par exemple.
+ */
+const messageDeFusion = async (error: unknown): Promise<string> => {
+  const generique = "La fusion a échoué. Aucune fiche n'a été modifiée.";
+  const contexte = (error as { context?: Response })?.context;
+  if (!(contexte instanceof Response)) return generique;
+  try {
+    const corps = await contexte.clone().json();
+    const detail = (corps as { error?: string })?.error;
+    return detail ? `${generique} (${detail})` : generique;
+  } catch {
+    return generique;
+  }
+};
+
 const getBaseDataProvider = () =>
   supabaseDataProvider({
     instanceUrl: import.meta.env.VITE_SUPABASE_URL,
@@ -337,7 +362,7 @@ const getDataProviderWithCustomMethods = () => {
 
       if (error) {
         console.error("merge_companies.error", error);
-        throw new Error("La fusion a échoué. Aucune fiche n'a été modifiée.");
+        throw new Error(await messageDeFusion(error));
       }
 
       return data;
