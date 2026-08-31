@@ -954,15 +954,15 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/notifications/dedupeFocus.ts",
-          "type": "registry:component"
-        },
-        {
           "path": "src/components/atomic-crm/notifications/NotificationBell.tsx",
           "type": "registry:component"
         },
         {
           "path": "src/components/atomic-crm/notifications/notifications.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/notifications/sansProchaineAction.ts",
           "type": "registry:component"
         },
         {

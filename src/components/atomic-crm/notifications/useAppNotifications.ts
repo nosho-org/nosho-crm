@@ -12,6 +12,7 @@ import type { Task } from "../types";
 import { toDealsLink } from "../deals/dealFilterContract";
 import { bucketFor } from "../dashboard/actionQueue";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
+import { focusMeriteNotification } from "./regleFocus";
 import { sansProchaineAction } from "./sansProchaineAction";
 import type { AppNotification } from "./notifications";
 
@@ -112,8 +113,20 @@ export function useAppNotifications(): AppNotification[] {
   const amount = (value: number) => formatCurrencyCompact(value, currency);
   const notifications: AppNotification[] = [];
 
+  /*
+   * La priorité du jour ne parle que s'il y a quelque chose à faire
+   * (NOS-1215).
+   *
+   * Simon : « uniquement si une action reste à faire ». Un classement a
+   * toujours une première ligne : l'annoncer sans condition transformait un
+   * état permanent en alerte quotidienne. Voir `regleFocus.ts`.
+   *
+   * `top` reste défini même quand on se tait : il sert encore à ne pas
+   * compter deux fois la même affaire plus bas.
+   */
   const top = ranked[0];
-  if (top) {
+  const focusAffiche = focusMeriteNotification(top);
+  if (top && focusAffiche) {
     notifications.push({
       id: `focus-${top.deal.id}`,
       severity: "action",
@@ -144,24 +157,50 @@ export function useAppNotifications(): AppNotification[] {
     });
   }
 
-  const due = (tasks ?? []).filter((task) => {
-    const { bucket } = bucketFor(task.due_date, today);
-    return bucket === "overdue" || bucket === "today";
-  });
-  const overdue = (tasks ?? []).filter(
+  /*
+   * Le retard a sa propre notification (NOS-1215).
+   *
+   * Simon : « il me faut une notification si j'ai des tâches en retard ».
+   * Le retard vivait jusqu'ici en sous-titre de « X actions aujourd'hui »,
+   * c'est-à-dire dans la ligne fine d'un message dont le titre parlait
+   * d'autre chose. Une échéance dépassée et une échéance du jour ne
+   * demandent pas le même geste : la première est un rattrapage, la seconde
+   * un programme.
+   */
+  const enRetard = (tasks ?? []).filter(
     (task) => bucketFor(task.due_date, today).bucket === "overdue",
-  ).length;
+  );
+  const aujourdhui = (tasks ?? []).filter(
+    (task) => bucketFor(task.due_date, today).bucket === "today",
+  );
 
-  if (due.length > 0) {
+  if (enRetard.length > 0) {
+    notifications.push({
+      id: "tasks-overdue",
+      severity: "action",
+      title: `${enRetard.length} tâche${
+        enRetard.length > 1 ? "s" : ""
+      } en retard`,
+      body:
+        enRetard.length > 1
+          ? "échéances dépassées, rien n'a été coché"
+          : "échéance dépassée, rien n'a été coché",
+      to: "/",
+      dismissKey: `tasks-overdue-${enRetard.length}`,
+    });
+  }
+
+  if (aujourdhui.length > 0) {
     notifications.push({
       id: "tasks-today",
-      severity: overdue > 0 ? "warning" : "info",
-      title: `${due.length} action${due.length > 1 ? "s" : ""} aujourd'hui`,
-      body: overdue > 0 ? `dont ${overdue} en retard` : "rien en retard",
+      severity: "info",
+      title: `${aujourdhui.length} action${
+        aujourdhui.length > 1 ? "s" : ""
+      } aujourd'hui`,
       to: "/",
       // Fermer « 6 actions » le matin ne doit pas taire « 9 actions » deux
       // heures plus tard : ce n'est plus la même journée de travail.
-      dismissKey: `tasks-today-${due.length}-${overdue}`,
+      dismissKey: `tasks-today-${aujourdhui.length}`,
     });
   }
 
@@ -174,7 +213,10 @@ export function useAppNotifications(): AppNotification[] {
    * puis, une fois la tête de classement retirée du compte (NOS-1210), la
    * notification disparaissait purement et simplement.
    *
-   * `top` reste exclu : la notification de focus le nomme déjà.
+   * L'affaire du focus n'est exclue QUE si sa notification est
+   * effectivement affichée. La retirer alors qu'on s'est tu la ferait
+   * disparaître des deux endroits — le défaut même de NOS-1214, sous une
+   * autre forme.
    */
   const missing = sansProchaineAction({
     deals: deals ?? [],
@@ -186,7 +228,7 @@ export function useAppNotifications(): AppNotification[] {
         fromStage: dealNextActionFromStage,
         today,
       }).status !== "missing",
-    exclure: top?.deal.id ?? null,
+    exclure: focusAffiche ? (top?.deal.id ?? null) : null,
   });
   if (missing.length > 0) {
     const stake = missing.reduce((sum, deal) => sum + (deal.amount ?? 0), 0);
@@ -194,7 +236,7 @@ export function useAppNotifications(): AppNotification[] {
       id: "missing-next-action",
       severity: "warning",
       title: `${missing.length}${
-        top && !top.hasNextAction
+        focusAffiche && top && !top.hasNextAction
           ? missing.length > 1
             ? " autres"
             : " autre"
