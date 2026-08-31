@@ -14,9 +14,10 @@ import { CompanyCreateSuggestion } from "./CompanyCreateSuggestion";
  */
 export const AutocompleteCompanyInput = ({
   validate,
+  label,
   defaultType,
   richCreate = false,
-}: Pick<InputProps, "validate"> & {
+}: Pick<InputProps, "validate" | "label"> & {
   defaultType?: string;
   richCreate?: boolean;
 }) => {
@@ -50,6 +51,7 @@ export const AutocompleteCompanyInput = ({
   return (
     <AutocompleteInput
       optionText="name"
+      label={label}
       helperText={false}
       // Les deux modes de `useSupportCreateSuggestion` s'excluent : `onCreate`
       // crée sans UI, `create` monte un élément. On passe l'un ou l'autre.

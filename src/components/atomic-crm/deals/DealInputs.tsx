@@ -51,6 +51,11 @@ import {
 } from "./dealUtils";
 import { companyIsIdentified, stageRequiresSiret } from "./dealStageGuard";
 import type { Company, Contact, DealContactRoles, Sale } from "../types";
+import {
+  deciderNom,
+  JAMAIS_VU,
+  type EtatPrecedent,
+} from "./dealAutoName";
 
 export type DealFormMode = "create" | "edit";
 
@@ -73,6 +78,18 @@ export type DealFormMode = "create" | "edit";
 const requiredOnCreate = (mode: DealFormMode) =>
   mode === "create" ? required() : undefined;
 
+/**
+ * L'ordre des champs, tel que Simon l'a dicté (NOS-1208).
+ *
+ * « dans l'ordre sur cette page tu mets les champs suivants : type
+ * d'opportunité, catégorie, contacts associés, produits, priorité, ARR, étape,
+ * responsable, apporteur, date d'entrée tu conserves mais tu la caches ».
+ *
+ * Une seule colonne pour ces champs-là : sur deux colonnes, le regard passerait
+ * de la première à la seconde au milieu de la liste, et l'ordre demandé ne se
+ * lirait plus. Le reste — ce qu'il n'a pas nommé — suit sous un séparateur, en
+ * deux colonnes pour ne pas allonger la fenêtre.
+ */
 export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
   const isMobile = useIsMobile();
   const { companyType: contextCompanyType } = useContext(DealListViewContext);
@@ -83,47 +100,42 @@ export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
 
   return (
     <div className="flex flex-col gap-8">
-      <DealInfoInputs mode={mode} companyTypeFilter={companyTypeFilter} />
-
-      <div className={`flex gap-6 ${isMobile ? "flex-col" : "flex-row"}`}>
-        <DealLinkedToInputs
-          companyTypeFilter={companyTypeFilter}
-          onCompanyTypeFilterChange={setCompanyTypeFilter}
-        />
-        <Separator orientation={isMobile ? "horizontal" : "vertical"} />
-        <DealMiscInputs mode={mode} />
-      </div>
+      <DealMainInputs
+        mode={mode}
+        companyTypeFilter={companyTypeFilter}
+        onCompanyTypeFilterChange={setCompanyTypeFilter}
+      />
+      <Separator />
+      <DealSecondaryInputs mode={mode} isMobile={isMobile} />
     </div>
   );
 };
 
 /**
- * Le nom de l'opportunité, prérempli depuis la société (NOS-1201).
+ * Le nom de l'opportunité, repris de la société (NOS-1201, NOS-1208).
  *
- * Simon : « le nom de l'opportunité doit être automatiquement mis en
- * reprenant le nom de la société, donc premier champ à renseigner est la
- * société ».
+ * Simon : « supprime le champ nom de l'opportunité, il sert à rien, tu
+ * reprends automatiquement le nom de la société ».
  *
- * ## Il ne réécrit jamais une saisie
+ * Le champ n'existe plus à l'écran, et `deals.name` est `not null` : ce hook
+ * est donc le seul chemin qui remplit la colonne. La décision — écrire ou
+ * non — vit dans `deciderNom`, testée à part, parce que la version qui
+ * dormait ici portait un défaut qu'aucun test ne pouvait voir : `undefined`
+ * servait à la fois de « jamais vu » et de « aucune société choisie », si
+ * bien que le premier choix passait pour un montage et ne remplissait rien.
  *
- * Le remplissage n'a lieu que si le champ n'est PAS `dirty` — c'est-à-dire
- * si personne ne l'a touché. Quelqu'un qui a écrit « Extension 3 sites » puis
- * corrige la société garde son intitulé.
+ * `shouldDirty: false` pour que « dirty » continue de vouloir dire « un
+ * humain y a touché ». Même convention que `DealArrInput` (NOS-810).
  *
- * `shouldDirty: false` pour que « dirty » continue de vouloir dire « un humain
- * y a touché ». Même convention que `DealArrInput` (NOS-810).
- *
- * ## Et il ne se déclenche pas au montage
- *
- * `useEffect` sur `company_id` se rejouerait à l'ouverture d'une fiche
- * existante et réécrirait son intitulé. On ne réagit donc qu'à une TRANSITION
- * réelle — le piège relevé et évité de la même façon dans NOS-1093.
+ * Les DEUX modes sont concernés depuis que le champ a disparu : sans cela,
+ * changer la société d'une opportunité existante laisserait l'ancien nom, et
+ * plus rien ne permettrait de le corriger.
  */
-const useNameFromCompany = (mode: DealFormMode) => {
+const useNameFromCompany = () => {
   const { setValue, getValues } = useFormContext();
   const { dirtyFields } = useFormState({ name: "name" });
   const companyId = useWatch({ name: "company_id" });
-  const previousCompanyId = useRef<unknown>(undefined);
+  const precedent = useRef<EtatPrecedent>(JAMAIS_VU);
 
   const { data: company } = useGetOne<Company>(
     "companies",
@@ -132,68 +144,55 @@ const useNameFromCompany = (mode: DealFormMode) => {
   );
 
   useEffect(() => {
-    const premierRendu = previousCompanyId.current === undefined;
-    const aChange = previousCompanyId.current !== companyId;
-    previousCompanyId.current = companyId;
-
-    if (mode !== "create") return;
-    if (premierRendu || !aChange) return;
-    if (dirtyFields.name) return;
-    if (!company?.name) return;
-    if (getValues("name") === company.name) return;
-
-    setValue("name", company.name, { shouldDirty: false });
-  }, [companyId, company, dirtyFields.name, mode, setValue, getValues]);
+    const decision = deciderNom({
+      precedent: precedent.current,
+      societeId: companyId,
+      nomSociete: company?.name,
+      nomActuel: getValues("name"),
+      nomTouche: !!dirtyFields.name,
+    });
+    precedent.current = decision.societeVue;
+    if (decision.nom == null) return;
+    setValue("name", decision.nom, { shouldDirty: false });
+  }, [companyId, company, dirtyFields.name, setValue, getValues]);
 };
-
-const DealInfoInputs = ({
-  mode,
-  companyTypeFilter,
-}: {
-  mode: DealFormMode;
-  companyTypeFilter: string;
-}) => {
-  useNameFromCompany(mode);
-
-  return (
-    <div className="flex flex-col gap-4 flex-1">
-      {/*
-        La société d'abord : c'est elle qui nomme l'opportunité, et un champ
-        qui en alimente un autre doit le précéder (NOS-1201).
-      */}
-      <ReferenceInput source="company_id" reference="companies">
-        <AutocompleteCompanyInput
-          validate={required()}
-          defaultType={companyTypeFilter || undefined}
-          richCreate
-        />
-      </ReferenceInput>
-      <TextInput
-        source="name"
-        label="Nom de l'opportunité"
-        validate={required()}
-        helperText={false}
-      />
-      <TextInput source="description" multiline rows={3} helperText={false} />
-    </div>
-  );
-};
-
 const ALL_TYPES = "__all__";
 
-const DealLinkedToInputs = ({
+/**
+ * Les champs que Simon a nommés, dans son ordre.
+ *
+ * Ce composant réunit ce qui vivait dans « Lié à » et « Divers ». Les deux
+ * titres ont disparu avec les colonnes : ils rangeaient les champs par origine
+ * technique — la relation d'un côté, le reste de l'autre — et non par l'ordre
+ * dans lequel on remplit le formulaire.
+ */
+const DealMainInputs = ({
+  mode,
   companyTypeFilter,
   onCompanyTypeFilterChange,
 }: {
+  mode: DealFormMode;
   companyTypeFilter: string;
   onCompanyTypeFilterChange: (type: string) => void;
 }) => {
-  const { companyTypes, customViews } = useConfigurationContext();
+  const {
+    companyTypes,
+    customViews,
+    dealStages,
+    dealCategories,
+    dealOpportunityTypes,
+    dealPriorities,
+    dealProducts,
+  } = useConfigurationContext();
   const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
+  const { initialVisibleStages } = useContext(DealListViewContext);
+  const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
   const { setValue, getValues } = useFormContext();
   // Société déjà choisie sur l'opportunité : elle préremplit le contact créé à
   // la volée, pour ne pas la ressaisir (NOS-1048).
   const companyId = useWatch({ name: "company_id" });
+
+  useNameFromCompany();
 
   // Initialise company_type au montage si pas encore défini (création)
   useEffect(() => {
@@ -210,9 +209,12 @@ const DealLinkedToInputs = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 flex-1">
-      <h3 className="text-base font-medium">Lié à</h3>
-
+    <div className="flex flex-col gap-4">
+      {/*
+        « Vue » précède la société parce qu'elle la filtre. Ce n'est pas un
+        champ de la liste de Simon, mais la séparer de ce qu'elle restreint la
+        rendrait incompréhensible.
+      */}
       <div className="space-y-1">
         <label className="text-sm font-medium">Vue</label>
         <Select
@@ -233,6 +235,32 @@ const DealLinkedToInputs = ({
         </Select>
       </div>
 
+      {/*
+        La société d'abord : c'est elle qui nomme l'opportunité, et un champ
+        qui en alimente un autre doit le précéder (NOS-1201).
+      */}
+      <ReferenceInput source="company_id" reference="companies">
+        <AutocompleteCompanyInput
+          label="Société"
+          validate={required()}
+          defaultType={companyTypeFilter || undefined}
+          richCreate
+        />
+      </ReferenceInput>
+
+      {/* Issue #95 — growth source of this opportunity. Distinct from the
+          "Vue" select above, which only routes the deal to a pipeline view. */}
+      <DealOpportunityTypeInput choices={dealOpportunityTypes} mode={mode} />
+
+      <SelectInput
+        source="category"
+        label="Catégorie"
+        choices={dealCategories}
+        optionText="label"
+        optionValue="value"
+        helperText={false}
+        validate={requiredOnCreate(mode)}
+      />
 
       {/*
        * `reference` reste `contacts_summary` : c'est la vue qui porte
@@ -250,8 +278,150 @@ const DealLinkedToInputs = ({
           create={<ContactCreateSuggestion companyId={companyId} />}
         />
       </ReferenceArrayInput>
-
+      {/* Les rôles ne listent que les contacts choisis juste au-dessus : les
+          séparer les laisserait sans référent. */}
       <DealContactRolesInput />
+
+      {/* Products (NOS-956). Multi-select: a deal can cover No-show, Entrant
+          and Data at once. Stored in `deals.products` as a text[]. */}
+      <AutocompleteArrayInput
+        source="products"
+        label="Produit(s)"
+        choices={dealProducts}
+        optionText="label"
+        optionValue="value"
+        helperText={false}
+        validate={requiredOnCreate(mode)}
+      />
+
+      <SelectInput
+        source="priority"
+        label="Priorité"
+        choices={dealPriorities}
+        optionText="label"
+        optionValue="value"
+        defaultValue={defaultDealPriority}
+        helperText={false}
+        validate={requiredOnCreate(mode)}
+      />
+
+      <DealArrInput />
+      <DealStageInput choices={dealStages} defaultStage={defaultStage} />
+      <DealSalesInput mode={mode} />
+      <DealReferrerInput />
+
+      {/*
+       * La date d'entrée, conservée mais masquée (NOS-1208).
+       *
+       * Simon : « date d'entrée tu conserves mais tu la caches ». Elle date
+       * l'arrivée dans le pipeline et sert aux calculs d'ancienneté ; ce qui
+       * ne se justifiait plus, c'est de la faire saisir alors qu'elle vaut
+       * « aujourd'hui » à chaque création.
+       *
+       * Masquée en CSS plutôt que retirée : l'input reste monté, donc son
+       * `defaultValue` continue de remplir la colonne. Le sortir du JSX la
+       * laisserait vide.
+       */}
+      <div className="hidden" aria-hidden>
+        <DateInput
+          source="entered_at"
+          label="Date d'entrée"
+          helperText={false}
+          defaultValue={new Date().toISOString().split("T")[0]}
+        />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Ce que Simon n'a pas nommé, et qui reste néanmoins nécessaire.
+ *
+ * Sa liste couvre ce qu'on remplit à chaque création. Ces champs-là servent
+ * moins souvent — mais « date de clôture prévue » est obligatoire, la source du
+ * lead alimente les statistiques d'acquisition, et la probabilité
+ * exceptionnelle est le seul moyen de sortir une affaire de la pondération de
+ * son étape. Les supprimer serait un retrait de fonctionnalité qu'il n'a pas
+ * demandé ; les reléguer ici suffit à dégager le haut du formulaire.
+ */
+const DealSecondaryInputs = ({
+  mode,
+  isMobile,
+}: {
+  mode: DealFormMode;
+  isMobile: boolean;
+}) => {
+  const { leadSources } = useConfigurationContext();
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-base font-medium">Autres informations</h3>
+
+      <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+        {/*
+         * Pas de `defaultValue` ici (NOS-1014). Le défaut vit dans
+         * `<DealCreate>`, au niveau du formulaire, pour qu'il ne s'applique
+         * qu'à la création : posé sur l'input, il remplirait aussi le champ à
+         * l'ouverture d'une opportunité existante qui n'a pas de date, et
+         * l'écrirait au premier enregistrement sans que personne ne l'ait
+         * décidé.
+         */}
+        <DateInput
+          validate={required()}
+          source="expected_closing_date"
+          label="Date de clôture prévue"
+          helperText={false}
+        />
+        <SelectInput
+          source="lead_source"
+          label="Source du lead"
+          choices={leadSources}
+          optionText="label"
+          optionValue="value"
+          helperText={false}
+          validate={requiredOnCreate(mode)}
+        />
+        <DateInput
+          source="won_at"
+          label="Date de signature"
+          helperText={false}
+        />
+        {/*
+         * « POC » et non « trial » : c'est le vocabulaire du pipeline, dont
+         * l'étape s'appelle « Démo / POC ». La colonne, elle, reste
+         * `trial_start_date` — la renommer pour du wording imposerait une
+         * migration et toucherait six emplacements dont le trigger d'audit,
+         * sans rien apporter (NOS-1049).
+         */}
+        <DateInput
+          source="trial_start_date"
+          label="Début du POC"
+          helperText={false}
+        />
+        {/*
+         * Probabilité exceptionnelle (NOS-817).
+         *
+         * Laissée vide, l'opportunité est pondérée par la probabilité de son
+         * étape, configurée dans les Paramètres. Une valeur ici la remplace
+         * pour cette seule opportunité — le cockpit marque alors la ligne
+         * « exc. » pour qu'on sache d'où vient le pourcentage affiché.
+         *
+         * Surtout pas de `defaultValue` : 0 n'est pas « pas de probabilité »,
+         * c'est « aucune chance », et poser l'un pour l'autre sortirait toute
+         * opportunité neuve des prévisions. La colonne est nullable exactement
+         * pour cette raison (20260823090000).
+         */}
+        <NumberInput
+          source="probability"
+          label="Probabilité exceptionnelle (%)"
+          min={0}
+          max={100}
+          step={5}
+          helperText="Laisser vide pour utiliser la probabilité de l'étape"
+        />
+      </div>
+
+      <TextInput source="description" multiline rows={3} helperText={false} />
     </div>
   );
 };
@@ -391,125 +561,6 @@ const DealSalesInput = ({ mode }: { mode: DealFormMode }) => {
         validate={requiredOnCreate(mode)}
       />
     </ReferenceInput>
-  );
-};
-
-const DealMiscInputs = ({ mode }: { mode: DealFormMode }) => {
-  const {
-    dealStages,
-    dealCategories,
-    dealOpportunityTypes,
-    dealPriorities,
-    dealProducts,
-    leadSources,
-  } = useConfigurationContext();
-  const { initialVisibleStages } = useContext(DealListViewContext);
-  const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
-
-  return (
-    <div className="flex flex-col gap-4 flex-1">
-      <h3 className="text-base font-medium">Divers</h3>
-
-      {/* Issue #95 — growth source of this opportunity. Distinct from the
-          "Vue" select above, which only routes the deal to a pipeline view. */}
-      <DealOpportunityTypeInput choices={dealOpportunityTypes} mode={mode} />
-      {/* Products (NOS-956). Multi-select: a deal can cover No-show, Entrant
-          and Data at once. Stored in `deals.products` as a text[]. */}
-      <AutocompleteArrayInput
-        source="products"
-        label="Produit(s)"
-        choices={dealProducts}
-        optionText="label"
-        optionValue="value"
-        helperText={false}
-        validate={requiredOnCreate(mode)}
-      />
-      <SelectInput
-        source="category"
-        label="Catégorie"
-        choices={dealCategories}
-        optionText="label"
-        optionValue="value"
-        helperText={false}
-        validate={requiredOnCreate(mode)}
-      />
-      <SelectInput
-        source="priority"
-        label="Priorité"
-        choices={dealPriorities}
-        optionText="label"
-        optionValue="value"
-        defaultValue={defaultDealPriority}
-        helperText={false}
-        validate={requiredOnCreate(mode)}
-      />
-      <DealArrInput />
-      {/*
-       * Probabilité exceptionnelle (NOS-817).
-       *
-       * Laissée vide, l'opportunité est pondérée par la probabilité de son
-       * étape, configurée dans les Paramètres. Une valeur ici la remplace pour
-       * cette seule opportunité — le cockpit marque alors la ligne « exc. »
-       * pour qu'on sache d'où vient le pourcentage affiché.
-       *
-       * Surtout pas de `defaultValue` : 0 n'est pas « pas de probabilité »,
-       * c'est « aucune chance », et poser l'un pour l'autre sortirait toute
-       * opportunité neuve des prévisions. La colonne est nullable exactement
-       * pour cette raison (20260823090000).
-       */}
-      <NumberInput
-        source="probability"
-        label="Probabilité exceptionnelle (%)"
-        min={0}
-        max={100}
-        step={5}
-        helperText="Laisser vide pour utiliser la probabilité de l'étape"
-      />
-      <SelectInput
-        source="lead_source"
-        label="Source du lead"
-        choices={leadSources}
-        optionText="label"
-        optionValue="value"
-        helperText={false}
-        validate={requiredOnCreate(mode)}
-      />
-      {/*
-       * Pas de `defaultValue` ici (NOS-1014). Le défaut vit dans
-       * `<DealCreate>`, au niveau du formulaire, pour qu'il ne s'applique qu'à
-       * la création : posé sur l'input, il remplirait aussi le champ à
-       * l'ouverture d'une opportunité existante qui n'a pas de date, et
-       * l'écrirait au premier enregistrement sans que personne ne l'ait décidé.
-       */}
-      <DateInput
-        validate={required()}
-        source="expected_closing_date"
-        label="Date de clôture prévue"
-        helperText={false}
-      />
-      <DateInput
-        source="entered_at"
-        label="Date d'entrée"
-        helperText={false}
-        defaultValue={new Date().toISOString().split("T")[0]}
-      />
-      <DateInput source="won_at" label="Date de signature" helperText={false} />
-      {/*
-       * « POC » et non « trial » : c'est le vocabulaire du pipeline, dont
-       * l'étape s'appelle « Démo / POC ». La colonne, elle, reste
-       * `trial_start_date` — la renommer pour du wording imposerait une
-       * migration et toucherait six emplacements dont le trigger d'audit, sans
-       * rien apporter (NOS-1049).
-       */}
-      <DateInput
-        source="trial_start_date"
-        label="Début du POC"
-        helperText={false}
-      />
-      <DealStageInput choices={dealStages} defaultStage={defaultStage} />
-      <DealSalesInput mode={mode} />
-      <DealReferrerInput />
-    </div>
   );
 };
 
