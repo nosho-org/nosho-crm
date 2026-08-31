@@ -1,6 +1,12 @@
-import { Mail, Phone, Plus, Linkedin } from "lucide-react";
+import { Mail, Phone, Plus, Linkedin, X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useGetMany, useRecordContext } from "ra-core";
+import {
+  useGetMany,
+  useNotify,
+  useRecordContext,
+  useRefresh,
+  useUpdate,
+} from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "../../contacts/Avatar";
 import { useConfigurationContext } from "../../root/ConfigurationContext";
 import type { Contact, Deal } from "../../types";
-import { getContactRole } from "../dealContactRoles";
+import { getContactRole, sanitizeContactRoles } from "../dealContactRoles";
 
 /**
  * ---------------------------------------------------------------------------
@@ -46,6 +52,9 @@ export const DealKeyContacts = () => {
   const record = useRecordContext<Deal>();
   const { dealContactRoles, archivedDealContactRoles } =
     useConfigurationContext();
+  const [update, { isPending }] = useUpdate();
+  const notify = useNotify();
+  const refresh = useRefresh();
 
   const ids = record?.contact_ids ?? [];
   const { data: contacts } = useGetMany<Contact>(
@@ -55,6 +64,51 @@ export const DealKeyContacts = () => {
   );
 
   if (!record) return null;
+
+  /*
+   * Retirer un contact de l opportunite (NOS-1204).
+   *
+   * Simon : « je veux qu on puisse supprimer un contact ajoute par erreur sur
+   * une opportunite, cela n est pas possible actuellement ».
+   *
+   * Le bloc savait AJOUTER et rien d autre. On pouvait donc se tromper, mais
+   * jamais se corriger -- et le formulaire d edition, seul endroit qui portait
+   * la liste, ne se devine pas depuis cette carte.
+   *
+   * Le role part avec le contact : `sanitizeContactRoles` elague ce qui ne
+   * correspond plus a personne. Un role orphelin ne se voit nulle part et
+   * ressurgirait si le contact etait rattache a nouveau, en lui remettant
+   * silencieusement une etiquette que personne n a rechoisie.
+   */
+  const detacher = (contact: Contact) => {
+    const restants = (record.contact_ids ?? []).filter(
+      (identifiant) => String(identifiant) !== String(contact.id),
+    );
+    update(
+      "deals",
+      {
+        id: record.id,
+        data: {
+          contact_ids: restants,
+          contact_roles: sanitizeContactRoles(
+            record.contact_roles ?? {},
+            restants,
+          ),
+        },
+        previousData: record,
+      },
+      {
+        onSuccess: () => {
+          notify(
+            `${contact.first_name} ${contact.last_name} retiré de l'opportunité`,
+            { type: "info" },
+          );
+          refresh();
+        },
+        onError: () => notify("Retrait impossible", { type: "error" }),
+      },
+    );
+  };
 
   const roleLabel = (slug: string | null) => {
     if (!slug) return "Non défini";
@@ -159,6 +213,28 @@ export const DealKeyContacts = () => {
                       </a>
                     </Button>
                   )}
+
+                  {/*
+                    Le retrait ne demande pas confirmation : il ne detruit rien.
+                    Le contact reste dans le CRM, seul le lien avec cette
+                    opportunite disparait, et le rattacher a nouveau prend deux
+                    clics. Une fenetre de confirmation sur un geste reversible
+                    apprend surtout a cliquer sur "Oui" sans lire.
+                  */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={isPending}
+                    onClick={() => detacher(contact)}
+                    title="Retirer de l'opportunité"
+                    className="text-muted-foreground hover:text-[var(--deal-status-critical)]"
+                  >
+                    <X className="w-3.5 h-3.5" aria-hidden />
+                    <span className="sr-only">
+                      Retirer {contact.first_name} {contact.last_name} de
+                      l'opportunité
+                    </span>
+                  </Button>
                 </span>
               </li>
             );
