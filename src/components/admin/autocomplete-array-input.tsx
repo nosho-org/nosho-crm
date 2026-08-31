@@ -123,9 +123,24 @@ export const AutocompleteArrayInput = (
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
 
+  /*
+   * Retirer une puce, quel que soit le type de l identifiant (NOS-1200).
+   *
+   * Simon : « on peut pas supprimer un contact d une opportunite ».
+   *
+   * La comparaison etait STRICTE. `contact_ids` est un `bigint[]` : la valeur
+   * du formulaire porte des nombres, tandis que l identifiant de l option
+   * peut remonter en chaine selon le chemin de donnees. `5 !== "5"` est vrai,
+   * donc le filtre ne retirait rien et la puce restait -- sans le moindre
+   * message, ce qui se lit comme une interface qui ne repond pas.
+   *
+   * Comparer les representations textuelles couvre les deux types sans
+   * supposer lequel arrive. Meme piege que `identity.id` dans NOS-1085.
+   */
   const handleUnselect = useEvent((choice: any) => {
+    const cible = String(getChoiceValue(choice));
     field.onChange(
-      field.value.filter((v: any) => v !== getChoiceValue(choice)),
+      field.value.filter((v: any) => String(v) !== cible),
     );
   });
 

@@ -83,7 +83,7 @@ export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
 
   return (
     <div className="flex flex-col gap-8">
-      <DealInfoInputs />
+      <DealInfoInputs mode={mode} companyTypeFilter={companyTypeFilter} />
 
       <div className={`flex gap-6 ${isMobile ? "flex-col" : "flex-row"}`}>
         <DealLinkedToInputs
@@ -97,9 +97,77 @@ export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
   );
 };
 
-const DealInfoInputs = () => {
+/**
+ * Le nom de l'opportunité, prérempli depuis la société (NOS-1201).
+ *
+ * Simon : « le nom de l'opportunité doit être automatiquement mis en
+ * reprenant le nom de la société, donc premier champ à renseigner est la
+ * société ».
+ *
+ * ## Il ne réécrit jamais une saisie
+ *
+ * Le remplissage n'a lieu que si le champ n'est PAS `dirty` — c'est-à-dire
+ * si personne ne l'a touché. Quelqu'un qui a écrit « Extension 3 sites » puis
+ * corrige la société garde son intitulé.
+ *
+ * `shouldDirty: false` pour que « dirty » continue de vouloir dire « un humain
+ * y a touché ». Même convention que `DealArrInput` (NOS-810).
+ *
+ * ## Et il ne se déclenche pas au montage
+ *
+ * `useEffect` sur `company_id` se rejouerait à l'ouverture d'une fiche
+ * existante et réécrirait son intitulé. On ne réagit donc qu'à une TRANSITION
+ * réelle — le piège relevé et évité de la même façon dans NOS-1093.
+ */
+const useNameFromCompany = (mode: DealFormMode) => {
+  const { setValue, getValues } = useFormContext();
+  const { dirtyFields } = useFormState({ name: "name" });
+  const companyId = useWatch({ name: "company_id" });
+  const previousCompanyId = useRef<unknown>(undefined);
+
+  const { data: company } = useGetOne<Company>(
+    "companies",
+    { id: companyId },
+    { enabled: companyId != null },
+  );
+
+  useEffect(() => {
+    const premierRendu = previousCompanyId.current === undefined;
+    const aChange = previousCompanyId.current !== companyId;
+    previousCompanyId.current = companyId;
+
+    if (mode !== "create") return;
+    if (premierRendu || !aChange) return;
+    if (dirtyFields.name) return;
+    if (!company?.name) return;
+    if (getValues("name") === company.name) return;
+
+    setValue("name", company.name, { shouldDirty: false });
+  }, [companyId, company, dirtyFields.name, mode, setValue, getValues]);
+};
+
+const DealInfoInputs = ({
+  mode,
+  companyTypeFilter,
+}: {
+  mode: DealFormMode;
+  companyTypeFilter: string;
+}) => {
+  useNameFromCompany(mode);
+
   return (
     <div className="flex flex-col gap-4 flex-1">
+      {/*
+        La société d'abord : c'est elle qui nomme l'opportunité, et un champ
+        qui en alimente un autre doit le précéder (NOS-1201).
+      */}
+      <ReferenceInput source="company_id" reference="companies">
+        <AutocompleteCompanyInput
+          validate={required()}
+          defaultType={companyTypeFilter || undefined}
+          richCreate
+        />
+      </ReferenceInput>
       <TextInput
         source="name"
         label="Nom de l'opportunité"
@@ -165,15 +233,6 @@ const DealLinkedToInputs = ({
         </Select>
       </div>
 
-      <ReferenceInput source="company_id" reference="companies">
-        <AutocompleteCompanyInput
-          validate={required()}
-          defaultType={companyTypeFilter || undefined}
-          // Feuille de création complète ici seulement : c'est le parcours où
-          // la catégorie manquait, et donc l'ARR proposé avec elle (NOS-1047).
-          richCreate
-        />
-      </ReferenceInput>
 
       {/*
        * `reference` reste `contacts_summary` : c'est la vue qui porte
