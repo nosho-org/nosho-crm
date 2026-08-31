@@ -193,16 +193,46 @@ async function mergeCompanies(
       ),
     );
 
+    /*
+     * Les colonnes JSON se passent en TEXTE, avec leur cast (NOS-1202).
+     *
+     * `context_links` est de type `json`, `logo` de type `jsonb`. Leur passer
+     * un objet ou un tableau JavaScript brut faisait echouer la requete : le
+     * pilote encode un tableau en litteral Postgres `{a,b}` et un objet en
+     * `[object Object]`, ni l un ni l autre n etant du JSON valide.
+     *
+     * Toute la transaction etait donc annulee -- ce que le message disait
+     * fidelement ("aucune fiche n a ete modifiee"), sans jamais dire pourquoi.
+     *
+     * `JSON.stringify` produit le texte, le cast dit a Postgres comment le
+     * lire. `null` reste `null` : la chaine "null" serait le JSON valide
+     * representant la valeur nulle, ce qui n est pas la meme chose qu une
+     * colonne vide.
+     */
+    const COLONNES_JSON: Record<string, string> = {
+      logo: "jsonb",
+      context_links: "json",
+    };
+
     const merged = mergeCompanyData(winner, loser);
     const columns = Object.keys(merged);
     const assignments = columns
-      .map((column, index) => `${column} = $${index + 1}`)
+      .map((column, index) => {
+        const cast = COLONNES_JSON[column];
+        return `${column} = ${index + 1}${cast ? `::${cast}` : ""}`;
+      })
       .join(", ");
+
+    const valeurs = columns.map((column) => {
+      const valeur = merged[column];
+      if (!COLONNES_JSON[column]) return valeur;
+      return valeur == null ? null : JSON.stringify(valeur);
+    });
 
     await trx.executeQuery(
       CompiledQuery.raw(
-        `update public.companies set ${assignments} where id = $${columns.length + 1}`,
-        [...columns.map((column) => merged[column]), winnerId],
+        `update public.companies set ${assignments} where id = ${columns.length + 1}`,
+        [...valeurs, winnerId],
       ),
     );
 
