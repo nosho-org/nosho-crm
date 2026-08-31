@@ -10,6 +10,7 @@ import { UrlField } from "@/components/admin/url-field";
 import { SelectField } from "@/components/admin/select-field";
 
 import { AiDescriptionNotice } from "./AiDescriptionNotice";
+import { CompanyEnrichButton } from "./CompanyEnrichButton";
 import { AsideSection } from "../misc/AsideSection";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { SaleName } from "../sales/SaleName";
@@ -159,17 +160,33 @@ export const ContextInfo = ({ record }: { record: Company }) => {
  */
 export const DescriptionInfo = ({ record }: { record: Company }) => {
   const description = record.description?.trim();
-  if (!description) return null;
 
+  /*
+   * La section s'affiche même vide, pour porter le bouton (NOS-1213).
+   *
+   * Elle disparaissait quand il n'y avait rien à lire — parti pris d'origine
+   * assumé, tant que le descriptif n'arrivait que par l'enrichissement à la
+   * création. Mais une fiche sans descriptif était alors une impasse : rien
+   * à l'écran ne disait qu'on pouvait en obtenir un.
+   *
+   * Ce n'est pas un cadre vide pour autant : il contient une action.
+   */
   return (
     <AsideSection title="Descriptif">
       {/* `whitespace-pre-line` : ces descriptifs viennent souvent d'un
           copier-coller ou de l'enrichissement, et arrivent en plusieurs
           paragraphes. Les aplatir en un bloc les rend pénibles à lire. */}
-      <p className="text-sm whitespace-pre-line">{description}</p>
-      {record.description_source === "ai" && (
+      {description ? (
+        <p className="text-sm whitespace-pre-line">{description}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Aucun descriptif pour cette société.
+        </p>
+      )}
+      {description && record.description_source === "ai" && (
         <AiDescriptionNotice className="mt-1" />
       )}
+      <CompanyEnrichButton record={record} />
     </AsideSection>
   );
 };
