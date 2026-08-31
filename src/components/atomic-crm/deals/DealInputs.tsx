@@ -42,7 +42,6 @@ import {
   setContactRole,
 } from "./dealContactRoles";
 import {
-  getCompanyTypeChoices,
   getDefaultDealStage,
   getSuggestedArr,
   resolvePrefilledArr,
@@ -94,17 +93,15 @@ export const DealInputs = ({ mode = "edit" }: { mode?: DealFormMode }) => {
   const isMobile = useIsMobile();
   const { companyType: contextCompanyType } = useContext(DealListViewContext);
   const record = useRecordContext();
-  const [companyTypeFilter, setCompanyTypeFilter] = useState(
+  // Plus de setter depuis que « Vue » a disparu : la valeur vient de la
+  // fiche ou de la vue courante, et ne change plus en cours de saisie.
+  const [companyTypeFilter] = useState(
     record?.company_type ?? contextCompanyType ?? "",
   );
 
   return (
     <div className="flex flex-col gap-8">
-      <DealMainInputs
-        mode={mode}
-        companyTypeFilter={companyTypeFilter}
-        onCompanyTypeFilterChange={setCompanyTypeFilter}
-      />
+      <DealMainInputs mode={mode} companyTypeFilter={companyTypeFilter} />
       <Separator />
       <DealSecondaryInputs mode={mode} isMobile={isMobile} />
     </div>
@@ -156,8 +153,6 @@ const useNameFromCompany = () => {
     setValue("name", decision.nom, { shouldDirty: false });
   }, [companyId, company, dirtyFields.name, setValue, getValues]);
 };
-const ALL_TYPES = "__all__";
-
 /**
  * Les champs que Simon a nommés, dans son ordre.
  *
@@ -166,25 +161,32 @@ const ALL_TYPES = "__all__";
  * technique — la relation d'un côté, le reste de l'autre — et non par l'ordre
  * dans lequel on remplit le formulaire.
  */
+/**
+ * `companyTypeFilter` survit sans son sélecteur (NOS-1211).
+ *
+ * Simon : « supprime le champ Vue, car inutile ». Le select écrivait
+ * `deals.company_type`, mais cette valeur est déjà posée par la vue depuis
+ * laquelle on crée — `DealCreate` la seede depuis `DealListViewContext`.
+ * La redemander revenait à faire ressaisir ce que l'écran savait déjà.
+ *
+ * Le filtre reste donc utile en lecture : il restreint la liste des
+ * sociétés proposées et sert de type par défaut à celle qu'on crée à la
+ * volée. C'est sa seule raison d'être ici désormais.
+ */
 const DealMainInputs = ({
   mode,
   companyTypeFilter,
-  onCompanyTypeFilterChange,
 }: {
   mode: DealFormMode;
   companyTypeFilter: string;
-  onCompanyTypeFilterChange: (type: string) => void;
 }) => {
   const {
-    companyTypes,
-    customViews,
     dealStages,
     dealCategories,
     dealOpportunityTypes,
     dealPriorities,
     dealProducts,
   } = useConfigurationContext();
-  const companyTypeChoices = getCompanyTypeChoices(companyTypes, customViews);
   const { initialVisibleStages } = useContext(DealListViewContext);
   const defaultStage = getDefaultDealStage(dealStages, initialVisibleStages);
   const { setValue, getValues } = useFormContext();
@@ -202,39 +204,8 @@ const DealMainInputs = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTypeChange = (newType: string) => {
-    const type = newType === ALL_TYPES ? "" : newType;
-    onCompanyTypeFilterChange(type);
-    setValue("company_type", type || null);
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      {/*
-        « Vue » précède la société parce qu'elle la filtre. Ce n'est pas un
-        champ de la liste de Simon, mais la séparer de ce qu'elle restreint la
-        rendrait incompréhensible.
-      */}
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Vue</label>
-        <Select
-          value={companyTypeFilter || ALL_TYPES}
-          onValueChange={handleTypeChange}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_TYPES}>Toutes les vues</SelectItem>
-            {companyTypeChoices.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/*
         La société d'abord : c'est elle qui nomme l'opportunité, et un champ
         qui en alimente un autre doit le précéder (NOS-1201).

@@ -98,6 +98,8 @@ interface Enrichment {
   ape_code?: string;
   is_individual?: boolean;
   not_found?: boolean;
+  /** La source qualitative n a pas repondu -- voir NOS-1211. */
+  qualitative_unavailable?: boolean;
   /**
    * Etablissements proposes quand le nom ne tranche pas (NOS-1152).
    *
@@ -511,11 +513,27 @@ async function handler(req: Request): Promise<Response> {
     });
   }
 
+  /*
+   * Dire que le qualitatif a manque (NOS-1211).
+   *
+   * Simon : « a la creation d une opportunite, le texte genere par l IA dans
+   * la partie Le client n apparait plus ». La cause etait ANTHROPIC_API_KEY
+   * absente des secrets de la fonction -- mais le defaut de code est que
+   * personne ne le voyait : Pappers rendait l adresse, le modele ne rendait
+   * rien, et l ecran affichait un enrichissement d apparence reussie.
+   *
+   * `null` ici ne veut pas dire « societe inconnue » mais « la source n a pas
+   * repondu » -- cle manquante, quota, panne. L interface a besoin de la
+   * difference pour ne pas laisser croire a une fiche complete.
+   */
+  const qualitativeIndisponible = qualitative === null;
+
   // Pappers en dernier : un registre prime sur une inference.
   const merged: Enrichment = {
     ...(qualitative?.not_found ? {} : (qualitative ?? {})),
     ...(legalData ?? {}),
     ...(candidates?.length ? { legal_candidates: candidates } : {}),
+    ...(qualitativeIndisponible ? { qualitative_unavailable: true } : {}),
   };
   delete merged.not_found;
 

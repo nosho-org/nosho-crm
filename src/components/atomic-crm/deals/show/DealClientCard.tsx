@@ -4,6 +4,10 @@ import { Card } from "@/components/ui/card";
 
 import type { Company, Deal } from "../../types";
 import { AiDescriptionNotice } from "../../companies/AiDescriptionNotice";
+import {
+  adresseCartographiable,
+  lienGoogleMaps,
+} from "../../companies/companyMapLink";
 
 /**
  * ---------------------------------------------------------------------------
@@ -43,6 +47,24 @@ export const DealClientCard = () => {
   const description = company?.description?.trim();
   const city = company?.city?.trim();
 
+  /*
+   * La localisation, cliquable (NOS-1211).
+   *
+   * Simon : « l'adresse qui remonte doit intégrer un lien vers la
+   * localisation Google Maps ». L'épingle était là depuis le début, sans
+   * rien derrière — un pictogramme qui promet une carte doit y mener.
+   *
+   * `adresseCartographiable` renvoie `null` quand on n'a que la ville : on
+   * garde alors le texte simple. Un lien qui ouvre le centre d'une commune
+   * à plusieurs kilomètres de l'établissement est pire qu'aucun lien.
+   */
+  const requeteCarte = adresseCartographiable({
+    name: company?.name,
+    address: company?.address,
+    zipcode: company?.zipcode,
+    city: company?.city,
+  });
+
   // Rien à dire : on ne rend rien. Voir l'en-tête pour le raisonnement.
   if (!description && !city) return null;
 
@@ -62,12 +84,25 @@ export const DealClientCard = () => {
         <AiDescriptionNotice />
       )}
 
-      {city && (
-        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-          <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />
-          {city}
-        </span>
-      )}
+      {city &&
+        (requeteCarte ? (
+          <a
+            href={lienGoogleMaps(requeteCarte)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground underline decoration-dotted underline-offset-4 w-fit"
+            title={requeteCarte}
+          >
+            <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            {city}
+            <span className="sr-only">— ouvrir dans Google Maps</span>
+          </a>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            {city}
+          </span>
+        ))}
     </Card>
   );
 };

@@ -25,6 +25,14 @@ import { sizes } from "./sizes";
 type Enrichment = Partial<Company> & {
   not_found?: boolean;
   /**
+   * La source qualitative n'a pas répondu (NOS-1211).
+   *
+   * Distinct de `not_found`, qui veut dire « société inconnue ». Ici la
+   * société existe peut-être très bien : c'est le modèle qui n'a rien pu
+   * dire — clé absente, quota, panne.
+   */
+  qualitative_unavailable?: boolean;
+  /**
    * Établissements proposés par le registre quand le nom ne tranche pas
    * (NOS-1152).
    *
@@ -254,6 +262,29 @@ const QuickCreate = ({
                   saisir les champs manuellement
                 </button>
                 .
+              </p>
+            </div>
+          )}
+
+          {/*
+            L'échec silencieux, rendu visible (NOS-1211).
+
+            Simon : « le texte généré par l'IA dans la partie Le client
+            n'apparaît plus ». Le registre répondait, le modèle non, et
+            l'écran affichait un enrichissement d'apparence réussie — avec
+            une adresse, sans description, et sans rien qui dise pourquoi.
+
+            Le message nomme la cause opérationnelle plutôt que de rester
+            vague : sans cela, on reproche à l'IA une clé manquante.
+          */}
+          {enrichment?.qualitative_unavailable && (
+            <div className="flex items-start gap-2 rounded-md border border-[var(--deal-status-warning)]/40 bg-[var(--deal-status-warning)]/10 p-3 text-sm">
+              <AlertCircle className="w-4 h-4 text-[var(--deal-status-warning)] mt-0.5 shrink-0" />
+              <p className="text-muted-foreground">
+                Le descriptif n'a pas pu être généré : le service d'analyse
+                n'a pas répondu. Les données du registre ci-dessous restent
+                valables ; la description pourra être ajoutée à la main ou
+                en relançant l'enrichissement plus tard.
               </p>
             </div>
           )}
