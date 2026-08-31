@@ -8,6 +8,7 @@ import type { Task } from "../types";
 import { toDealsLink } from "../deals/dealFilterContract";
 import { bucketFor } from "../dashboard/actionQueue";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
+import { autresQueLaTete } from "./dedupeFocus";
 import type { AppNotification } from "./notifications";
 
 /**
@@ -112,9 +113,18 @@ export function useAppNotifications(): AppNotification[] {
     notifications.push({
       id: `focus-${top.deal.id}`,
       severity: "action",
-      title: `À faire : ${top.deal.company_name || top.deal.name}`,
+      /*
+       * « Priorité du jour », et non « À faire » (NOS-1210).
+       *
+       * Simon a lu « À faire : Oxance » comme « il te reste une tâche à
+       * faire », alors que ses trois tâches étaient terminées. Le message
+       * ne désigne pas une tâche en attente : il désigne l'affaire que le
+       * classement place en tête, souvent justement parce que plus rien
+       * n'y est planifié.
+       */
+      title: `Priorité du jour : ${top.deal.company_name || top.deal.name}`,
       body: `${amount(top.deal.amount ?? 0)} d'ARR${
-        top.hasNextAction ? "" : " · aucune prochaine action"
+        top.hasNextAction ? "" : " · aucune prochaine action planifiée"
       }`,
       detail: `score ${top.score} · ${explainFocus(top, amount)}`,
       to: `/deals/${top.deal.id}/show`,
@@ -151,7 +161,15 @@ export function useAppNotifications(): AppNotification[] {
     });
   }
 
-  const missing = ranked.filter((candidate) => !candidate.hasNextAction);
+  /*
+   * Les affaires sans prochaine action, MOINS celle que la notification de
+   * focus vient de nommer (NOS-1210). Voir `dedupeFocus.ts` : les deux
+   * messages avaient la même cause, et Simon en voyait deux pour un fait.
+   */
+  const missing = autresQueLaTete(
+    ranked.filter((candidate) => !candidate.hasNextAction),
+    top,
+  );
   if (missing.length > 0) {
     const stake = missing.reduce(
       (sum, candidate) => sum + (candidate.deal.amount ?? 0),
@@ -160,7 +178,15 @@ export function useAppNotifications(): AppNotification[] {
     notifications.push({
       id: "missing-next-action",
       severity: "warning",
-      title: `${missing.length} opportunité${missing.length > 1 ? "s" : ""} sans prochaine action`,
+      title: `${missing.length}${
+        top && !top.hasNextAction
+          ? missing.length > 1
+            ? " autres"
+            : " autre"
+          : ""
+      } opportunité${
+        missing.length > 1 ? "s" : ""
+      } sans prochaine action`,
       body: `${amount(stake)} qui n'avancent plus`,
       /*
        * Les cinq opportunites nommees, pas un lien vers la liste entiere.

@@ -510,6 +510,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/dealAutoName.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealBulkEditStage.tsx",
           "type": "registry:component"
         },
