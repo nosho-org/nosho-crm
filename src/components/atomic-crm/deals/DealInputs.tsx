@@ -590,7 +590,7 @@ const DealOpportunityTypeInput = ({
 };
 
 /**
- * L'étape, avec le contrôle SIRET à partir de Qualifié (NOS-1150).
+ * L'étape, avec le contrôle SIRET au-delà de Qualifié (NOS-1150, NOS-1227).
  *
  * La validation vit sur ce champ plutôt que sur le formulaire entier : c'est
  * le champ fautif, et c'est là que l'utilisateur regarde. Un message global

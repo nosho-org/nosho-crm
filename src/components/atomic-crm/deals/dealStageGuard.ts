@@ -7,22 +7,28 @@ type DealCompanyId = string | number | null | undefined;
 
 /**
  * ---------------------------------------------------------------------------
- * Le SIRET, exigé à partir de Qualifié (NOS-1150)
+ * Le SIRET, exigé au-delà de Qualifié (NOS-1150, NOS-1227)
  * ---------------------------------------------------------------------------
- * Simon voulait d'abord l'exiger à la création de l'opportunité. La mesure a
- * fait changer d'avis : **46 des 53 opportunités créées en 60 jours auraient
- * été refusées** — 87 %. Un commercial en salon qui note un prénom et un
- * numéro n'a pas de raison sociale à donner, et 89 des sociétés en base
- * portent un libellé de travail introuvable chez Pappers.
+ * Le seuil a bougé deux fois, chaque fois sur mesure.
  *
- * Une barrière que 87 % des cas heurtent n'est pas un garde-fou qualité : elle
- * pousse à saisir de faux SIRET pour passer, ce qui est pire qu'un champ vide
- * — une donnée fausse ne se signale pas.
+ * **À la création** (abandonné) : 46 des 53 opportunités créées en 60 jours
+ * auraient été refusées — 87 %. Un commercial en salon qui note un prénom et
+ * un numéro n'a pas de raison sociale à donner.
  *
- * Le contrôle a donc été déplacé là où l'affaire devient réelle : on entre
- * librement en Lead, on ne passe pas en Qualifié sans avoir identifié la
- * société. Aucune des créations récentes n'aurait été empêchée, et la pression
- * s'exerce au moment où le commercial a de quoi y répondre.
+ * **À Qualifié** (abandonné) : la mesure du 1er septembre 2026 montre que
+ * **28 des 37 opportunités qualifiées n'ont pas de SIRET**, soit 76 %. Le
+ * seuil reproduisait donc le défaut qu'il corrigeait, un cran plus loin :
+ * qualifier, c'est encore explorer, et on qualifie souvent avant d'avoir la
+ * fiche registre de l'établissement.
+ *
+ * **Au-delà de Qualifié** (en vigueur). Simon : « bloque le changement de
+ * statut d'un lead sans SIRET seulement si l'opportunité passe à un statut
+ * supérieur à qualifié ». On entre librement, on qualifie librement, on ne
+ * démarre pas un POC sur un établissement qu'on n'a pas identifié.
+ *
+ * Une barrière que la majorité des cas heurte n'est pas un garde-fou de
+ * qualité : elle pousse à saisir de faux SIRET pour passer, ce qui est pire
+ * qu'un champ vide — une donnée fausse ne se signale pas.
  *
  * ## Ce qui n'est jamais bloqué, et pourquoi
  *
@@ -31,12 +37,11 @@ type DealCompanyId = string | number | null | undefined;
  * gonflant les prévisions — le contrôle produirait exactement le mensonge
  * qu'il prétend empêcher. On doit toujours pouvoir fermer une affaire.
  *
- * `a-reclasser` et `lead` restent libres : ce sont les étapes d'entrée.
+ * `a-reclasser`, `lead` et désormais `qualified` restent libres : ce sont les
+ * étapes où l'on ne sait pas encore à qui l'on parle.
  */
-
 /** Étapes qui exigent une société identifiée. */
 export const STAGES_REQUIRING_SIRET = [
-  "qualified",
   "demo-poc",
   "proposal",
   "negociation",
