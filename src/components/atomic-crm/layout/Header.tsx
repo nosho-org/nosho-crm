@@ -33,6 +33,7 @@ import { ImportPage } from "../misc/ImportPage";
 import { CreateViewDialog } from "../deals/CreateViewDialog";
 import { APP_VERSION } from "../../../version";
 import { NotificationBell } from "../notifications/NotificationBell";
+import { GlobalSearchButton } from "./GlobalSearchButton";
 import { ChangelogModal } from "./ChangelogModal";
 
 const Header = () => {
@@ -166,6 +167,10 @@ const Header = () => {
                 </nav>
               </div>
               <div className="flex items-center">
+                {/* La recherche en tête de la zone droite : elle
+                    s'utilise plus souvent que tout ce qui suit, et se lit
+                    de gauche à droite avant les icônes (NOS-1226). */}
+                <GlobalSearchButton />
                 {/* La cloche avant les réglages : c'est ce qu'on vient
                     consulter, pas ce qu'on vient régler (NOS-1178). */}
                 <NotificationBell />

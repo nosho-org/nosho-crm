@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/command";
 
 import type { Company, Contact, Deal } from "../types";
+import { ecouterOuverturePalette } from "./paletteBus";
 
 /**
  * ---------------------------------------------------------------------------
@@ -121,6 +122,23 @@ export const CommandPalette = () => {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  /*
+   * La barre du bandeau ouvre la même palette (NOS-1226).
+   *
+   * Simon voulait une recherche visible ; elle existait, mais uniquement
+   * derrière ⌘K. Plutôt qu'un second moteur, `GlobalSearchButton` demande
+   * l'ouverture d'ici — et transmet la lettre déjà tapée, qui serait sinon
+   * perdue entre le champ et la fenêtre.
+   */
+  useEffect(
+    () =>
+      ecouterOuverturePalette(({ texte }) => {
+        if (texte) setQuery(texte);
+        setOpen(true);
+      }),
+    [],
+  );
 
   const search = query.trim();
   const enabled = open && search.length >= MIN_QUERY;
