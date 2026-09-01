@@ -962,6 +962,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/notifications/regleFocus.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/notifications/sansProchaineAction.ts",
           "type": "registry:component"
         },

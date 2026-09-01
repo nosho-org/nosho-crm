@@ -15,6 +15,7 @@ import { isLinkedinUrl } from "../misc/isLinkedInUrl";
 import { contactGender } from "./contactGender";
 import type { Sale } from "../types";
 import { Avatar } from "./Avatar";
+import { ContactDealRolesInputs } from "./ContactDealRolesInputs";
 import { AutocompleteCompanyInput } from "../companies/AutocompleteCompanyInput.tsx";
 
 export const ContactInputs = () => {
@@ -36,6 +37,9 @@ export const ContactInputs = () => {
         <div className="flex flex-col gap-10 flex-1">
           <ContactPersonalInformationInputs />
           <ContactMiscInputs />
+          {/* Les roles decisionnels portent sur les opportunites, pas sur
+              le contact : voir l en-tete du composant (NOS-1223). */}
+          <ContactDealRolesInputs />
         </div>
       </div>
     </div>
