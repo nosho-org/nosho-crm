@@ -12,6 +12,7 @@ import type { Task } from "../types";
 import { toDealsLink } from "../deals/dealFilterContract";
 import { bucketFor } from "../dashboard/actionQueue";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
+import { lienFileActions } from "../dashboard/useFocusCible";
 import { focusMeriteNotification } from "./regleFocus";
 import { sansProchaineAction } from "./sansProchaineAction";
 import type { AppNotification } from "./notifications";
@@ -185,7 +186,7 @@ export function useAppNotifications(): AppNotification[] {
         enRetard.length > 1
           ? "échéances dépassées, rien n'a été coché"
           : "échéance dépassée, rien n'a été coché",
-      to: "/",
+      to: lienFileActions(),
       dismissKey: `tasks-overdue-${enRetard.length}`,
     });
   }
@@ -197,7 +198,14 @@ export function useAppNotifications(): AppNotification[] {
       title: `${aujourdhui.length} action${
         aujourdhui.length > 1 ? "s" : ""
       } aujourd'hui`,
-      to: "/",
+      /*
+       * Vers la file d'actions, pas vers « / » (NOS-1224).
+       *
+       * Simon : « quand je clique il ne se passe rien ». Le lien menait au
+       * tableau de bord, où il se trouvait déjà : le clic ne déplaçait
+       * rien, alors que les six actions étaient plus bas dans la page.
+       */
+      to: lienFileActions(),
       // Fermer « 6 actions » le matin ne doit pas taire « 9 actions » deux
       // heures plus tard : ce n'est plus la même journée de travail.
       dismissKey: `tasks-today-${aujourdhui.length}`,

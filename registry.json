@@ -214,6 +214,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/contacts/ContactDealRolesInputs.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/contacts/ContactEdit.tsx",
           "type": "registry:component"
         },

@@ -8,6 +8,7 @@ import { formatCurrencyCompact } from "../misc/formatCurrency";
 import type { Deal, Task as TaskRecord } from "../types";
 import { AnimatedListItem } from "@/components/ui/motion";
 import { useDashboard } from "./DashboardContext";
+import { FOCUS_FILE_ACTIONS, useFocusCible } from "./useFocusCible";
 import {
   BUCKET_LABELS,
   type QueueBucket,
@@ -49,6 +50,8 @@ const SHOWN: QueueBucket[] = ["overdue", "today", "week"];
 
 export const CockpitQueue = () => {
   const { selection, today } = useDashboard();
+  // La cible de la notification « X actions aujourd'hui » (NOS-1224).
+  const enEvidence = useFocusCible(FOCUS_FILE_ACTIONS);
   const { currency } = useConfigurationContext();
   const { identity } = useGetIdentity();
 
@@ -82,7 +85,14 @@ export const CockpitQueue = () => {
   if (isPending) return null;
 
   return (
-    <Card className="p-3 flex flex-col gap-2.5">
+    <Card
+      id={FOCUS_FILE_ACTIONS}
+      className={`p-3 flex flex-col gap-2.5 transition-shadow ${
+        enEvidence
+          ? "ring-2 ring-[var(--deal-status-warning)] ring-offset-2"
+          : ""
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           File d'actions
