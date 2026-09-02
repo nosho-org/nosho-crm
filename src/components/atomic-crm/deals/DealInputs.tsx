@@ -45,6 +45,7 @@ import {
   getDefaultDealStage,
   getSuggestedArr,
   resolvePrefilledArr,
+  todayISODate,
   PARTNERSHIP_OPPORTUNITY_TYPE,
   PARTNER_DEAL_CATEGORY,
 } from "./dealUtils";
@@ -298,7 +299,7 @@ const DealMainInputs = ({
           source="entered_at"
           label="Date d'entrée"
           helperText={false}
-          defaultValue={new Date().toISOString().split("T")[0]}
+          defaultValue={todayISODate()}
         />
       </div>
     </div>

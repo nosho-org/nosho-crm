@@ -12,6 +12,7 @@ import type {
   EstablishmentType,
 } from "../types";
 import { defaultDealPriorities } from "../root/defaultConfiguration";
+import { toISODateString } from "./cockpit/dealDates";
 
 export function getDefaultDealStage(
   dealStages: ConfigurationContextValue["dealStages"],
@@ -260,9 +261,20 @@ export const SIGNED_DEAL_STAGE = "closed-won";
 export const PARTNERSHIP_OPPORTUNITY_TYPE = "partenariat";
 export const PARTNER_DEAL_CATEGORY = "partenaire";
 
-/** Today, in the `YYYY-MM-DD` form the date columns expect. */
+/**
+ * Aujourd'hui, dans la forme `YYYY-MM-DD` qu'attendent les colonnes date.
+ *
+ * Lit le calendrier LOCAL (NOS-1229). `toISOString()` rend le jour UTC :
+ * entre minuit et 2 h à Paris en été, il désigne la veille. Les colonnes
+ * visées sont des `date` sans fuseau propre — c'est le jour où se trouve
+ * l'utilisateur qui fait foi, jamais celui de Greenwich.
+ *
+ * Le même piège avait déjà décalé d'un jour un seuil de dormance, et il
+ * vient de faire passer les tâches d'hier pour celles du jour dans la file
+ * d'actions.
+ */
 export function todayISODate(): string {
-  return new Date().toISOString().split("T")[0];
+  return toISODateString(new Date());
 }
 
 /**

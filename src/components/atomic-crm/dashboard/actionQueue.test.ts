@@ -39,6 +39,39 @@ describe("bucketFor", () => {
     expect(bucketFor("2026-09-06", TODAY).bucket).toBe("later");
   });
 
+  it("suit le jour local, pas le jour UTC", () => {
+    /*
+     * Le défaut signalé par Simon : « dans la partie tâche le CRM confond
+     * aujourd'hui et hier ».
+     *
+     * La production appelle `bucketFor` avec `startOfToday()`, c'est-à-dire
+     * MINUIT LOCAL. À Paris en été, cet instant s'écrit
+     * `2026-08-31T22:00:00Z` : l'ancien code en découpait « 2026-08-31 » et
+     * se croyait la veille.
+     *
+     * Les fixtures existantes valaient 10 h UTC — une heure où les deux
+     * lectures coïncident partout, donc où le défaut reste invisible. Ce test
+     * reconstruit la valeur réelle.
+     */
+    const minuitLocal = new Date(2026, 8, 1); // 1er septembre, heure locale
+
+    expect(bucketFor("2026-09-01", minuitLocal).bucket).toBe("today");
+    expect(bucketFor("2026-08-31", minuitLocal)).toEqual({
+      bucket: "overdue",
+      daysOverdue: 1,
+    });
+    expect(bucketFor("2026-09-02", minuitLocal).bucket).toBe("week");
+  });
+
+  it("range un horodatage sur le jour où on le lit", () => {
+    // 23 h 30 UTC le 31 août, c'est déjà le 1er septembre à Paris. La tâche
+    // s'affiche « due 01/09 » : elle doit se ranger avec ce jour-là.
+    const minuitLocal = new Date(2026, 8, 1);
+    const instant = new Date(2026, 8, 1, 9, 30).toISOString();
+
+    expect(bucketFor(instant, minuitLocal).bucket).toBe("today");
+  });
+
   it("ne met pas en retard une tâche sans date", () => {
     // Elle n'est en retard sur rien : personne n'a pris d'engagement. La faire
     // remonter en rouge apprendrait à ignorer le rouge.

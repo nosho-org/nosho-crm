@@ -42,17 +42,47 @@ export const BUCKET_LABELS: Record<QueueBucket, string> = {
 const DAY = 86_400_000;
 
 /**
- * Le jour calendaire d'une échéance, en millisecondes UTC.
+ * Le jour civil, ramené à une clé comparable.
  *
  * Les échéances arrivent sous deux formes — `YYYY-MM-DD` nu, ou horodatage
  * complet — et le regroupement doit traiter les deux de la même façon : ce qui
  * compte est le jour, pas l'heure. C'est ce mélange qui produisait l'en-tête
  * « PLUS TARD » au-dessus de tâches du jour même.
+ *
+ * ## Le jour LOCAL, jamais le jour UTC (NOS-1229)
+ *
+ * Simon : « dans la partie tâche le CRM confond aujourd'hui et hier ».
+ *
+ * L'ancienne version découpait les dix premiers caractères de l'ISO. Sur une
+ * chaîne c'était acceptable ; sur `today`, qui vaut minuit LOCAL, c'était
+ * faux : à Paris en été, minuit du 1er septembre s'écrit
+ * `2026-08-31T22:00:00Z`, et le découpage rendait « 2026-08-31 ». Le CRM se
+ * croyait la veille — les tâches d'hier passaient pour celles du jour, et
+ * celles du jour tombaient dans « cette semaine ».
+ *
+ * Un fuseau à l'ouest de Greenwich aurait produit l'erreur inverse. Seul un
+ * poste réglé sur UTC ne voyait rien, ce qui explique que le défaut ait tenu.
  */
+function jourLocal(date: Date): number {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function dayOf(value: string | null | undefined): number | null {
   if (!value) return null;
-  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date.getTime();
+
+  /*
+   * Une date nue n'a pas de fuseau : la lire comme un instant lui en
+   * inventerait un. `2026-09-20` vaut le 20 septembre, où qu'on soit.
+   */
+  const nue = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (nue) {
+    return Date.UTC(Number(nue[1]), Number(nue[2]) - 1, Number(nue[3]));
+  }
+
+  // Un horodatage, lui, désigne un instant : c'est le jour où le lecteur le
+  // vit qui compte, donc son jour local.
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : jourLocal(date);
 }
 
 /**
@@ -67,7 +97,7 @@ export function bucketFor(
   today: Date,
 ): { bucket: QueueBucket; daysOverdue: number } {
   const due = dayOf(dueDate);
-  const now = dayOf(today.toISOString());
+  const now = jourLocal(today);
   if (due === null || now === null) {
     return { bucket: "later", daysOverdue: 0 };
   }
