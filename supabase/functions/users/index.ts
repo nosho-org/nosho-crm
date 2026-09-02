@@ -4,6 +4,12 @@ import { corsHeaders, OptionsMiddleware } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/utils.ts";
 import { AuthMiddleware, UserMiddleware } from "../_shared/authentication.ts";
 import { getUserSale } from "../_shared/getUserSale.ts";
+import {
+  accorder,
+  ATTACHES,
+  messageDeBlocage,
+  type Blocage,
+} from "./deletionGuard.ts";
 
 async function updateSaleDisabled(user_id: string, disabled: boolean) {
   return await supabaseAdmin
@@ -259,6 +265,136 @@ async function patchUser(req: Request, currentUserSale: any) {
   }
 }
 
+/**
+ * Supprimer un utilisateur, si son compte est vide (NOS-1233).
+ *
+ * Simon a tranché : « suppression réelle, si le compte est vide ». La règle
+ * est donc stricte — on ne réattribue rien à la volée, on refuse en disant ce
+ * qui retient.
+ *
+ * ## Trois refus avant tout décompte
+ *
+ * **Non-administrateur** : gérer les comptes est un privilège d'admin, comme
+ * pour l'invitation et la modification.
+ *
+ * **Se supprimer soi-même** : personne ne doit pouvoir se retirer l'accès en
+ * un clic, et surtout pas le dernier administrateur.
+ *
+ * **Le dernier administrateur** : supprimer le dernier compte admin
+ * fermerait la porte à clé de l'intérieur — plus personne ne pourrait
+ * inviter, promouvoir, ni supprimer.
+ *
+ * ## L'ordre de suppression
+ *
+ * La ligne `sales` d'abord, le compte d'authentification ensuite. L'inverse
+ * laisserait, si la seconde étape échouait, une fiche CRM rattachée à un
+ * compte disparu — un utilisateur fantôme que plus rien ne permet de
+ * nettoyer depuis l'écran.
+ */
+async function deleteUser(req: Request, currentUserSale: any) {
+  const { sales_id } = await req.json();
+
+  if (!currentUserSale.administrator) {
+    return createErrorResponse(401, "Not Authorized");
+  }
+
+  const { data: sale } = await supabaseAdmin
+    .from("sales")
+    .select("*")
+    .eq("id", sales_id)
+    .single();
+
+  if (!sale) {
+    return createErrorResponse(404, "Utilisateur introuvable");
+  }
+
+  if (String(sale.id) === String(currentUserSale.id)) {
+    return createErrorResponse(
+      400,
+      "Vous ne pouvez pas supprimer votre propre compte.",
+    );
+  }
+
+  if (sale.administrator) {
+    const { count } = await supabaseAdmin
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .eq("administrator", true);
+    if ((count ?? 0) <= 1) {
+      return createErrorResponse(
+        400,
+        "Impossible de supprimer le dernier administrateur : plus personne ne pourrait gérer les comptes.",
+      );
+    }
+  }
+
+  /*
+   * Le décompte, table par table.
+   *
+   * `head: true` ne rapatrie aucune ligne : seul le nombre nous intéresse, et
+   * une de ces tables porte plusieurs centaines de milliers de lignes.
+   */
+  const blocages: Blocage[] = [];
+  for (const attache of ATTACHES) {
+    const { count, error } = await supabaseAdmin
+      .from(attache.table)
+      .select("id", { count: "exact", head: true })
+      .eq(attache.colonne, sale.id);
+
+    if (error) {
+      console.error("deleteUser.count", attache.table, error);
+      return createErrorResponse(
+        500,
+        `Vérification impossible sur ${attache.table}`,
+      );
+    }
+    if ((count ?? 0) > 0) {
+      blocages.push({
+        libelle: accorder(attache, count ?? 0),
+        nombre: count ?? 0,
+      });
+    }
+  }
+
+  if (blocages.length > 0) {
+    const nom = `${sale.first_name ?? ""} ${sale.last_name ?? ""}`.trim();
+    return createErrorResponse(409, messageDeBlocage(nom, blocages));
+  }
+
+  const { error: saleError } = await supabaseAdmin
+    .from("sales")
+    .delete()
+    .eq("id", sale.id);
+
+  if (saleError) {
+    console.error("deleteUser.sale", saleError);
+    return createErrorResponse(500, "La fiche n'a pas pu être supprimée.");
+  }
+
+  if (sale.user_id) {
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+      sale.user_id,
+    );
+    /*
+     * La fiche est déjà partie : on ne peut plus revenir en arrière, et taire
+     * cet échec laisserait un compte capable de se connecter sans fiche. On
+     * le dit, avec l'identifiant, pour qu'il soit retiré à la main.
+     */
+    if (authError) {
+      console.error("deleteUser.auth", authError);
+      return createErrorResponse(
+        500,
+        `Fiche supprimée, mais le compte d'authentification subsiste (${sale.user_id}). Retirez-le depuis Supabase.`,
+      );
+    }
+  }
+
+  return new Response(JSON.stringify({ data: { id: sale.id } }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status: 200,
+  });
+}
+
 Deno.serve(async (req: Request) =>
   OptionsMiddleware(req, async (req) =>
     AuthMiddleware(req, async (req) =>
@@ -274,6 +410,10 @@ Deno.serve(async (req: Request) =>
 
         if (req.method === "PATCH") {
           return patchUser(req, currentUserSale);
+        }
+
+        if (req.method === "DELETE") {
+          return deleteUser(req, currentUserSale);
         }
 
         return createErrorResponse(405, "Method Not Allowed");

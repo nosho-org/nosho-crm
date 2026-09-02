@@ -50,7 +50,23 @@ export function SalesList() {
       actions={<SalesListActions />}
       sort={{ field: "first_name", order: "ASC" }}
     >
-      <DataTable>
+      {/*
+        Pas de suppression groupée ici (NOS-1233).
+
+        Simon : « je les supprime et ils reviennent ». Le bouton venait du
+        `DataTable` par défaut et tentait un `DELETE` direct sur `sales`,
+        que les politiques de la table n'autorisent pas : Postgres
+        refusait en supprimant zéro ligne, sans erreur, si bien que
+        l'écran annonçait un succès puis remettait la ligne au
+        rafraîchissement.
+
+        Supprimer un utilisateur passe par la fonction serveur, qui
+        vérifie ce que porte le compte et emporte l'authentification avec.
+        Ce chemin vit sur la fiche, une personne à la fois : un lot de
+        comptes dont chacun peut être refusé pour une raison différente ne
+        se rend pas dans une seule barre d'action.
+      */}
+      <DataTable bulkActionButtons={false}>
         <DataTable.Col source="first_name" />
         <DataTable.Col source="last_name" />
         <DataTable.Col source="email" />

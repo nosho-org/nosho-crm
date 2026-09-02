@@ -38,8 +38,21 @@ function DeleteUserButton({ recordId }: { recordId: any }) {
       await dataProvider.salesDelete(recordId);
       notify("Utilisateur supprimé");
       redirect("/sales");
-    } catch {
-      notify("Erreur lors de la suppression", { type: "error" });
+    } catch (e) {
+      /*
+       * Le message du serveur, pas un « erreur » sec (NOS-1233).
+       *
+       * Le refus nomme ce qui retient le compte — « 78 opportunités et
+       * 163 contacts » — et les deux issues possibles. Le remplacer par
+       * un message générique obligerait à chercher, puis à supprimer à la
+       * main en base.
+       */
+      notify(
+        e instanceof Error && e.message
+          ? e.message
+          : "Erreur lors de la suppression",
+        { type: "error" },
+      );
     }
   };
 
