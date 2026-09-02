@@ -8,27 +8,37 @@ import {
 } from "./deletionGuard.ts";
 
 describe("ATTACHES", () => {
-  it("couvre les deux liens que les contraintes ne protègent pas", () => {
+  it("couvre les tâches, que nulle contrainte ne protège", () => {
     /*
      * `tasks.sales_id` n'a aucune clé étrangère : sans ce décompte, les tâches
-     * resteraient rattachées à un identifiant qui ne désigne plus personne.
-     * `contact_notes.sales_id` est en CASCADE : les notes partiraient en
-     * silence. Ce sont précisément les deux cas qu'une confiance aveugle aux
-     * contraintes laisserait passer.
+     * resteraient rattachées à un identifiant qui ne désigne plus personne, et
+     * n'apparaîtraient dans la file de personne.
      */
     const cibles = ATTACHES.map((a) => `${a.table}.${a.colonne}`);
     expect(cibles).toContain("tasks.sales_id");
-    expect(cibles).toContain("contact_notes.sales_id");
   });
 
-  it("couvre les huit contraintes bloquantes relevées en production", () => {
+  it("ne retient plus personne sur ses notes", () => {
+    /*
+     * NOS-1234 : les notes se détachent de leur auteur (`SET NULL`) au lieu
+     * de bloquer sa suppression. Une note dit ce qu'un client a répondu ;
+     * elle vaut pour l'affaire, pas pour la personne qui l'a saisie.
+     *
+     * Les y remettre reviendrait à rendre à nouveau indélébiles trois comptes
+     * désactivés — Etienne, Leo et Benjamin.
+     */
+    const cibles = ATTACHES.map((a) => `${a.table}.${a.colonne}`);
+    expect(cibles).not.toContain("deal_notes.sales_id");
+    expect(cibles).not.toContain("contact_notes.sales_id");
+  });
+
+  it("couvre les contraintes bloquantes relevées en production", () => {
     const cibles = ATTACHES.map((a) => `${a.table}.${a.colonne}`);
     for (const attendu of [
       "companies.sales_id",
       "contacts.sales_id",
       "contracts.nosho_signatory_id",
       "contracts.sales_id",
-      "deal_notes.sales_id",
       "deals.sales_id",
       "event_leads.captured_by",
       "targets.author_id",

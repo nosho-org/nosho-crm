@@ -272,7 +272,7 @@ alter table public.contact_notes
     add constraint "contactNotes_contact_id_fkey" foreign key (contact_id) references public.contacts(id) on update cascade on delete cascade;
 
 alter table public.contact_notes
-    add constraint "contactNotes_sales_id_fkey" foreign key (sales_id) references public.sales(id) on update cascade on delete cascade;
+    add constraint "contactNotes_sales_id_fkey" foreign key (sales_id) references public.sales(id) on update cascade on delete set null;
 
 alter table public.deals
     add constraint deals_company_id_fkey foreign key (company_id) references public.companies(id) on update cascade on delete cascade;
@@ -303,7 +303,7 @@ alter table public.deal_notes
     add constraint "dealNotes_deal_id_fkey" foreign key (deal_id) references public.deals(id) on update cascade on delete cascade;
 
 alter table public.deal_notes
-    add constraint "dealNotes_sales_id_fkey" foreign key (sales_id) references public.sales(id);
+    add constraint "dealNotes_sales_id_fkey" foreign key (sales_id) references public.sales(id) on delete set null;
 
 alter table public.sales
     add constraint sales_user_id_fkey foreign key (user_id) references auth.users(id);

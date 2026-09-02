@@ -105,15 +105,27 @@ export const Note = ({
           <CompanyAvatar width={20} height={20} />
         </ReferenceField>
         <div className="inline-flex h-full items-center text-sm text-muted-foreground">
-          <ReferenceField
-            record={note}
-            resource={resource}
-            source="sales_id"
-            reference="sales"
-            link={false}
-          >
-            <WithRecord render={(record) => <SaleName sale={record} />} />
-          </ReferenceField>{" "}
+          {/*
+            Une note peut survivre à son auteur (NOS-1234).
+
+            Depuis que `sales_id` passe à NULL à la suppression d'un compte,
+            `ReferenceField` n'aurait plus rien à rendre : la phrase
+            deviendrait « a ajouté une note », sans sujet. On nomme donc
+            l'absence plutôt que de la laisser trouer le texte.
+          */}
+          {note.sales_id == null ? (
+            <span className="italic">Un utilisateur supprimé</span>
+          ) : (
+            <ReferenceField
+              record={note}
+              resource={resource}
+              source="sales_id"
+              reference="sales"
+              link={false}
+            >
+              <WithRecord render={(record) => <SaleName sale={record} />} />
+            </ReferenceField>
+          )}{" "}
           a ajouté une note{" "}
           {showStatus && note.status && (
             <Status className="ml-2" status={note.status} />
