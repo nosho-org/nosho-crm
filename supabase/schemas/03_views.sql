@@ -112,6 +112,12 @@ select
     comp.name                                                                                                          as company_name,
     replace(lower(immutable_unaccent(coalesce(comp.name, ''))), ' ', '')                                                as company_name_search,
     coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), '')                                                as contact_names,
+    -- L email des contacts, mis a plat (NOS-1235). La sous-requete est
+    -- correlee au contact de la jointure : un jsonb_array_elements dans le
+    -- FROM multiplierait les lignes et repeterait chaque nom autant de fois
+    -- que le contact a d adresses.
+    coalesce(string_agg((select string_agg(e.value ->> 'email', ' ') from jsonb_array_elements(coalesce(c.email_jsonb, '[]'::jsonb)) e), ' '), '')  as contact_emails,
+    replace(lower(immutable_unaccent(coalesce(string_agg((select string_agg(e.value ->> 'email', ' ') from jsonb_array_elements(coalesce(c.email_jsonb, '[]'::jsonb)) e), ' '), ''))), ' ', '') as contact_emails_search,
     replace(lower(immutable_unaccent(coalesce(string_agg((c.first_name || ' ' || c.last_name), ' '), ''))), ' ', '')    as contact_names_search,
     -- Real last activity, replacing the `updated_at` proxy the cockpit used to
     -- read. Computed rather than materialised: a denormalised column kept in

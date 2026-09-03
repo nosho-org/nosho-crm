@@ -32,6 +32,7 @@ import { getActivityLog } from "../commons/activity";
 import { ATTACHMENTS_BUCKET } from "../commons/attachments";
 import { getIsInitialized } from "./authProvider";
 import { getSupabaseClient } from "./supabase";
+import { construireClause } from "./rechercheMultiMots";
 
 /**
  * Le message d'échec d'une fusion, en gardant ce que le serveur a dit.
@@ -122,6 +123,10 @@ const getDataProviderWithCustomMethods = () => {
           "name",
           "company_name",
           "contact_names",
+          // L email d un contact, mis a plat par la vue (NOS-1235) : Simon
+          // veut retrouver une affaire depuis l adresse de son
+          // interlocuteur, pas seulement depuis son nom.
+          "contact_emails",
           "category",
           "description",
         ])(params);
@@ -748,22 +753,13 @@ export const getDataProvider = () => {
   ) as CrmDataProvider;
 };
 
-/**
- * Normalize a search query: strip diacritics (accents) and trim whitespace.
- * "Clément" → "Clement", "léa" → "lea"
+/*
+ * Les normaliseurs ont disparu avec l ancienne construction (NOS-1235).
+ *
+ * Accents et espaces sont desormais traites par `decouperEnMots`, dans
+ * `rechercheMultiMots` : les garder ici en aurait fait une seconde
+ * definition de ce qu est un terme de recherche, appelee par personne.
  */
-const normalizeSearchQuery = (q: string): string =>
-  q
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim();
-
-/**
- * Normalize for _search columns: also strip spaces so "SoClinic" matches "So Clinic".
- */
-const normalizeForSearchColumn = (q: string): string =>
-  normalizeSearchQuery(q).replace(/\s+/g, "");
-
 /**
  * Columns that have a corresponding `_search` generated column in the DB
  * (lowercase + unaccented). Only these get the extra `_search@ilike` filter.
@@ -783,49 +779,57 @@ const SEARCHABLE_COLUMNS = new Set([
   "category",
   "description",
   "contact_names",
+  "contact_emails",
 ]);
 
+/**
+ * Le filtre de recherche, en ET entre les mots (NOS-1235).
+ *
+ * Voir `rechercheMultiMots` : l'ancienne construction laissait l'adaptateur
+ * découper le terme et mettait chaque mot en alternative, si bien que
+ * « bar le duc » ramenait 75 opportunités au lieu d'une.
+ *
+ * La clause part sous la clé `and@` — opérateur volontairement vide — que
+ * l'adaptateur transmet telle quelle. C'est le seul moyen d'imbriquer
+ * plusieurs `or(...)` dans un `and(...)`, un objet JavaScript ne pouvant pas
+ * porter deux fois la même clé.
+ *
+ * Les colonnes `_search` restent interrogées : elles ignorent espaces et
+ * accents, et rattrapent « SoClinic » écrit « So Clinic ».
+ */
 const applyFullTextSearch = (columns: string[]) => (params: GetListParams) => {
   if (!params.filter?.q) {
     return params;
   }
   const { q, ...filter } = params.filter;
-  const normalizedQ = normalizeSearchQuery(q);
-  const spacelessQ = normalizeForSearchColumn(q);
+  /*
+   * Toutes les colonnes interrogeables, y compris leurs jumelles `_search`.
+   *
+   * `email_fts` et `phone_fts` gardent leur nom : ce sont des colonnes de
+   * `contacts_summary`, sans équivalent `_search`.
+   */
+  const colonnes = columns.flatMap((column) => {
+    if (column === "email") return ["email_fts"];
+    if (column === "phone") return ["phone_fts"];
+    return SEARCHABLE_COLUMNS.has(column)
+      ? [column, `${column}_search`]
+      : [column];
+  });
 
-  // Build OR conditions for a given query term
-  const buildConditions = (term: string, searchColumnTerm: string) =>
-    columns.reduce(
-      (acc, column) => {
-        if (column === "email") return { ...acc, [`email_fts@ilike`]: term };
-        if (column === "phone") return { ...acc, [`phone_fts@ilike`]: term };
-        const conditions: Record<string, string> = {
-          ...acc,
-          [`${column}@ilike`]: term,
-        };
-        // _search columns strip spaces, so match with spaceless term
-        if (SEARCHABLE_COLUMNS.has(column)) {
-          conditions[`${column}_search@ilike`] = searchColumnTerm;
-        }
-        return conditions;
-      },
-      {} as Record<string, string>,
-    );
+  const clause = construireClause(q, colonnes);
 
-  // If query has accents, search with both original and normalized terms
-  const orConditions =
-    normalizedQ !== q
-      ? {
-          ...buildConditions(q, spacelessQ),
-          ...buildConditions(normalizedQ, spacelessQ),
-        }
-      : buildConditions(normalizedQ, spacelessQ);
+  /*
+   * Une saisie sans lettre ni chiffre ne filtre rien plutôt que d'échouer.
+   * `and()` serait invalide, et PostgREST répondrait par une erreur — donc
+   * par une liste vide, ce que l'utilisateur lirait comme « aucun résultat ».
+   */
+  if (!clause) return { ...params, filter };
 
   return {
     ...params,
     filter: {
       ...filter,
-      "@or": orConditions,
+      "and@": clause,
     },
   };
 };
