@@ -1,0 +1,56 @@
+name: 💶 Collecte des encaissements Qonto
+
+# Le « tjrs » demandé par Simon (NOS-1237).
+#
+# La collecte se faisait à la main : la table `revenue_actuals` s'est arrêtée
+# au 29 août, et le tableau de bord annonçait début septembre un ARR calculé
+# sur juillet. Un chiffre qui ne se rafraîchit que si quelqu'un y pense finit
+# toujours par mentir.
+#
+# Tous les jours plutôt qu'une fois par mois : le mois en cours se remplit au
+# fil de l'eau, et surtout une panne se voit le lendemain au lieu de passer
+# inaperçue quatre semaines.
+
+on:
+  schedule:
+    # 06:00 UTC — les versements Mollie de la veille sont réglés.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      mois:
+        description: "Mois à recollecter (AAAA-MM). Vide = les 12 derniers."
+        required: false
+        type: string
+
+concurrency:
+  group: collect-revenue
+  cancel-in-progress: false
+
+jobs:
+  collecte:
+    name: 💶 Relever Qonto et mettre à jour revenue_actuals
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      # Doppler porte déjà QONTO_API_KEY, SUPABASE_ACCESS_TOKEN et
+      # SUPABASE_PROJECT_ID : aucun secret supplémentaire à déclarer côté
+      # GitHub, et la clé Qonto ne se recopie nulle part.
+      - name: 🔑 Fetch secrets from Doppler
+        uses: dopplerhq/secrets-fetch-action@v1
+        id: doppler
+        with:
+          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
+          inject-env-vars: true
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 💶 Collecter
+        run: |
+          node scripts/collect-revenue.mjs ${{ inputs.mois && format('--mois={0}', inputs.mois) || '' }}

@@ -104,6 +104,12 @@ supabase-remote-init:
 	npm run supabase:remote:init
 	$(MAKE) supabase-deploy
 
+collect-revenue: ## releve les encaissements Mollie sur Qonto (requires Doppler)
+	$(DOPPLER_RUN_PRD) node scripts/collect-revenue.mjs
+
+collect-revenue-preview: ## meme releve, sans rien ecrire en base
+	$(DOPPLER_RUN_PRD) node scripts/collect-revenue.mjs --apercu
+
 supabase-push: ## push pending migrations to remote Supabase (requires Doppler)
 	$(DOPPLER_RUN_PRD) ./scripts/supabase-push.sh
 

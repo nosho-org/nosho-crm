@@ -1,0 +1,161 @@
+#!/usr/bin/env node
+/**
+ * ---------------------------------------------------------------------------
+ * Collecter les encaissements Qonto (NOS-1237)
+ * ---------------------------------------------------------------------------
+ * Simon : « maj avec les infos mollie uniquement et tjrs ».
+ *
+ * Le « toujours » est le vrai sujet. Jusqu'ici la collecte se faisait à la
+ * main, par un script jetable écrit dans un dossier temporaire : la table
+ * `revenue_actuals` s'est donc arrêtée au 29 août, et le tableau de bord
+ * annonçait en septembre un ARR calculé sur juillet. Un chiffre qui ne se
+ * rafraîchit que si quelqu'un y pense finit toujours par mentir.
+ *
+ * Ce script est versionné pour cette raison, et se relance sans risque : il
+ * écrase le mois qu'il recalcule (`on conflict`) au lieu d'ajouter des lignes.
+ *
+ * ## Mollie, et rien d'autre
+ *
+ * Simon : « avec les infos mollie uniquement ». C'est un revirement assumé
+ * par rapport à NOS-1179, qui avait ajouté les virements bancaires directs
+ * après avoir constaté qu'Hôpital Européen ne passe pas par Mollie.
+ *
+ * La mesure lui donne raison. Reconnaître un virement client suppose de
+ * rapprocher un libellé bancaire d'un nom de société, et ce rapprochement
+ * se trompe : sur avril 2026, il comptait 15 000 EUR d'apports personnels
+ * — « M. ALEXANDRE BEAUDOUX », « Sylvain Beaudoux » — comme du chiffre
+ * d'affaires. Un mode capable de gonfler un mois de 480 % ne mérite pas de
+ * rester disponible « au cas où ».
+ *
+ * Ce que Mollie ne voit pas est donc absent du chiffre, et c'est le bon
+ * compromis : mieux vaut un encaissement manquant qu'une levée de fonds
+ * comptée en revenu récurrent.
+ *
+ * ## Usage
+ *
+ *   doppler run --project nosho-crm --config prd -- \
+ *     node scripts/collect-revenue.mjs [--mois=2026-08] [--apercu]
+ *
+ * Sans `--mois`, le script reprend les douze derniers mois : rattraper est le
+ * cas courant, pas l'exception.
+ */
+
+const QONTO_BASE = "https://thirdparty.qonto.com/v2";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).map((a) => {
+    const [k, v] = a.replace(/^--/, "").split("=");
+    return [k, v ?? true];
+  }),
+);
+
+const APERCU = args.apercu === true || args["dry-run"] === true;
+
+function moisCibles() {
+  if (typeof args.mois === "string") return [args.mois];
+  const liste = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    liste.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  return liste.reverse();
+}
+
+/** Bornes UTC du mois, en ISO — l'API Qonto filtre sur `settled_at`. */
+function bornes(mois) {
+  const [an, m] = mois.split("-").map(Number);
+  return {
+    debut: new Date(Date.UTC(an, m - 1, 1)).toISOString(),
+    fin: new Date(Date.UTC(an, m, 1)).toISOString(),
+  };
+}
+
+async function qonto(chemin) {
+  const cle = process.env.QONTO_API_KEY;
+  if (!cle) throw new Error("QONTO_API_KEY absente (lancer via doppler run)");
+  const r = await fetch(`${QONTO_BASE}${chemin}`, {
+    headers: { Authorization: cle },
+  });
+  if (!r.ok) throw new Error(`Qonto ${r.status} sur ${chemin}`);
+  return r.json();
+}
+
+async function supabase(sql) {
+  const ref = process.env.SUPABASE_PROJECT_ID;
+  const tok = process.env.SUPABASE_ACCESS_TOKEN;
+  const r = await fetch(
+    `https://api.supabase.com/v1/projects/${ref}/database/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${tok}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: sql }),
+    },
+  );
+  const data = await r.json();
+  if (!r.ok) throw new Error(`Supabase: ${JSON.stringify(data)}`);
+  return data;
+}
+
+/** Un credit Mollie se reconnait a sa contrepartie. */
+const estMollie = (t) => /mollie/i.test(`${t.label ?? ""} ${t.counterparty_name ?? ""}`);
+
+async function main() {
+  const comptes = await qonto("/bank_accounts");
+  const iban = comptes.bank_accounts?.[0]?.iban;
+  if (!iban) throw new Error("aucun compte bancaire lisible");
+
+  for (const mois of moisCibles()) {
+    const { debut, fin } = bornes(mois);
+    const params = new URLSearchParams({
+      iban,
+      "settled_at_from": debut,
+      "settled_at_to": fin,
+      "side": "credit",
+      "per_page": "100",
+    });
+    const { transactions = [] } = await qonto(`/transactions?${params}`);
+
+    const mollie = transactions.filter(estMollie);
+
+    const somme = (liste) =>
+      Math.round(liste.reduce((t, x) => t + Number(x.amount ?? 0), 0) * 100) / 100;
+
+    const lignes = [
+      { source: "mollie", montant: somme(mollie), n: mollie.length },
+    ].filter((l) => l.n > 0);
+
+    const total = lignes.reduce((t, l) => t + l.montant, 0);
+    console.log(
+      `${mois}  ${String(total.toFixed(2)).padStart(10)} EUR  ` +
+        lignes.map((l) => `${l.source} ${l.montant} (${l.n})`).join(", "),
+    );
+
+    if (APERCU) continue;
+
+    /*
+     * On efface le mois avant de le reecrire.
+     *
+     * Les lignes `virement` posees par la collecte precedente doivent
+     * disparaitre : sans ce menage, le total continuerait d'additionner une
+     * source qu'on vient justement de retirer.
+     */
+    await supabase(
+      `delete from revenue_actuals where month = '${mois}-01'`,
+    );
+    for (const l of lignes) {
+      await supabase(
+        `insert into revenue_actuals (month, source, amount, transaction_count, updated_at)
+         values ('${mois}-01', '${l.source}', ${l.montant}, ${l.n}, now())`,
+      );
+    }
+  }
+}
+
+main().catch((e) => {
+  console.error("Echec:", e.message);
+  process.exit(1);
+});
