@@ -187,23 +187,21 @@ describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle"
     expect(progress.achieved).toBeCloseTo(MOYENNE, 2);
   });
 
-  it("annualise la même moyenne pour un objectif en ARR", () => {
-    // Les deux objectifs doivent afficher le même avancement : c'est le
-    // même argent, exprimé dans deux unités.
-    const mrr = computeTargetProgress(
-      target({ amount: 25000 }),
-      [],
-      now,
-      actuals,
-    );
+  it("cumule toute l'année pour un objectif en ARR, mois en cours compris (NOS-1255)", () => {
+    // Simon : « l'ARR, c'est la somme de tous les versements depuis le début
+    // de l'année, rien de plus. » Ni ×12, ni moyenne : un cumul.
     const arr = computeTargetProgress(
       target({ metric: "arr", amount: 300000 }),
       [],
       now,
-      actuals,
+      [
+        ...actuals,
+        // Le mois en cours (septembre) EST compté dans le cumul.
+        { month: "2026-09-01", amount: 198.43, transactionCount: 1, bySource: [] },
+      ],
     );
-    expect(arr.achieved).toBeCloseTo(MOYENNE * 12, 2);
-    expect(arr.ratio).toBeCloseTo(mrr.ratio, 6);
+    // 3123.21 + 3874.31 + 2855.77 + 198.43
+    expect(arr.achieved).toBeCloseTo(10051.72, 2);
   });
 
   it("écarte le mois en cours de la moyenne", () => {

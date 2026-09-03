@@ -34,28 +34,32 @@ export const TARGET_METRIC_LABELS: Record<TargetMetric, string> = {
  * pas un volume. Cumuler des debits mensuels donne un encaissement annuel,
  * qui se compare a un ARR, jamais a un MRR.
  *
- * ## Une moyenne, pas le dernier mois seul (NOS-1249)
+ * ## ARR et MRR ne se calculent pas pareil (NOS-1255)
  *
- * La premiere correction prenait le dernier mois COMPLET et le multipliait par
- * douze. Elle a bute sur un fait de Qonto : Mollie ne reverse pas « le MRR du
- * mois », il regroupe les prelevements par LOTS et les vire a sa propre
- * cadence. Juillet 2026 a recu un lot de 1 988 EUR, aout un de 1 231 EUR : le
- * total mensuel encaisse sautait de 3 874 a 2 856 sans qu'aucun client n'ait
- * bouge. Multiplier ce hasard par douze donnait un ARR qui oscillait de 46 k a
- * 34 k d'un mois sur l'autre.
+ * Deux approches du run-rate ont echoue, chacune sur un fait de Qonto : Mollie
+ * ne reverse pas « le MRR du mois », il regroupe les prelevements par LOTS
+ * vires a sa propre cadence. Prendre le dernier mois x12, puis la moyenne des
+ * trois derniers x12, donnaient des ARR qui sautaient de 34 k a 46 k sans
+ * qu'aucun client ne bouge.
  *
- * On moyenne donc les `FENETRE_MOIS` derniers mois complets : sur trois mois,
- * les lots se compensent, et le chiffre ne bouge plus que quand la base
- * d'abonnements bouge vraiment. Faute d'API Mollie (aucune cle disponible), le
- * lissage sur l'encaisse Qonto est la meilleure approximation du MRR reel.
+ * Simon a tranche, et sa definition est litterale : « l'ARR, c'est la somme de
+ * tous les versements Mollie plus les encaissements Breizh Clinic et Hopital
+ * Europeen depuis le debut de l'annee, rien de plus ».
  *
- * Le mois en cours reste ecarte : entame au tiers, il ferait lire une chute
- * tous les 10 du mois. On moyenne ce qui existe quand moins de trois mois
- * complets sont disponibles -- diviser par trois un debut d'activite qui n'a
- * que deux mois sous-estimerait le regime.
+ * Donc **l'ARR est le CUMUL** de la periode, mois en cours compris. Ce n'est
+ * pas un run-rate annualise mais un total encaisse depuis le 1er janvier. Un
+ * cumul ne subit pas le bruit des lots : il ne fait que croitre, et il grandit
+ * quand l'argent rentre. `revenue_actuals` contient deja exactement les sources
+ * voulues -- Mollie, et les deux clients par virement via la liste blanche.
  *
- * En ARR, la moyenne est annualisee (x12) : les deux objectifs affichent alors
- * le meme pourcentage d'avancement, c'est le meme argent dans deux unites.
+ * **Le MRR reste le regime mensuel** (« ce qui rentre chaque mois », NOS-1182).
+ * On garde la moyenne des `FENETRE_MOIS` derniers mois complets, qui lisse les
+ * lots ; le mois en cours en est ecarte, sans quoi il ferait lire une chute
+ * tous les 10 du mois. Moins de trois mois disponibles : on moyenne ce qui
+ * existe.
+ *
+ * Les deux cartes n'affichent donc PAS le meme pourcentage, et c'est normal :
+ * l'une mesure un total d'annee, l'autre un rythme mensuel.
  */
 export const FENETRE_MOIS = 3;
 
@@ -67,22 +71,26 @@ function runRateInPeriod(
 ): number {
   const start = target.period_start.slice(0, 10);
   const end = target.period_end.slice(0, 10);
-  const current = currentMonthStart(now);
 
-  const complete = actuals
-    .filter(
-      (month) =>
-        month.month >= start && month.month <= end && month.month < current,
-    )
+  const inPeriod = actuals.filter(
+    (month) => month.month >= start && month.month <= end,
+  );
+
+  if (metric === "arr") {
+    // Le cumul de l'annee, mois en cours compris : la definition de Simon.
+    return inPeriod.reduce((total, mois) => total + mois.amount, 0);
+  }
+
+  // Le MRR : moyenne des derniers mois COMPLETS, mois en cours ecarte.
+  const current = currentMonthStart(now);
+  const complete = inPeriod
+    .filter((month) => month.month < current)
     .sort((a, b) => a.month.localeCompare(b.month));
 
   const fenetre = complete.slice(-FENETRE_MOIS);
   if (fenetre.length === 0) return 0;
 
-  const moyenne =
-    fenetre.reduce((total, mois) => total + mois.amount, 0) / fenetre.length;
-
-  return metric === "arr" ? moyenne * 12 : moyenne;
+  return fenetre.reduce((total, mois) => total + mois.amount, 0) / fenetre.length;
 }
 
 export interface TargetProgress {
