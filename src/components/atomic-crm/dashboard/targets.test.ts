@@ -164,47 +164,74 @@ describe("findActiveTarget", () => {
 });
 
 describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle", () => {
-  const now = new Date("2026-08-29T10:00:00Z");
+  // Septembre : juin, juillet et août sont trois mois complets.
+  const now = new Date("2026-09-15T10:00:00Z");
   const actuals = [
     { month: "2026-06-01", amount: 3123.21, transactionCount: 5, bySource: [] },
     { month: "2026-07-01", amount: 3874.31, transactionCount: 9, bySource: [] },
+    { month: "2026-08-01", amount: 2855.77, transactionCount: 7, bySource: [] },
   ];
+  // (3123.21 + 3874.31 + 2855.77) / 3 = 3284.43
+  const MOYENNE = 3284.43;
 
-  it("mesure un MRR sur le dernier mois complet, pas sur le cumul", () => {
-    // « Le MRR c'est ce qui rentre chaque mois. » Cumuler juin et juillet
-    // donnerait 6 997 €, soit 28 % d'un objectif dont on est à 15 %.
+  it("mesure un MRR moyenné sur les 3 derniers mois complets (NOS-1246)", () => {
+    // Les lots de versement Mollie font sauter le total mensuel : juillet a
+    // reçu un lot de 1 988 €, août un de 1 231 €. La moyenne sur trois mois
+    // absorbe ce hasard, là où un seul mois × 12 le multipliait.
     const progress = computeTargetProgress(
       target({ amount: 25000 }),
       [deal({ mrr: 9999 })],
       now,
       actuals,
     );
-    expect(progress.achieved).toBeCloseTo(3874.31, 2);
-    expect(progress.ratio).toBeCloseTo(0.155, 3);
+    expect(progress.achieved).toBeCloseTo(MOYENNE, 2);
   });
 
-  it("annualise le même mois pour un objectif en ARR", () => {
+  it("annualise la même moyenne pour un objectif en ARR", () => {
     // Les deux objectifs doivent afficher le même avancement : c'est le
     // même argent, exprimé dans deux unités.
-    const progress = computeTargetProgress(
+    const mrr = computeTargetProgress(
+      target({ amount: 25000 }),
+      [],
+      now,
+      actuals,
+    );
+    const arr = computeTargetProgress(
       target({ metric: "arr", amount: 300000 }),
       [],
       now,
       actuals,
     );
-    expect(progress.achieved).toBeCloseTo(46491.72, 2);
-    expect(progress.ratio).toBeCloseTo(0.155, 3);
+    expect(arr.achieved).toBeCloseTo(MOYENNE * 12, 2);
+    expect(arr.ratio).toBeCloseTo(mrr.ratio, 6);
   });
 
-  it("écarte le mois en cours", () => {
-    // Un mois entamé ferait lire une chute tous les 10 du mois.
+  it("écarte le mois en cours de la moyenne", () => {
+    // Un mois entamé ferait chuter la moyenne tous les 10 du mois.
     const progress = computeTargetProgress(
       target({ amount: 25000 }),
       [],
       now,
-      [...actuals, { month: "2026-08-01", amount: 412, transactionCount: 1, bySource: [] }],
+      [
+        ...actuals,
+        { month: "2026-09-01", amount: 198, transactionCount: 1, bySource: [] },
+      ],
     );
-    expect(progress.achieved).toBeCloseTo(3874.31, 2);
+    expect(progress.achieved).toBeCloseTo(MOYENNE, 2);
+  });
+
+  it("moyenne ce qui existe quand moins de trois mois sont disponibles", () => {
+    // Un début d'activité à deux mois ne doit pas être divisé par trois.
+    const progress = computeTargetProgress(
+      target({ amount: 25000 }),
+      [],
+      new Date("2026-08-15T10:00:00Z"),
+      [
+        { month: "2026-06-01", amount: 3000, transactionCount: 5, bySource: [] },
+        { month: "2026-07-01", amount: 4000, transactionCount: 9, bySource: [] },
+      ],
+    );
+    expect(progress.achieved).toBeCloseTo(3500, 2);
   });
 
   it("laisse un objectif personnel sur les affaires signées du CRM", () => {

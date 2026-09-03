@@ -34,14 +34,31 @@ export const TARGET_METRIC_LABELS: Record<TargetMetric, string> = {
  * pas un volume. Cumuler des debits mensuels donne un encaissement annuel,
  * qui se compare a un ARR, jamais a un MRR.
  *
- * On prend donc le dernier mois COMPLET de la periode. Le mois en cours est
- * ecarte ici comme il l'est partout ailleurs : entame au tiers, il ferait
- * lire une chute de deux tiers tous les 10 du mois.
+ * ## Une moyenne, pas le dernier mois seul (NOS-1249)
  *
- * En ARR, le meme mois est annualise (x12) : c'est la definition, et cela
- * garde les deux objectifs coherents entre eux -- 3 874 EUR de MRR et
- * 46 492 EUR d'ARR affichent le meme pourcentage d'avancement.
+ * La premiere correction prenait le dernier mois COMPLET et le multipliait par
+ * douze. Elle a bute sur un fait de Qonto : Mollie ne reverse pas « le MRR du
+ * mois », il regroupe les prelevements par LOTS et les vire a sa propre
+ * cadence. Juillet 2026 a recu un lot de 1 988 EUR, aout un de 1 231 EUR : le
+ * total mensuel encaisse sautait de 3 874 a 2 856 sans qu'aucun client n'ait
+ * bouge. Multiplier ce hasard par douze donnait un ARR qui oscillait de 46 k a
+ * 34 k d'un mois sur l'autre.
+ *
+ * On moyenne donc les `FENETRE_MOIS` derniers mois complets : sur trois mois,
+ * les lots se compensent, et le chiffre ne bouge plus que quand la base
+ * d'abonnements bouge vraiment. Faute d'API Mollie (aucune cle disponible), le
+ * lissage sur l'encaisse Qonto est la meilleure approximation du MRR reel.
+ *
+ * Le mois en cours reste ecarte : entame au tiers, il ferait lire une chute
+ * tous les 10 du mois. On moyenne ce qui existe quand moins de trois mois
+ * complets sont disponibles -- diviser par trois un debut d'activite qui n'a
+ * que deux mois sous-estimerait le regime.
+ *
+ * En ARR, la moyenne est annualisee (x12) : les deux objectifs affichent alors
+ * le meme pourcentage d'avancement, c'est le meme argent dans deux unites.
  */
+export const FENETRE_MOIS = 3;
+
 function runRateInPeriod(
   actuals: MonthlyRevenue[],
   target: Target,
@@ -59,10 +76,13 @@ function runRateInPeriod(
     )
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  const last = complete[complete.length - 1];
-  if (!last) return 0;
+  const fenetre = complete.slice(-FENETRE_MOIS);
+  if (fenetre.length === 0) return 0;
 
-  return metric === "arr" ? last.amount * 12 : last.amount;
+  const moyenne =
+    fenetre.reduce((total, mois) => total + mois.amount, 0) / fenetre.length;
+
+  return metric === "arr" ? moyenne * 12 : moyenne;
 }
 
 export interface TargetProgress {
