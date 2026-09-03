@@ -14,22 +14,27 @@
  * Ce script est versionné pour cette raison, et se relance sans risque : il
  * écrase le mois qu'il recalcule (`on conflict`) au lieu d'ajouter des lignes.
  *
- * ## Mollie, et rien d'autre
+ * ## Mollie, plus une liste blanche de virements clients
  *
- * Simon : « avec les infos mollie uniquement ». C'est un revirement assumé
- * par rapport à NOS-1179, qui avait ajouté les virements bancaires directs
- * après avoir constaté qu'Hôpital Européen ne passe pas par Mollie.
+ * Simon : « remonte les virements de Hôpital Européen et de Breizh Clinique
+ * aussi ». Ces deux-là paient par virement bancaire direct, pas par Mollie.
  *
- * La mesure lui donne raison. Reconnaître un virement client suppose de
- * rapprocher un libellé bancaire d'un nom de société, et ce rapprochement
- * se trompe : sur avril 2026, il comptait 15 000 EUR d'apports personnels
- * — « M. ALEXANDRE BEAUDOUX », « Sylvain Beaudoux » — comme du chiffre
- * d'affaires. Un mode capable de gonfler un mois de 480 % ne mérite pas de
- * rester disponible « au cas où ».
+ * On ne les reconnaît PAS par rapprochement avec les sociétés du CRM : cette
+ * approche, essayée puis abandonnée, comptait 15 000 EUR d'apports personnels
+ * d'avril 2026 — « M. ALEXANDRE BEAUDOUX », « Sylvain Beaudoux » — comme du
+ * chiffre d'affaires. Le compte reçoit en effet des apports fondateurs, des
+ * levées (SOGECARE, MARANANT, AUCTEO…) et des remboursements, tous crédités
+ * comme un paiement client le serait.
  *
- * Ce que Mollie ne voit pas est donc absent du chiffre, et c'est le bon
- * compromis : mieux vaut un encaissement manquant qu'une levée de fonds
- * comptée en revenu récurrent.
+ * D'où `VIREMENTS_CLIENTS` : une liste nommée, tenue à la main. Un virement ne
+ * compte que si son libellé contient l'un de ces motifs. C'est le seul filtre
+ * qui ne peut pas confondre une levée de fonds avec une vente — au prix d'une
+ * ligne à ajouter ici quand un nouveau client se met à payer par virement.
+ *
+ * Le risque assumé : un client qui paierait par virement sans figurer dans la
+ * liste ne serait pas compté. C'est le bon sens du compromis — mieux vaut un
+ * encaissement manquant, qui se corrige en ajoutant une ligne, qu'un apport en
+ * capital gonflant le revenu récurrent.
  *
  * ## Usage
  *
@@ -103,6 +108,37 @@ async function supabase(sql) {
 /** Un credit Mollie se reconnait a sa contrepartie. */
 const estMollie = (t) => /mollie/i.test(`${t.label ?? ""} ${t.counterparty_name ?? ""}`);
 
+/*
+ * Les clients qui paient par virement direct, nommement (NOS-1245).
+ *
+ * `motif` est cherche dans le libelle, accents et casse ignores. Il doit etre
+ * assez distinctif pour ne pas accrocher un apport ou un remboursement :
+ * "hopital europeen", pas "hopital".
+ *
+ * Constate dans Qonto :
+ *   GIE HOPITAL EUROPEEN            -> juillet 2026, 708 EUR
+ *   S.A.S. BREIZH CLINIC RENNES...  -> aout 2026, 151,80 EUR
+ *
+ * Simon ecrit "brezi clinique" : c'est Breizh (la Bretagne), oriente Rennes.
+ */
+const VIREMENTS_CLIENTS = [
+  { motif: "hopital europeen", nom: "Hopital Europeen" },
+  { motif: "breizh clinic", nom: "Breizh Clinic" },
+];
+
+const sansAccentBas = (v) =>
+  (v ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
+/** Un virement compte s'il figure dans la liste blanche, et seulement alors. */
+const estVirementClient = (t) => {
+  if (estMollie(t)) return false;
+  const libelle = sansAccentBas(`${t.label ?? ""} ${t.counterparty_name ?? ""}`);
+  return VIREMENTS_CLIENTS.some((c) => libelle.includes(c.motif));
+};
+
 async function main() {
   const comptes = await qonto("/bank_accounts");
   const iban = comptes.bank_accounts?.[0]?.iban;
@@ -120,12 +156,14 @@ async function main() {
     const { transactions = [] } = await qonto(`/transactions?${params}`);
 
     const mollie = transactions.filter(estMollie);
+    const virements = transactions.filter(estVirementClient);
 
     const somme = (liste) =>
       Math.round(liste.reduce((t, x) => t + Number(x.amount ?? 0), 0) * 100) / 100;
 
     const lignes = [
       { source: "mollie", montant: somme(mollie), n: mollie.length },
+      { source: "virement", montant: somme(virements), n: virements.length },
     ].filter((l) => l.n > 0);
 
     const total = lignes.reduce((t, l) => t + l.montant, 0);
