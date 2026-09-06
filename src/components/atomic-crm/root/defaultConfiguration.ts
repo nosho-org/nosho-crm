@@ -48,7 +48,22 @@ export const defaultDealStages = [
   // opportunité au moment du retrait.
   { value: "lead", label: "Lead" },
   { value: "qualified", label: "Qualifié" },
-  { value: "demo-poc", label: "Démo / POC" },
+  /*
+   * « Démo / POC » a été redécoupée le 06/09/2026, à la demande de Simon :
+   * « ce ne sont pas les mêmes niveaux d'avancement ».
+   *
+   * Il ne s'agit pas d'une invention : la refonte v2 avait FUSIONNÉ deux
+   * étapes qui existaient séparément — `d-mo-rdv` (« Démo booked ») et
+   * `poc-lanc` (« POC lancé »), toutes deux encore listées dans
+   * `archivedDealStages`. On revient donc à la distinction d'origine.
+   *
+   * L'ordre porte du sens : une démo est une présentation, un POC est un
+   * déploiement d'essai. On ne lance pas un POC avant d'avoir montré le
+   * produit, et un POC engage l'établissement bien davantage — d'où deux
+   * probabilités distinctes dans `defaultDealStageProbabilities`.
+   */
+  { value: "demo", label: "Démo" },
+  { value: "poc", label: "POC" },
   { value: "proposal", label: "Proposition" },
   { value: "negociation", label: "Négociation" },
   { value: "closed-won", label: "Close Won" },
@@ -74,6 +89,14 @@ export const archivedDealStages = [
   // reste résoluble si un enregistrement égaré la porte encore, plutôt que
   // d'afficher son slug brut.
   { value: "a-reclasser", label: "À reclasser" },
+  /*
+   * Redécoupée en `demo` + `poc` le 06/09/2026. Archivée plutôt que
+   * supprimée, et c'est indispensable : `deal_change_log` conserve des
+   * centaines de lignes dont l'`old_value` ou la `new_value` vaut
+   * « demo-poc », et la timeline d'activité résout ses libellés ici. Sans
+   * cette entrée, l'historique afficherait le slug brut.
+   */
+  { value: "demo-poc", label: "Démo / POC" },
   { value: "logiciels-brique", label: "Logiciels (brique)" },
   { value: "declined", label: "Décliné" },
   { value: "follow-up", label: "Follow up" },
@@ -107,15 +130,33 @@ export const archivedDealStages = [
 export const legacyDealStages: Record<string, string> = {
   // Retired by the v2 migration (NOS-956).
   perdu: "lost", // renamed
-  "d-mo-rdv": "demo-poc", // labelled "Démo booked"
-  "poc-lanc": "demo-poc", // labelled "POC lancé"
+  /*
+   * Ces deux-là retrouvent leur cible d'origine (06/09/2026).
+   *
+   * La refonte v2 les avait toutes deux renvoyées vers `demo-poc`, faute
+   * d'étape distincte pour les accueillir. Le redécoupage rend la
+   * correspondance exacte : une « Démo booked » est une démo, un « POC
+   * lancé » est un POC.
+   */
+  "d-mo-rdv": "demo", // labelled "Démo booked"
+  "poc-lanc": "poc", // labelled "POC lancé"
+  /*
+   * L'étape fusionnée elle-même, redécoupée le 06/09/2026.
+   *
+   * Elle vise `demo` et non `poc` : c'est la reprise effectivement passée en
+   * production, où les 14 opportunités concernées sont allées en démo, à
+   * l'exception du Cabinet Saint Louis Aboulker (deal 287) que Simon a
+   * explicitement placé en POC. Un cas nommé ne se déduit pas d'une règle —
+   * il a été traité à part dans la migration.
+   */
+  "demo-poc": "demo",
   "proposition-a-envoyer": "proposal", // merged, per the spec's mapping table
   "proposition-envoy-e": "proposal", // merged, per the spec's mapping table
   "proposal-to-send": "proposal", // orphan slug from 20260820150000
   // Retired earlier, by 20260820150000. Kept so a row that somehow still
   // carries one is handled rather than parked.
   "follow-up": "qualified", // Suivi — still being nurtured after qualification
-  "rdv-prix": "demo-poc", // Rendez-vous prix — a meeting is booked
+  "rdv-prix": "demo", // Rendez-vous prix — a meeting is booked
   trial: "proposal", // Essai — demo done, proposal is the next step
   "trial-failed": "lost", // Essai échoué
   declined: "lost", // Décliné
@@ -232,7 +273,19 @@ export const defaultDealInactivityAlertDays = 14;
 export const defaultDealStageProbabilities: Record<string, number> = {
   lead: 10,
   qualified: 20,
-  "demo-poc": 40,
+  /*
+   * Le redécoupage du 06/09/2026 place deux barreaux là où il n'y en avait
+   * qu'un. `demo` conserve les 40 % de l'étape fusionnée : c'est la valeur
+   * que la production connaissait, et la démo est le premier des deux.
+   *
+   * `poc` vaut 55 %, entre la démo et la proposition (70 %). Un POC lancé
+   * engage l'établissement — un accès, des utilisateurs, souvent un contrat
+   * POC signé — sans que le prix soit acté. Le placer à 40 % nierait cet
+   * engagement ; le placer à 70 % en ferait l'équivalent d'une proposition
+   * envoyée, ce qu'il n'est pas.
+   */
+  demo: 40,
+  poc: 55,
   proposal: 70,
   negociation: 85,
 };

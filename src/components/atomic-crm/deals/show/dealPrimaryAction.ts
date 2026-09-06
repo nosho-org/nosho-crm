@@ -33,9 +33,9 @@ export type DealPrimaryAction = "task" | "contract" | null;
  * - `lead`, `qualified` : le deal avance par un contact. Une tâche datée est
  *   ce qui le fait bouger — c'est aussi ce que mesure l'alerte de santé du
  *   pipeline, qui compte les opportunités sans prochaine action.
- * - `demo-poc` : la démo est passée, la suite est la proposition. C'est
- *   précisément le goulot relevé par l'audit — aucun deal n'a franchi
- *   Démo → Proposition ce trimestre.
+ * - `demo`, `poc` : la démo est passée, la suite est le POC puis la
+ *   proposition. C'est précisément le goulot relevé par l'audit — aucun deal
+ *   n'a franchi Démo → Proposition ce trimestre.
  * - `proposal`, `negociation` : la proposition est partie, ce qui reste à
  *   produire est le contrat.
  */
@@ -50,7 +50,14 @@ const PRIMARY_BY_STAGE: Record<string, DealPrimaryAction> = {
    * avec template specifique)". Chez Nosho le POC se contractualise
    * directement -- il n y a pas de devis intermediaire.
    */
-  "demo-poc": "contract",
+  /*
+   * Les deux moitiés de l'ancienne `demo-poc` (redécoupée le 06/09/2026)
+   * gardent le contrat comme action principale, pour la même raison : depuis
+   * la démo, la marche suivante est le contrat POC ; depuis le POC, le
+   * contrat cadre. Dans les deux cas on édite un contrat, jamais un devis.
+   */
+  demo: "contract",
+  poc: "contract",
   proposal: "contract",
   negociation: "contract",
   "closed-won": null,

@@ -27,7 +27,12 @@ const STAGE_COLORS: Record<string, string> = {
   "a-reclasser": "var(--muted-foreground)",
   lead: "#7cc0f0",
   qualified: "var(--deal-series-potential)",
-  "demo-poc": "var(--deal-series-weighted)",
+  // `demo` garde le violet de l'ancienne « Démo / POC » — c'est la couleur que
+  // l'équipe associe déjà à cette zone du pipeline. `poc` reçoit un magenta,
+  // interpolé entre ce violet et l'orange de « Proposition », pour que la
+  // progression du dégradé reste continue après le redécoupage du 06/09/2026.
+  demo: "var(--deal-series-weighted)",
+  poc: "#c4569e",
   proposal: "#f0993f",
   negociation: "var(--deal-status-warning)",
 };

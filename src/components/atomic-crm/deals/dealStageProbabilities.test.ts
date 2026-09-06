@@ -23,7 +23,11 @@ describe("pondération par étape", () => {
   it("applies the agreed grid to open stages", () => {
     expect(getDealProbability(deal("lead"), config).value).toBe(0.1);
     expect(getDealProbability(deal("qualified"), config).value).toBe(0.2);
-    expect(getDealProbability(deal("demo-poc"), config).value).toBe(0.4);
+    expect(getDealProbability(deal("demo"), config).value).toBe(0.4);
+    // Le POC vaut 55 % depuis le découpage du 06/09/2026 : entre la démo et
+    // la proposition. Un POC lancé engage l'établissement — un accès, des
+    // utilisateurs, souvent un contrat POC — sans que le prix soit acté.
+    expect(getDealProbability(deal("poc"), config).value).toBe(0.55);
     expect(getDealProbability(deal("proposal"), config).value).toBe(0.7);
     expect(getDealProbability(deal("negociation"), config).value).toBe(0.85);
   });

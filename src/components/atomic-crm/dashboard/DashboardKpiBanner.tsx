@@ -506,23 +506,54 @@ const NewLeadsKpiCard = () => {
   );
 };
 
+/**
+ * Le stock d'une étape — ou de plusieurs, agrégées.
+ *
+ * `stage` accepte un tableau depuis le redécoupage de « Démo / POC » en
+ * `demo` + `poc` (06/09/2026). Le bandeau tient exactement huit cartes
+ * (`xl:grid-cols-8`) : y ajouter une neuvième casserait la rangée en 8 + 1.
+ *
+ * Le regroupement n'est pas qu'un accommodement de mise en page. Ce bandeau
+ * répond à « où en est le pipeline », et la zone démo-POC reste une seule
+ * réponse à cette question ; c'est le kanban, l'entonnoir et les filtres —
+ * là où l'on travaille étape par étape — qui montrent les deux séparément.
+ * Le lien pointe vers les deux étapes, donc le clic rend bien ce que la
+ * carte additionne.
+ */
 const StageKpiCard = ({
   stage,
+  label,
   icon,
   buckets,
 }: {
-  stage: string;
+  stage: string | string[];
+  /** Obligatoire dès que `stage` en regroupe plusieurs : aucun bucket ne porte le libellé du groupe. */
+  label?: string;
   icon: LucideIcon;
   buckets: DealStageBucket[];
 }) => {
   const { selectionFilter } = useDashboard();
-  const bucket = buckets.find((entry) => entry.stage === stage);
-  if (!bucket) return null;
+
+  const stages = Array.isArray(stage) ? stage : [stage];
+  const matching = buckets.filter((entry) => stages.includes(entry.stage));
+  if (matching.length === 0) return null;
+
+  const bucket = matching.reduce((total, entry) => ({
+    ...total,
+    amount: total.amount + entry.amount,
+    count: total.count + entry.count,
+    weightedAmount: total.weightedAmount + entry.weightedAmount,
+    // Pondérable dès qu'une des étapes l'est, et incomplet dès qu'une ne
+    // l'est pas : additionner un montant pondéré partiel sous une étiquette
+    // « pondéré » tout court le ferait lire comme un total.
+    weightedAvailable: total.weightedAvailable && entry.weightedAvailable,
+    hasUnvaluedDeals: total.hasUnvaluedDeals || entry.hasUnvaluedDeals,
+  }));
 
   return (
     <LinkedKpiCard
       to={toDealsLink({ ...selectionFilter, stage })}
-      label={`ARR en ${bucket.label}`}
+      label={`ARR en ${label ?? bucket.label}`}
       icon={icon}
       color="var(--muted-foreground)"
       value={formatCurrencyCompact(bucket.amount)}
@@ -631,7 +662,12 @@ export const DashboardKpiBanner = () => {
         />
 
         <StageKpiCard stage="qualified" icon={Target} buckets={buckets} />
-        <StageKpiCard stage="demo-poc" icon={FlaskConical} buckets={buckets} />
+        <StageKpiCard
+          stage={["demo", "poc"]}
+          label="démo / POC"
+          icon={FlaskConical}
+          buckets={buckets}
+        />
         <StageKpiCard stage="proposal" icon={FileText} buckets={buckets} />
 
         <CashKpiCard />

@@ -25,8 +25,12 @@ const providerWith = (
   }) as unknown as DataProvider;
 
 describe("stageRequiresSiret", () => {
-  it("exige le SIRET de Démo / POC jusqu'à Close Won", () => {
-    expect(stageRequiresSiret("demo-poc")).toBe(true);
+  it("exige le SIRET de la Démo jusqu'à Close Won", () => {
+    expect(stageRequiresSiret("demo")).toBe(true);
+    // Les deux moitiés de l'ancienne « Démo / POC » (découpée le 06/09/2026)
+    // héritent de l'exigence : le seuil est « au-dessus de qualifié », et la
+    // démo comme le POC sont au-dessus de qualifié.
+    expect(stageRequiresSiret("poc")).toBe(true);
     expect(stageRequiresSiret("proposal")).toBe(true);
     expect(stageRequiresSiret("negociation")).toBe(true);
     expect(stageRequiresSiret("closed-won")).toBe(true);
@@ -96,7 +100,7 @@ describe("countDealsMissingSiret", () => {
 
   it("laisse passer une société identifiée", async () => {
     await expect(
-      countDealsMissingSiret(provider, [{ company_id: 1 }], "demo-poc"),
+      countDealsMissingSiret(provider, [{ company_id: 1 }], "demo"),
     ).resolves.toBe(0);
   });
 
@@ -105,7 +109,7 @@ describe("countDealsMissingSiret", () => {
       countDealsMissingSiret(
         provider,
         [{ company_id: 2 }, { company_id: 3 }],
-        "demo-poc",
+        "demo",
       ),
     ).resolves.toBe(2);
   });
@@ -116,7 +120,7 @@ describe("countDealsMissingSiret", () => {
       countDealsMissingSiret(
         provider,
         [{ company_id: null }, { company_id: undefined }, {}],
-        "demo-poc",
+        "demo",
       ),
     ).resolves.toBe(3);
   });
@@ -134,7 +138,7 @@ describe("countDealsMissingSiret", () => {
   it("compare les identifiants sans se soucier de leur type", async () => {
     // Les listes rendent des identifiants tantôt nombres, tantôt chaînes.
     await expect(
-      countDealsMissingSiret(provider, [{ company_id: "1" }], "demo-poc"),
+      countDealsMissingSiret(provider, [{ company_id: "1" }], "demo"),
     ).resolves.toBe(0);
   });
 });

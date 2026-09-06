@@ -16,7 +16,10 @@ const STAGE_ACCENT: Record<string, string> = {
   "a-reclasser": "var(--muted-foreground)",
   lead: "#7cc0f0",
   qualified: "var(--deal-series-potential)",
-  "demo-poc": "var(--deal-series-weighted)",
+  // Même dégradé que le entonnoir du tableau de bord (PipelineFunnel) : les
+  // deux écrans doivent nommer la même étape de la même couleur.
+  demo: "var(--deal-series-weighted)",
+  poc: "#c4569e",
   proposal: "#f0993f",
   negociation: "var(--deal-status-warning)",
   "closed-won": "var(--deal-status-won)",

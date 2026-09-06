@@ -42,7 +42,11 @@ type DealCompanyId = string | number | null | undefined;
  */
 /** Étapes qui exigent une société identifiée. */
 export const STAGES_REQUIRING_SIRET = [
-  "demo-poc",
+  // `demo-poc` a été redécoupée en `demo` + `poc` le 06/09/2026. Les deux
+  // héritent de l'exigence : le seuil voulu par Simon est « au-dessus de
+  // qualifié », et la démo reste au-dessus de qualifié.
+  "demo",
+  "poc",
   "proposal",
   "negociation",
   "closed-won",

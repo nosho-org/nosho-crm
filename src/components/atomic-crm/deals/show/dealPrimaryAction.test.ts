@@ -12,7 +12,11 @@ describe("getDealPrimaryAction", () => {
      * a pas de devis intermédiaire, et cette étape pointait vers une
      * proposition qui n'existe plus.
      */
-    expect(getDealPrimaryAction("demo-poc")).toBe("contract");
+    expect(getDealPrimaryAction("demo")).toBe("contract");
+    // Depuis le découpage du 06/09/2026, le POC est une étape à part — et la
+    // règle y vaut aussi : depuis la démo on édite le contrat POC, depuis le
+    // POC le contrat cadre. Jamais un devis.
+    expect(getDealPrimaryAction("poc")).toBe("contract");
   });
 
   it("propose le contrat une fois la proposition partie", () => {

@@ -30,11 +30,15 @@ const view = (id: string, label: string, companyType: string): CustomView => ({
 
 // NOS-796, revised by NOS-956 (seven-stage pipeline)
 describe("canonical pipeline", () => {
-  it("has the 6 commercial stages, in order, closed by churn", () => {
+  it("has the 7 commercial stages, in order, closed by churn", () => {
+    // « Démo / POC » redécoupée le 06/09/2026 : `demo` puis `poc`, dans cet
+    // ordre. Une démo est une présentation, un POC un déploiement d'essai —
+    // on ne lance pas le second avant d'avoir fait la première.
     expect(defaultDealStages.map((s) => s.value)).toEqual([
       "lead",
       "qualified",
-      "demo-poc",
+      "demo",
+      "poc",
       "proposal",
       "negociation",
       "closed-won",
@@ -42,6 +46,37 @@ describe("canonical pipeline", () => {
       // Terminal, still counted in lost ARR, only hidden from the board.
       "churn",
     ]);
+  });
+
+  /*
+   * Le découpage de « Démo / POC » (06/09/2026) touche six modules : la liste
+   * des étapes, les probabilités, la garde SIRET, l'action principale, et deux
+   * palettes. Un découpage à moitié fait ne se voit pas : l'étape apparaît
+   * dans le kanban, et c'est en la traversant qu'on découvre qu'elle ne pèse
+   * rien, ou qu'elle n'exige pas de SIRET.
+   *
+   * Ce test relie les modules entre eux plutôt que de vérifier chacun dans son
+   * coin — c'est le seul endroit où l'oubli d'un consommateur se voit.
+   */
+  it("découpe Démo / POC jusque dans tous ses consommateurs", () => {
+    const values = defaultDealStages.map((s) => s.value);
+    expect(values).toContain("demo");
+    expect(values).toContain("poc");
+    expect(values).not.toContain("demo-poc");
+
+    // La démo précède le POC : on ne déploie pas un essai avant d'avoir montré.
+    expect(values.indexOf("demo")).toBeLessThan(values.indexOf("poc"));
+
+    // Pondérables toutes les deux, et le POC strictement au-dessus de la démo.
+    expect(defaultDealStageProbabilities.demo).toBe(40);
+    expect(defaultDealStageProbabilities.poc).toBe(55);
+    expect(defaultDealStageProbabilities.poc).toBeLessThan(
+      defaultDealStageProbabilities.proposal,
+    );
+
+    // Et l'ancienne étape reste résoluble : `deal_change_log` en conserve des
+    // centaines de lignes, que la timeline d'activité doit savoir nommer.
+    expect(archivedDealStages.map((s) => s.value)).toContain("demo-poc");
   });
 
   it("a retiré « À reclasser » sans la perdre", () => {
@@ -60,6 +95,8 @@ describe("canonical pipeline", () => {
     expect(Object.keys(legacyDealStages).sort()).toEqual([
       "d-mo-rdv",
       "declined",
+      // L'étape fusionnée elle-même, retirée du pipeline le 06/09/2026.
+      "demo-poc",
       "follow-up",
       "perdu",
       "poc-lanc",

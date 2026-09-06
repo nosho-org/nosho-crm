@@ -62,8 +62,12 @@ const STAGE_STYLES: Record<string, string> = {
    */
   lead: "bg-sky-50 text-sky-700 border-sky-200",
   qualified: "bg-sky-100 text-sky-800 border-sky-300",
-  "demo-poc": "bg-blue-100 text-blue-800 border-blue-300",
-  proposal: "bg-blue-200 text-blue-900 border-blue-400",
+  // Le redécoupage du 06/09/2026 ajoute un barreau à l'échelle : elle passe de
+  // cinq à six teintes, et continue de foncer régulièrement de Lead à
+  // Négociation. `demo` reprend le bleu de l'ancienne « Démo / POC ».
+  demo: "bg-blue-100 text-blue-800 border-blue-300",
+  poc: "bg-blue-200 text-blue-900 border-blue-400",
+  proposal: "bg-indigo-100 text-indigo-900 border-indigo-300",
   negociation: "bg-indigo-200 text-indigo-900 border-indigo-400",
   // Les deux issues gardent leur sémantique : vert = acquis, rouge = perdu.
   "closed-won":

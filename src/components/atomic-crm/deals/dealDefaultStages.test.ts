@@ -14,7 +14,7 @@ describe("getDefaultOpenStages", () => {
   it("keeps the stages where a deal is actually worked", () => {
     expect(
       getDefaultOpenStages(defaultDealStages, defaultDealPipelineStatuses),
-    ).toEqual(["lead", "qualified", "demo-poc", "proposal", "negociation"]);
+    ).toEqual(["lead", "qualified", "demo", "poc", "proposal", "negociation"]);
   });
 
   it("excludes closed stages and the reclassification queue", () => {
