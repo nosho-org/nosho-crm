@@ -78,7 +78,7 @@ const STAGE_COLORS: Record<string, string> = {
 const ETAPES_MASQUEES = new Set(["churn", "a-reclasser"]);
 
 /**
- * Le lien vers les opportunités qu'un chiffre compte (NOS-1379).
+ * Le lien vers les opportunités qu'un chiffre compte (NOS-1380).
  *
  * Simon : « faut que les KPI soient cliquables et amènent vers les
  * opportunités concernées ».

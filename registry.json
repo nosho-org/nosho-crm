@@ -398,6 +398,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/dashboard/pipelineWeek.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/dashboard/revenueActuals.ts",
           "type": "registry:component"
         },
