@@ -1,5 +1,5 @@
 import { ArrowRight, FilePlus2, MoveRight, Trophy, XCircle } from "lucide-react";
-import { useGetList } from "ra-core";
+import { type Identifier, useGetList } from "ra-core";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -77,43 +77,85 @@ const STAGE_COLORS: Record<string, string> = {
  */
 const ETAPES_MASQUEES = new Set(["churn", "a-reclasser"]);
 
+/**
+ * Le lien vers les opportunités qu'un chiffre compte (NOS-1379).
+ *
+ * Simon : « faut que les KPI soient cliquables et amènent vers les
+ * opportunités concernées ».
+ *
+ * Le lien nomme les identifiants un par un plutôt que de redécrire le critère.
+ * `DealFilterState.ids` existe exactement pour ça (NOS-1193) : « le seul filtre
+ * qui ne peut pas diverger de ce qui l'a produit ». Tenter de retraduire
+ * « ayant bougé cette semaine » en filtres de liste donnerait un second calcul,
+ * donc une seconde définition, donc un lien qui ment sur son propre chiffre.
+ *
+ * Et surtout : **le filtre de sélection n'est PAS ajouté**. Les identifiants
+ * sont déjà le résultat exact, responsable compris ; y superposer
+ * `periodStart` — qui vise `expected_closing_date` — retrancherait des lignes
+ * que le chiffre annonce.
+ */
+const lienVers = (ids: Identifier[]) => toDealsLink({ ids });
+
 const KpiSemaine = ({
   icone: Icone,
   libelle,
   valeur,
   detail,
   couleur,
+  ids,
 }: {
   icone: typeof Trophy;
   libelle: string;
   valeur: string;
   detail?: string | null;
   couleur?: string;
-}) => (
-  <div className="flex items-start gap-2 min-w-0 rounded-md border border-border/60 px-3 py-2">
-    <Icone
-      className="w-4 h-4 mt-0.5 shrink-0"
-      style={{ color: couleur ?? "var(--muted-foreground)" }}
-      aria-hidden
-    />
-    <div className="min-w-0">
-      <span className="block text-lg font-semibold tabular-nums leading-tight">
-        {valeur}
-      </span>
-      <span className="block text-xs text-muted-foreground leading-tight">
-        {libelle}
-      </span>
-      {detail ? (
-        <span
-          className="block text-xs tabular-nums leading-tight"
-          style={{ color: couleur ?? "var(--muted-foreground)" }}
-        >
-          {detail}
+  ids: Identifier[];
+}) => {
+  const contenu = (
+    <>
+      <Icone
+        className="w-4 h-4 mt-0.5 shrink-0"
+        style={{ color: couleur ?? "var(--muted-foreground)" }}
+        aria-hidden
+      />
+      <div className="min-w-0">
+        <span className="block text-lg font-semibold tabular-nums leading-tight">
+          {valeur}
         </span>
-      ) : null}
-    </div>
-  </div>
-);
+        <span className="block text-xs text-muted-foreground leading-tight">
+          {libelle}
+        </span>
+        {detail ? (
+          <span
+            className="block text-xs tabular-nums leading-tight"
+            style={{ color: couleur ?? "var(--muted-foreground)" }}
+          >
+            {detail}
+          </span>
+        ) : null}
+      </div>
+    </>
+  );
+
+  const classes =
+    "flex items-start gap-2 min-w-0 rounded-md border border-border/60 px-3 py-2";
+
+  // Zéro n'ouvre rien : un lien vers une liste vide promet un contenu qui
+  // n'existe pas, et se distingue mal d'un lien cassé.
+  if (ids.length === 0) {
+    return <div className={classes}>{contenu}</div>;
+  }
+
+  return (
+    <Link
+      to={lienVers(ids)}
+      className={`${classes} hover:bg-muted/50 transition-colors`}
+      aria-label={`${valeur} ${libelle} — voir ${ids.length === 1 ? "l'opportunité" : "les opportunités"}`}
+    >
+      {contenu}
+    </Link>
+  );
+};
 
 export const PipelineFunnel = () => {
   const { dealStages } = useConfigurationContext();
@@ -226,18 +268,24 @@ export const PipelineFunnel = () => {
           <KpiSemaine
             icone={FilePlus2}
             libelle="Nouveaux leads"
-            valeur={String(semaine.kpis.nouveauxLeads)}
+            valeur={String(semaine.kpis.nouveauxLeads.count)}
+            ids={semaine.kpis.nouveauxLeads.ids}
             couleur="var(--deal-series-potential)"
           />
           <KpiSemaine
             icone={MoveRight}
             libelle="Opportunités ayant bougé"
-            valeur={String(semaine.kpis.ayantBouge)}
+            valeur={String(semaine.kpis.ayantBouge.count)}
+            ids={semaine.kpis.ayantBouge.ids}
           />
           <KpiSemaine
             icone={Trophy}
-            libelle={pluralize(semaine.kpis.won.count, "gagnée", "gagnées")}
+            // Le libellé porte le NOM, jamais le nombre : la tuile affiche
+            // déjà le compteur en gros juste au-dessus, et `pluralize` le
+            // préfixerait une seconde fois — « 2 » puis « 2 gagnées ».
+            libelle={semaine.kpis.won.count > 1 ? "gagnées" : "gagnée"}
             valeur={String(semaine.kpis.won.count)}
+            ids={semaine.kpis.won.ids}
             detail={
               semaine.kpis.won.count > 0
                 ? `+ ${formatCurrencyCompact(semaine.kpis.won.amount)} ARR`
@@ -247,8 +295,9 @@ export const PipelineFunnel = () => {
           />
           <KpiSemaine
             icone={XCircle}
-            libelle={pluralize(semaine.kpis.lost.count, "perdue", "perdues")}
+            libelle={semaine.kpis.lost.count > 1 ? "perdues" : "perdue"}
             valeur={String(semaine.kpis.lost.count)}
+            ids={semaine.kpis.lost.ids}
             detail={
               semaine.kpis.lost.count > 0
                 ? `- ${formatCurrencyCompact(semaine.kpis.lost.amount)} ARR`
@@ -282,7 +331,13 @@ export const PipelineFunnel = () => {
                 <Link
                   to={toDealsLink({ ...selectionFilter, stage: bucket.stage })}
                   className="flex-1 min-w-0 group"
-                  aria-label={`${bucket.label} — ${bucket.count} ${pluralize(bucket.count, "opportunité", "opportunités")}, ${formatCurrencyCompact(bucket.amount)}, ${mouvement.entrees} ${pluralize(mouvement.entrees, "entrée", "entrées")} cette semaine, stock ${formatVariation(mouvement.variation)} depuis lundi`}
+                  /*
+                   * `pluralize` PRÉFIXE déjà le nombre : le préfixer une
+                   * seconde fois donnait « 3 3 opportunités ». Le défaut
+                   * vivait ici depuis l'origine du bloc, et seuls les lecteurs
+                   * d'écran l'entendaient — d'où sa longévité.
+                   */
+                  aria-label={`${bucket.label} — ${pluralize(bucket.count, "opportunité", "opportunités")}, ${formatCurrencyCompact(bucket.amount)}, ${pluralize(mouvement.entrees, "entrée", "entrées")} cette semaine, stock ${formatVariation(mouvement.variation)} depuis lundi`}
                 >
                   <div
                     className="bg-muted overflow-hidden"
@@ -313,10 +368,16 @@ export const PipelineFunnel = () => {
                 <span className="text-right shrink-0 w-20 hidden sm:block">
                   <span className="block text-xs tabular-nums">
                     {mouvement.entrees > 0 ? (
-                      <span className="text-[var(--deal-status-won)]">
+                      // Cliquable au même titre que les KPI : ce chiffre aussi
+                      // désigne un ensemble précis d'opportunités.
+                      <Link
+                        to={lienVers(mouvement.entreesIds)}
+                        className="text-[var(--deal-status-won)] hover:underline"
+                        aria-label={`${bucket.label} — voir ${pluralize(mouvement.entrees, "opportunité entrée", "opportunités entrées")} cette semaine`}
+                      >
                         + {mouvement.entrees} entré
                         {mouvement.entrees > 1 ? "es" : "e"}
-                      </span>
+                      </Link>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

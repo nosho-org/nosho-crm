@@ -102,8 +102,17 @@ describe("computePipelineWeek — entrées et variation sont deux choses", () =>
     expect(semaine.parEtape.demo.entrees).toBe(1);
   });
 
-  it("compte une entrée par passage, même aller-retour", () => {
-    // Une opportunité repassée deux fois en Qualifié est bien entrée deux fois.
+  it("ne compte qu'une entrée pour un aller-retour dans la même étape", () => {
+    /*
+     * Marc-Henri écrit « le nombre réel d'opportunités ayant rejoint cette
+     * étape » : ce sont des opportunités, pas des passages. Une affaire sortie
+     * de Qualifié puis revenue reste une affaire.
+     *
+     * La première version comptait 2. Le chiffre étant devenu cliquable
+     * (06/09/2026), elle aurait annoncé « + 2 entrées » puis ouvert une liste
+     * d'une seule ligne — et un lecteur qui voit ça cesse de croire le bloc
+     * entier.
+     */
     const deals = [deal({ id: 1, stage: "qualified" })];
     const changements = [
       change({
@@ -128,12 +137,13 @@ describe("computePipelineWeek — entrées et variation sont deux choses", () =>
 
     const semaine = computePipelineWeek(deals, changements, STAGES, MERCREDI);
 
-    expect(semaine.parEtape.qualified.entrees).toBe(2);
+    expect(semaine.parEtape.qualified.entrees).toBe(1);
+    expect(semaine.parEtape.qualified.entreesIds).toEqual([1]);
     // Mais elle était déjà en lead lundi matin, et est en qualifié : +1 / -1.
     expect(semaine.parEtape.qualified.variation).toBe(1);
     expect(semaine.parEtape.lead.variation).toBe(-1);
     // Et elle n'a bougé qu'une fois au sens du KPI.
-    expect(semaine.kpis.ayantBouge).toBe(1);
+    expect(semaine.kpis.ayantBouge.count).toBe(1);
   });
 
   it("laisse une étape immobile à zéro partout", () => {
@@ -143,7 +153,7 @@ describe("computePipelineWeek — entrées et variation sont deux choses", () =>
       STAGES,
       MERCREDI,
     );
-    expect(semaine.parEtape.proposal).toEqual({ entrees: 0, variation: 0 });
+    expect(semaine.parEtape.proposal).toMatchObject({ entrees: 0, variation: 0 });
   });
 });
 
@@ -155,7 +165,7 @@ describe("computePipelineWeek — ce qui ne doit pas compter", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.ayantBouge).toBe(0);
+    expect(semaine.kpis.ayantBouge.count).toBe(0);
     expect(semaine.parEtape.qualified.entrees).toBe(0);
     // Sans changement dans la semaine, elle était déjà en qualifié lundi.
     expect(semaine.parEtape.qualified.variation).toBe(0);
@@ -193,7 +203,7 @@ describe("computePipelineWeek — ce qui ne doit pas compter", () => {
 
     const semaine = computePipelineWeek(deals, changements, STAGES, MERCREDI);
 
-    expect(semaine.kpis.ayantBouge).toBe(0);
+    expect(semaine.kpis.ayantBouge.count).toBe(0);
     expect(semaine.parEtape.demo.entrees).toBe(0);
     expect(semaine.parEtape.demo.variation).toBe(0);
   });
@@ -212,7 +222,7 @@ describe("computePipelineWeek — ce qui ne doit pas compter", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.ayantBouge).toBe(0);
+    expect(semaine.kpis.ayantBouge.count).toBe(0);
   });
 
   it("résout un slug renommé écrit par un humain avant la migration", () => {
@@ -286,7 +296,7 @@ describe("computePipelineWeek — les opportunités nées cette semaine", () => 
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.nouveauxLeads).toBe(1);
+    expect(semaine.kpis.nouveauxLeads.count).toBe(1);
     expect(semaine.parEtape.lead.entrees).toBe(1);
     // Elle n'existait pas lundi : la variation doit voir un gain, pas zéro.
     expect(semaine.parEtape.lead.variation).toBe(1);
@@ -328,7 +338,7 @@ describe("computePipelineWeek — les opportunités nées cette semaine", () => 
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.nouveauxLeads).toBe(0);
+    expect(semaine.kpis.nouveauxLeads.count).toBe(0);
   });
 });
 
@@ -345,8 +355,8 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.ayantBouge).toBe(1);
-    expect(semaine.kpis.lost).toEqual({ count: 1, amount: 12000 });
+    expect(semaine.kpis.ayantBouge.count).toBe(1);
+    expect(semaine.kpis.lost).toMatchObject({ count: 1, amount: 12000 });
   });
 
   it("ne compte qu'une fois une opportunité déplacée deux fois", () => {
@@ -369,7 +379,7 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.ayantBouge).toBe(1);
+    expect(semaine.kpis.ayantBouge.count).toBe(1);
   });
 
   it("additionne l'ARR gagné et perdu de la semaine", () => {
@@ -386,9 +396,9 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
 
     const semaine = computePipelineWeek(deals, changements, STAGES, MERCREDI);
 
-    expect(semaine.kpis.won).toEqual({ count: 2, amount: 28000 });
-    expect(semaine.kpis.lost).toEqual({ count: 1, amount: 12000 });
-    expect(semaine.kpis.ayantBouge).toBe(3);
+    expect(semaine.kpis.won).toMatchObject({ count: 2, amount: 28000 });
+    expect(semaine.kpis.lost).toMatchObject({ count: 1, amount: 12000 });
+    expect(semaine.kpis.ayantBouge.count).toBe(3);
   });
 
   it("ne compte pas deux fois une affaire gagnée puis rouverte puis regagnée", () => {
@@ -417,7 +427,7 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.won).toEqual({ count: 1, amount: 9000 });
+    expect(semaine.kpis.won).toMatchObject({ count: 1, amount: 9000 });
   });
 
   it("ignore le churn dans le Lost de la semaine", () => {
@@ -429,9 +439,9 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.lost).toEqual({ count: 0, amount: 0 });
+    expect(semaine.kpis.lost).toMatchObject({ count: 0, amount: 0 });
     // Elle a tout de même bougé.
-    expect(semaine.kpis.ayantBouge).toBe(1);
+    expect(semaine.kpis.ayantBouge.count).toBe(1);
   });
 
   it("tolère une opportunité gagnée sans montant", () => {
@@ -441,7 +451,80 @@ describe("computePipelineWeek — les 4 KPI de la semaine", () => {
       STAGES,
       MERCREDI,
     );
-    expect(semaine.kpis.won).toEqual({ count: 1, amount: 0 });
+    expect(semaine.kpis.won).toMatchObject({ count: 1, amount: 0 });
+  });
+});
+
+describe("computePipelineWeek — chaque chiffre nomme ce qu'il ouvre", () => {
+  /*
+   * Simon, le 06/09/2026 : « faut que les KPI soient cliquables et amènent
+   * vers les opportunités concernées ».
+   *
+   * Un chiffre cliquable contracte une promesse que les autres ne font pas :
+   * le nombre annoncé doit être exactement le nombre de lignes ouvertes. « 5 »
+   * qui ouvre trois lignes se lit comme un bug, et le lecteur cesse alors de
+   * croire tout le bloc. Cet invariant est donc vérifié partout, sur un jeu qui
+   * mélange création, avancée, victoire, défaite et aller-retour.
+   */
+  const deals = [
+    deal({ id: 1, stage: "qualified" }),
+    deal({ id: 2, stage: "closed-won", amount: 18000 }),
+    deal({ id: 3, stage: "lost", amount: 5000 }),
+    deal({ id: 4, stage: "demo", created_at: MARDI }),
+    deal({ id: 5, stage: "proposal" }),
+  ];
+  const changements = [
+    change({ deal_id: 1, old_value: "lead", new_value: "qualified" }),
+    change({ deal_id: 2, old_value: "negociation", new_value: "closed-won" }),
+    change({ deal_id: 3, old_value: "demo", new_value: "lost" }),
+    // Aller-retour : une seule entrée en Proposition, pas deux.
+    change({
+      deal_id: 5,
+      old_value: "proposal",
+      new_value: "negociation",
+      changed_at: LUNDI,
+    }),
+    change({
+      deal_id: 5,
+      old_value: "negociation",
+      new_value: "proposal",
+      changed_at: MARDI,
+    }),
+  ];
+
+  const semaine = computePipelineWeek(deals, changements, STAGES, MERCREDI);
+
+  it("fait correspondre chaque KPI à sa liste", () => {
+    for (const [nom, kpi] of Object.entries(semaine.kpis)) {
+      expect(`${nom}: ${kpi.count}`).toBe(`${nom}: ${kpi.ids.length}`);
+    }
+  });
+
+  it("fait correspondre chaque compteur d'entrées à sa liste", () => {
+    for (const [etape, mouvement] of Object.entries(semaine.parEtape)) {
+      expect(`${etape}: ${mouvement.entrees}`).toBe(
+        `${etape}: ${mouvement.entreesIds.length}`,
+      );
+    }
+  });
+
+  it("nomme les bonnes opportunités", () => {
+    expect(semaine.kpis.nouveauxLeads.ids).toEqual([4]);
+    expect(semaine.kpis.ayantBouge.ids).toEqual([1, 2, 3, 5]);
+    expect(semaine.kpis.won.ids).toEqual([2]);
+    expect(semaine.kpis.lost.ids).toEqual([3]);
+    expect(semaine.parEtape.qualified.entreesIds).toEqual([1]);
+    // L'opportunité 4 est née en Démo cette semaine : c'est une entrée.
+    expect(semaine.parEtape.demo.entreesIds).toEqual([4]);
+    expect(semaine.parEtape.proposal.entreesIds).toEqual([5]);
+  });
+
+  it("ne nomme jamais une opportunité deux fois dans la même étape", () => {
+    for (const mouvement of Object.values(semaine.parEtape)) {
+      expect(new Set(mouvement.entreesIds).size).toBe(
+        mouvement.entreesIds.length,
+      );
+    }
   });
 });
 

@@ -84,19 +84,46 @@ export interface WeekDeal {
   entered_at?: string | null;
 }
 
+/**
+ * Un compteur et les opportunités qu'il compte.
+ *
+ * Les deux vont ensemble depuis que ces chiffres sont cliquables (06/09/2026,
+ * demande de Simon : « faut que les KPI soient cliquables et amènent vers les
+ * opportunités concernées »).
+ *
+ * `count` vaut toujours `ids.length`. Ce n'est pas une redondance mais une
+ * contrainte : un chiffre qui ouvre une liste doit annoncer exactement le
+ * nombre de lignes qu'on y trouvera. « 5 » qui ouvre trois lignes se lit comme
+ * un bug, et le lecteur cesse alors de croire tout le bloc.
+ */
+export interface CompteurSemaine {
+  count: number;
+  ids: Identifier[];
+}
+
 export interface MouvementEtape {
-  /** Opportunités ayant REJOINT l'étape pendant la semaine — un flux. */
+  /**
+   * Opportunités DISTINCTES ayant rejoint l'étape pendant la semaine — un flux.
+   *
+   * Distinctes, et non un décompte de passages. Marc-Henri écrit « le nombre
+   * réel d'opportunités ayant rejoint cette étape », et une affaire qui sort
+   * puis revient reste une affaire. La première version comptait deux entrées
+   * pour cet aller-retour ; le chiffre étant devenu cliquable, il aurait
+   * ouvert une liste d'une seule ligne.
+   */
   entrees: number;
+  /** Les opportunités ci-dessus, nommées — c'est ce que le lien ouvre. */
+  entreesIds: Identifier[];
   /** Stock d'aujourd'hui moins stock de lundi matin — un solde, souvent négatif. */
   variation: number;
 }
 
 export interface KpisSemaine {
-  nouveauxLeads: number;
+  nouveauxLeads: CompteurSemaine;
   /** Opportunités ayant changé d'étape, dédoublonnées. Lost inclus. */
-  ayantBouge: number;
-  won: { count: number; amount: number };
-  lost: { count: number; amount: number };
+  ayantBouge: CompteurSemaine;
+  won: CompteurSemaine & { amount: number };
+  lost: CompteurSemaine & { amount: number };
 }
 
 export interface SemainePipeline {
@@ -236,7 +263,9 @@ export function computePipelineWeek(
     );
   }
 
-  const entrees = new Map<string, number>();
+  // Les entrées gardent l'identité des opportunités, pas seulement leur nombre :
+  // le chiffre est cliquable, et doit ouvrir exactement ce qu'il annonce.
+  const entrees = new Map<string, Identifier[]>();
   const stockDebut = new Map<string, number>();
   const stockActuel = new Map<string, number>();
   const incremente = (carte: Map<string, number>, etape: string | null) => {
@@ -244,12 +273,12 @@ export function computePipelineWeek(
     carte.set(etape, (carte.get(etape) ?? 0) + 1);
   };
 
-  const kpis: KpisSemaine = {
-    nouveauxLeads: 0,
-    ayantBouge: 0,
-    won: { count: 0, amount: 0 },
-    lost: { count: 0, amount: 0 },
-  };
+  const nouveauxLeads: Identifier[] = [];
+  const ayantBouge: Identifier[] = [];
+  const gagnees: Identifier[] = [];
+  const perdues: Identifier[] = [];
+  let montantGagne = 0;
+  let montantPerdu = 0;
 
   for (const deal of deals) {
     const sesChangements = parDeal.get(String(deal.id)) ?? [];
@@ -270,48 +299,74 @@ export function computePipelineWeek(
     const creeeCetteSemaine = entree != null && entree >= debut;
 
     incremente(stockActuel, etapeActuelle);
+
+    /*
+     * Les étapes que CETTE opportunité a rejointes cette semaine.
+     *
+     * Un ensemble, donc dédoublonné par construction : une affaire sortie de
+     * Qualifié puis revenue n'y est entrée qu'une fois, au sens du chiffre
+     * affiché et de la liste qu'il ouvre.
+     */
+    const etapesRejointes = new Set<string>();
+
     // Une opportunité créée cette semaine n'existait pas lundi : elle ne compte
     // pas dans le stock de départ, sans quoi sa création se lirait comme une
     // absence de mouvement.
     if (!creeeCetteSemaine) incremente(stockDebut, etapeAuDebut);
     else {
       // Elle est bien ENTRÉE quelque part : dans l'étape où elle est née.
-      incremente(entrees, etapeAuDebut);
-      kpis.nouveauxLeads += 1;
+      if (etapeAuDebut) etapesRejointes.add(etapeAuDebut);
+      nouveauxLeads.push(deal.id);
     }
 
-    if (sesChangements.length > 0) kpis.ayantBouge += 1;
+    if (sesChangements.length > 0) ayantBouge.push(deal.id);
 
     let gagnee = false;
     let perdue = false;
     for (const ligne of sesChangements) {
       const destination = etapeDe(ligne.new_value, alias);
-      incremente(entrees, destination);
+      if (destination) etapesRejointes.add(destination);
       if (destination === ETAPE_GAGNEE) gagnee = true;
       if (destination === ETAPE_PERDUE) perdue = true;
+    }
+
+    for (const etape of etapesRejointes) {
+      if (!etapesConnues.has(etape)) continue;
+      const liste = entrees.get(etape);
+      if (liste) liste.push(deal.id);
+      else entrees.set(etape, [deal.id]);
     }
 
     // Dédoublonné : une affaire passée en Won puis rouverte puis re-gagnée
     // dans la même semaine reste une seule victoire.
     const montant = typeof deal.amount === "number" ? deal.amount : 0;
     if (gagnee) {
-      kpis.won.count += 1;
-      kpis.won.amount += montant;
+      gagnees.push(deal.id);
+      montantGagne += montant;
     }
     if (perdue) {
-      kpis.lost.count += 1;
-      kpis.lost.amount += montant;
+      perdues.push(deal.id);
+      montantPerdu += montant;
     }
   }
 
   const parEtape: Record<string, MouvementEtape> = {};
   for (const stage of stages) {
+    const ids = entrees.get(stage.value) ?? [];
     parEtape[stage.value] = {
-      entrees: entrees.get(stage.value) ?? 0,
+      entrees: ids.length,
+      entreesIds: ids,
       variation:
         (stockActuel.get(stage.value) ?? 0) - (stockDebut.get(stage.value) ?? 0),
     };
   }
+
+  const kpis: KpisSemaine = {
+    nouveauxLeads: { count: nouveauxLeads.length, ids: nouveauxLeads },
+    ayantBouge: { count: ayantBouge.length, ids: ayantBouge },
+    won: { count: gagnees.length, ids: gagnees, amount: montantGagne },
+    lost: { count: perdues.length, ids: perdues, amount: montantPerdu },
+  };
 
   return { debut, parEtape, kpis };
 }
