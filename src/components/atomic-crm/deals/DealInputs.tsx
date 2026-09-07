@@ -253,7 +253,7 @@ const DealMainInputs = ({
       </ReferenceArrayInput>
       {/*
         Le garde-fou anti-doublon, juste sous les deux champs qui le nourrissent
-        (NOS-1384). Le placer ici plutôt qu'en tête du formulaire est délibéré :
+        (NOS-1397). Le placer ici plutôt qu'en tête du formulaire est délibéré :
         il n'a rien à dire tant que la société n'est pas choisie, et une alerte
         qui apparaît au-dessus du champ qui la déclenche se lit comme un
         reproche avant l'acte.

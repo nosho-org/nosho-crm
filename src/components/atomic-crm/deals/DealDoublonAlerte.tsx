@@ -14,7 +14,7 @@ import {
 } from "./doublonOpportunite";
 
 /**
- * Le garde-fou anti-doublon du formulaire d'opportunité (NOS-1384).
+ * Le garde-fou anti-doublon du formulaire d'opportunité (NOS-1397).
  *
  * Simon : « je veux un garde-fou qui t'avertit si tu crées une opportunité et
  * que la société ou le contact existe déjà ».

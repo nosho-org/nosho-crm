@@ -2,7 +2,7 @@ import type { Identifier } from "ra-core";
 
 /**
  * ---------------------------------------------------------------------------
- * Prévenir avant de créer une opportunité en double (NOS-1384)
+ * Prévenir avant de créer une opportunité en double (NOS-1397)
  * ---------------------------------------------------------------------------
  * Simon, le 07/09/2026 : « je veux un garde-fou qui t'avertit si tu crées une
  * opportunité et que la société ou le contact existe déjà ».

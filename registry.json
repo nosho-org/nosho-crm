@@ -562,6 +562,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealDoublonAlerte.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealEdit.tsx",
           "type": "registry:component"
         },
@@ -615,6 +619,10 @@
         },
         {
           "path": "src/components/atomic-crm/deals/dealUtils.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/deals/doublonOpportunite.ts",
           "type": "registry:component"
         },
         {

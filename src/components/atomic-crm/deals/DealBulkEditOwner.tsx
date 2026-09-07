@@ -29,7 +29,7 @@ import type { Deal, Sale } from "../types";
 import { pluralize } from "./cockpit/dealFormat";
 
 /**
- * Réassigner plusieurs opportunités en une fois (NOS-1384).
+ * Réassigner plusieurs opportunités en une fois (NOS-1397).
  *
  * Simon : « quand j'ai toute la liste, que je puisse sélectionner plusieurs
  * opportunités et modifier en masse à qui elles sont assignées ». Le pendant
