@@ -59,6 +59,29 @@ export function corrigerLienRecuperation(href: string): string | null {
   if (fragment.startsWith("/")) return null;
 
   const parametres = new URLSearchParams(fragment);
+
+  /*
+   * Le lien a echoue cote Supabase (jeton deja consomme, ou perime).
+   *
+   * Le fragment ressemble alors a
+   * `#error=access_denied&error_code=otp_expired&error_description=...`.
+   * Sans ce traitement il ne porte pas d'`access_token`, tombe donc dans le
+   * `return null` plus bas, et le routeur depose l'utilisateur sur l'ecran de
+   * connexion SANS UN MOT. C'est ce qu'ont vu Julie puis Alexandre : ils ont
+   * cru s'etre trompes de mot de passe, alors que leur lien etait mort.
+   *
+   * On aiguille donc vers la page « mot de passe oublie », qui est l'action
+   * utile, en emportant le code d'erreur pour qu'elle puisse l'expliquer.
+   *
+   * Cause la plus frequente du jeton mort : Slack et WhatsApp PRECHARGENT les
+   * liens pour en afficher l'apercu. Cet appel automatique consomme le jeton a
+   * usage unique avant meme que le destinataire n'ait clique.
+   */
+  const erreur = parametres.get("error_code") ?? parametres.get("error");
+  if (erreur) {
+    return `${url.origin}${url.pathname}#/forgot-password?${fragment}`;
+  }
+
   const jeton = parametres.get("access_token");
   if (!jeton) return null;
 

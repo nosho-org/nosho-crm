@@ -10,10 +10,43 @@ interface FormData {
   email: string;
 }
 
+/**
+ * Ce que Supabase renvoie quand un lien ne marche plus, traduit.
+ *
+ * Sans cela, l'utilisateur atterrissait ici — ou pire, sur l'écran de
+ * connexion — sans la moindre explication, et concluait qu'il se trompait de
+ * mot de passe. Julie, puis Alexandre deux fois : trois personnes qui ont cru
+ * à leur propre erreur alors que leur lien était mort.
+ */
+const MESSAGES_ERREUR: Record<string, string> = {
+  otp_expired:
+    "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau ci-dessous.",
+  access_denied:
+    "Ce lien n'est plus valable. Demandez-en un nouveau ci-dessous.",
+};
+
 export const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
 
   const notify = useNotify();
+
+  /*
+   * Le code d'erreur arrive dans le fragment, réaiguillé ici par
+   * `corrigerLienRecuperation` — voir ce module pour la mécanique complète.
+   */
+  const erreurLien = (() => {
+    if (typeof window === "undefined") return null;
+    const fragment = window.location.hash.replace(/^#/, "");
+    const requete = fragment.includes("?") ? fragment.split("?")[1] : "";
+    const p = new URLSearchParams(requete);
+    const code = p.get("error_code") ?? p.get("error");
+    if (!code) return null;
+    return (
+      MESSAGES_ERREUR[code] ??
+      p.get("error_description") ??
+      "Ce lien n'est plus valable. Demandez-en un nouveau ci-dessous."
+    );
+  })();
   const redirect = useRedirect();
   const translate = useTranslate();
   const [, { mutateAsync: resetPassword }] = useResetPassword({
@@ -67,6 +100,14 @@ export const ForgotPasswordPage = () => {
           })}
         </p>
       </div>
+      {erreurLien ? (
+        <p
+          role="alert"
+          className="rounded-md border border-[var(--deal-status-lost)]/40 bg-[color-mix(in_oklch,var(--deal-status-lost)_10%,transparent)] px-3 py-2 text-sm text-[var(--deal-status-lost)]"
+        >
+          {erreurLien}
+        </p>
+      ) : null}
       <Form<FormData>
         className="space-y-8"
         onSubmit={submit as SubmitHandler<FieldValues>}

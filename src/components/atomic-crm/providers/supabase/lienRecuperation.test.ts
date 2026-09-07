@@ -52,13 +52,16 @@ describe("corrigerLienRecuperation", () => {
   it("ignore une URL sans fragment, ou sans jeton", () => {
     expect(corrigerLienRecuperation("https://crm.nosho.cc/")).toBeNull();
     expect(corrigerLienRecuperation("https://crm.nosho.cc/#")).toBeNull();
-    // Un retour d'erreur de Supabase ne porte pas de jeton : on le laisse
-    // suivre son chemin plutôt que de l'aiguiller vers un formulaire vide.
+    // Un fragment inconnu qui ne porte ni jeton ni erreur suit son chemin.
     expect(
-      corrigerLienRecuperation(
-        "https://crm.nosho.cc/#error=access_denied&error_description=expired",
-      ),
+      corrigerLienRecuperation("https://crm.nosho.cc/#quelque-chose-d-autre"),
     ).toBeNull();
+    /*
+     * Le retour d'erreur, LUI, est desormais aiguille — voir le bloc dedie
+     * plus bas. Ce test affirmait l'inverse jusqu'au 07/09/2026 : il encodait
+     * le comportement muet qui a bloque trois utilisateurs, en le presentant
+     * comme un choix. C'en etait un, et il etait mauvais.
+     */
   });
 
   it("ne casse pas sur une URL illisible", () => {
@@ -73,5 +76,39 @@ describe("corrigerLienRecuperation", () => {
     expect(corrigee).toBe(
       `https://crm.nosho.cc/app/#/set-password?access_token=${JETON}&refresh_token=r`,
     );
+  });
+});
+
+describe("corrigerLienRecuperation — les liens morts ne doivent plus etre muets", () => {
+  it("aiguille une erreur Supabase vers la page « mot de passe oublié »", () => {
+    /*
+     * Ce que renvoie vraiment Supabase quand le jeton est consommé ou périmé,
+     * relevé sur la production le 07/09/2026. Sans ce traitement, le fragment
+     * ne porte pas d'`access_token`, le routeur dépose l'utilisateur sur
+     * l'écran de connexion sans un mot, et il conclut qu'il se trompe de mot
+     * de passe.
+     */
+    const corrigee = corrigerLienRecuperation(
+      "https://crm.nosho.cc/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+    );
+    expect(corrigee).toContain("#/forgot-password?");
+    expect(corrigee).toContain("error_code=otp_expired");
+  });
+
+  it("préfère la page de réinitialisation à la connexion", () => {
+    // L'action utile est de redemander un lien, pas de retaper un mot de passe
+    // qu'on n'a jamais choisi.
+    const corrigee = corrigerLienRecuperation(
+      "https://crm.nosho.cc/#error=access_denied",
+    );
+    expect(corrigee).toContain("/forgot-password");
+    expect(corrigee).not.toContain("/login");
+  });
+
+  it("ne confond pas une erreur avec un jeton valide", () => {
+    const corrigee = corrigerLienRecuperation(
+      `https://crm.nosho.cc/#access_token=${JETON}&refresh_token=r`,
+    );
+    expect(corrigee).toContain("/set-password");
   });
 });
