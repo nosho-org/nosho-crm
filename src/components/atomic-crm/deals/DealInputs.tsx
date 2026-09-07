@@ -11,6 +11,7 @@ import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
 import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
+import { DealDoublonAlerte } from "./DealDoublonAlerte";
 import { TextInput } from "@/components/admin/text-input";
 import { NumberInput } from "@/components/admin/number-input";
 import { DateInput } from "@/components/admin/date-input";
@@ -250,6 +251,15 @@ const DealMainInputs = ({
           create={<ContactCreateSuggestion companyId={companyId} />}
         />
       </ReferenceArrayInput>
+      {/*
+        Le garde-fou anti-doublon, juste sous les deux champs qui le nourrissent
+        (NOS-1384). Le placer ici plutôt qu'en tête du formulaire est délibéré :
+        il n'a rien à dire tant que la société n'est pas choisie, et une alerte
+        qui apparaît au-dessus du champ qui la déclenche se lit comme un
+        reproche avant l'acte.
+      */}
+      <DealDoublonAlerte />
+
       {/* Les rôles ne listent que les contacts choisis juste au-dessus : les
           séparer les laisserait sans référent. */}
       <DealContactRolesInput />
