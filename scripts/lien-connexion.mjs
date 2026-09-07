@@ -100,7 +100,13 @@ if (!r.ok) {
   process.exit(1);
 }
 
-const lien = d.properties?.action_link;
+/*
+ * L'API REST rend le lien A PLAT, aux cotes des champs de l'utilisateur.
+ * `properties.action_link` est la forme du SDK supabase-js, qui reemballe la
+ * reponse -- la chercher ici faisait echouer le script sur une reponse
+ * pourtant valide.
+ */
+const lien = d.action_link ?? d.properties?.action_link;
 if (!lien) {
   console.error("Reponse sans lien :", JSON.stringify(d).slice(0, 300));
   process.exit(1);
