@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
+import { rattraperLienRecuperation } from "./components/atomic-crm/providers/supabase/lienRecuperation";
 
 // After a new deploy, the service worker may replace its pre-cache while
 // the page still holds old chunk references. A reload picks up the new
@@ -15,6 +16,16 @@ window.addEventListener("vite:preloadError", () => {
     window.location.reload();
   }
 });
+
+/*
+ * Supabase renvoie les jetons de mot de passe dans le FRAGMENT
+ * (`/#access_token=...`), que le HashRouter lit comme une route inconnue :
+ * l'utilisateur atterrissait sur l'ecran de connexion, jeton perdu, et le
+ * jeton etant a usage unique il ne pouvait plus recliquer (NOS-1381).
+ *
+ * Meme rattrapage que pour Google ci-dessous, et pour la meme raison.
+ */
+rattraperLienRecuperation();
 
 // Google redirects to /google-oauth-callback?code=xxx but the app uses HashRouter.
 // Convert to /#/google-oauth-callback?code=xxx before React renders.
