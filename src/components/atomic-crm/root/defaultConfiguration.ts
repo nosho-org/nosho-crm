@@ -321,6 +321,9 @@ export const defaultDealCategories = [
   { value: "imagerie", label: "Imagerie" },
   { value: "dentaire", label: "Dentaire" },
   { value: "clinique", label: "Clinique" },
+  // Juste après « Clinique » : quatre opportunités ouvertes portaient des
+  // cliniques vétérinaires faute de mieux (NOS-1398).
+  { value: "clinique-veterinaire", label: "Clinique vétérinaire" },
   { value: "esthetique", label: "Esthétique" },
   { value: "cabinet", label: "Cabinet" },
   /*
@@ -332,10 +335,32 @@ export const defaultDealCategories = [
   { value: "centre-de-sante", label: "Centre de santé" },
   { value: "msp", label: "MSP" },
   { value: "scm", label: "SCM" },
+  /*
+   * Ce qui n'est pas un lieu de soins (NOS-1398).
+   *
+   * « Institution » couvre la Croix Rouge, l'Ordre des Médecins, l'Institut
+   * Curie, les mutuelles et les associations ; « Éditeur / plateforme » couvre
+   * Qare, Cpage, Clikodoc. Treize opportunités ouvertes tombaient dans
+   * « Autre » faute de ces deux entrées.
+   *
+   * Le libellé est au singulier comme tout le reste de la liste : une
+   * catégorie qualifie une société, pas un ensemble.
+   */
+  { value: "editeur-plateforme", label: "Éditeur / plateforme" },
+  { value: "institution", label: "Institution" },
   // NOS-1090. À ne pas confondre avec le *type de société* `partenaire`, qui
   // sert lui à exclure une opportunité du pipeline commercial : ici c'est une
   // catégorie de clientèle, au même titre que « Dentaire » ou « Hôpital ».
   { value: "partenaire", label: "Partenaire" },
+  /*
+   * « Autre » reste le fourre-tout, et se lit mieux en dernier.
+   *
+   * Retirée le matin du 08/09/2026 puis rendue le même jour, à la demande de
+   * Simon : les catégories ajoutées couvrent l'essentiel des cas qui y
+   * tombaient, mais pas tous — un fourre-tout explicite vaut mieux qu'une
+   * catégorie approchante choisie par dépit.
+   */
+  { value: "autre", label: "Autre" },
 ];
 
 /**
@@ -345,18 +370,10 @@ export const defaultDealCategories = [
 export const archivedDealCategories = [
   { value: "angiologue", label: "Angiologue" },
   { value: "api", label: "API" },
-  /*
-   * « Autre » a quitté le menu le 08/09/2026, à la demande de Simon.
-   *
-   * Archivée et non supprimée : 15 opportunités ouvertes la portaient encore
-   * ce jour-là — cliniques vétérinaires, mutuelles, associations, Ordre des
-   * Médecins — et aucune ne relève des trois catégories ajoutées en échange.
-   * Sans cette entrée, leur fiche afficherait le slug brut « autre ».
-   *
-   * Elles restent donc lisibles, mais ne sont plus reclassables dans « Autre »
-   * : c'est l'effet recherché, ces 15 doivent trouver une vraie catégorie.
-   */
-  { value: "autre", label: "Autre" },
+  // `autre` a quitté cette liste le 08/09/2026 : elle est retournée au menu
+  // (voir `defaultDealCategories`). Une catégorie ne doit figurer que d'un
+  // côté — présente aux deux endroits, on ne saurait plus si elle est
+  // proposable.
   { value: "cardiologue", label: "Cardiologue" },
   { value: "centre-dentaire", label: "Centre dentaire" },
   { value: "centre-esthetique", label: "Centre esthétique" },
