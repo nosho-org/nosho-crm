@@ -323,12 +323,19 @@ export const defaultDealCategories = [
   { value: "clinique", label: "Clinique" },
   { value: "esthetique", label: "Esthétique" },
   { value: "cabinet", label: "Cabinet" },
-  // NOS-1090. Avant « Autre », qui reste le fourre-tout et se lit mieux en
-  // dernier. À ne pas confondre avec le *type de société* `partenaire`, qui
+  /*
+   * Les trois structures d'exercice coordonné (NOS-1398, demandées par Simon
+   * le 08/09/2026). Placées à la suite de « Cabinet » : ce sont des cabinets
+   * de groupe sous des formes juridiques différentes, et les lire côte à côte
+   * évite d'avoir à parcourir la liste entière pour les comparer.
+   */
+  { value: "centre-de-sante", label: "Centre de santé" },
+  { value: "msp", label: "MSP" },
+  { value: "scm", label: "SCM" },
+  // NOS-1090. À ne pas confondre avec le *type de société* `partenaire`, qui
   // sert lui à exclure une opportunité du pipeline commercial : ici c'est une
   // catégorie de clientèle, au même titre que « Dentaire » ou « Hôpital ».
   { value: "partenaire", label: "Partenaire" },
-  { value: "autre", label: "Autre" },
 ];
 
 /**
@@ -338,6 +345,18 @@ export const defaultDealCategories = [
 export const archivedDealCategories = [
   { value: "angiologue", label: "Angiologue" },
   { value: "api", label: "API" },
+  /*
+   * « Autre » a quitté le menu le 08/09/2026, à la demande de Simon.
+   *
+   * Archivée et non supprimée : 15 opportunités ouvertes la portaient encore
+   * ce jour-là — cliniques vétérinaires, mutuelles, associations, Ordre des
+   * Médecins — et aucune ne relève des trois catégories ajoutées en échange.
+   * Sans cette entrée, leur fiche afficherait le slug brut « autre ».
+   *
+   * Elles restent donc lisibles, mais ne sont plus reclassables dans « Autre »
+   * : c'est l'effet recherché, ces 15 doivent trouver une vraie catégorie.
+   */
+  { value: "autre", label: "Autre" },
   { value: "cardiologue", label: "Cardiologue" },
   { value: "centre-dentaire", label: "Centre dentaire" },
   { value: "centre-esthetique", label: "Centre esthétique" },
