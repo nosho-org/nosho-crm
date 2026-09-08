@@ -40,6 +40,13 @@ export interface DealFilterState {
   category?: FilterSelection;
   /** Multi-select. Matches deals carrying *any* of these products. */
   products?: string[] | null;
+  /**
+   * Type d'opportunité — la colonne « Type » de la liste (NOS-1399).
+   *
+   * La colonne existait, le filtre non : on pouvait voir que sept affaires
+   * étaient des renouvellements sans pouvoir demander à ne voir qu'eux.
+   */
+  opportunityType?: FilterSelection;
   /** Stored slugs: `urgent` (P0) / `important` (P1) / `normal` (P2). */
   priority?: FilterSelection;
   stage?: FilterSelection;
@@ -123,6 +130,7 @@ export function toListFilter(
   // FakeRest et ses tests).
   assignIn(filter, "sales_id", state.salesId);
   assignIn(filter, "category", state.category);
+  assignIn(filter, "opportunity_type", state.opportunityType);
   assignIn(filter, "priority", state.priority);
   assignIn(filter, "stage", state.stage);
 
@@ -248,12 +256,27 @@ export const HEALTH_FILTER_KEYS = [
  * raison d'être que le contrat lui-même.
  */
 export const LIST_FILTER_KEYS = [
+  /*
+   * Les identifiants nommes, ecrits par la cloche de notifications (NOS-1193)
+   * et par les KPI de la semaine (NOS-1380).
+   *
+   * Ils manquaient a cette liste, et le defaut etait exactement celui que le
+   * commentaire ci-dessus decrit : arriver depuis « voir les 6 opportunites »
+   * posait un `id@in` que la barre ne montrait pas, que « Reinitialiser »
+   * n'effacait pas, et que `ra-core` persiste dans le navigateur. On revenait
+   * plus tard sur une liste amputee, sans qu'aucun filtre visible ne
+   * l'explique.
+   */
+  "id",
+  "id@in",
   "expected_closing_date@gte",
   "expected_closing_date@lte",
   "sales_id",
   "sales_id@in",
   "category",
   "category@in",
+  "opportunity_type",
+  "opportunity_type@in",
   "priority",
   "priority@in",
   "stage",

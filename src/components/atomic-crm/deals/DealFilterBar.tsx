@@ -178,10 +178,25 @@ const FilterMultiSelect = ({
  */
 const contractKeyOf = (
   field: string,
-): "salesId" | "category" | "priority" | "stage" =>
-  field === "sales_id"
-    ? "salesId"
-    : (field as "category" | "priority" | "stage");
+): "salesId" | "category" | "opportunityType" | "priority" | "stage" => {
+  /*
+   * Les deux colonnes dont le nom PostgREST diffère du champ du contrat.
+   *
+   * Le transtypage plus bas est un pari : toute colonne non listée ici est
+   * supposée porter le même nom des deux côtés. `opportunity_type` a fait
+   * mentir ce pari (NOS-1399) — `toListFilter` recevait la clé inconnue
+   * `opportunity_type`, n'écrivait rien, et le filtre s'affichait dans la
+   * barre sans jamais filtrer la liste. Une table explicite, plutôt qu'un
+   * ternaire qui grandit à chaque ajout.
+   */
+  const EXCEPTIONS: Record<string, "salesId" | "opportunityType"> = {
+    sales_id: "salesId",
+    opportunity_type: "opportunityType",
+  };
+  return (
+    EXCEPTIONS[field] ?? (field as "category" | "priority" | "stage")
+  );
+};
 
 const PERIOD_KEYS = [
   "expected_closing_date@gte",
@@ -225,8 +240,13 @@ const FilterSelect = ({
 );
 
 export const DealFilterBar = () => {
-  const { dealCategories, dealPriorities, dealProducts, dealStages } =
-    useConfigurationContext();
+  const {
+    dealCategories,
+    dealOpportunityTypes,
+    dealPriorities,
+    dealProducts,
+    dealStages,
+  } = useConfigurationContext();
   const { filterValues, displayedFilters, setFilters } = useListFilterContext();
   const today = startOfToday();
 
@@ -411,6 +431,25 @@ export const DealFilterBar = () => {
         onClear={() => clearSelection("category")}
         allLabel="Toutes"
         choices={dealCategories}
+      />
+
+      {/*
+        Le type d'opportunité (NOS-1399), à côté de la catégorie : les deux
+        qualifient l'affaire elle-même — ce qu'on vend et à qui — là où les
+        filtres voisins portent sur son avancement ou son responsable.
+
+        La colonne « Type » existait dans le tableau depuis l'origine sans
+        filtre correspondant : on pouvait constater que sept affaires étaient
+        des renouvellements sans pouvoir demander à ne voir qu'eux.
+      */}
+      <FilterMultiSelect
+        label="Type"
+        selected={readSelection(filterValues, "opportunity_type")}
+        onToggle={(value) => toggleSelection("opportunity_type", value)}
+        onClear={() => clearSelection("opportunity_type")}
+        allLabel="Tous"
+        choices={dealOpportunityTypes}
+        className="w-44"
       />
 
       {/* Multi-select, so pills again: "Produit = No-show + Entrant" means

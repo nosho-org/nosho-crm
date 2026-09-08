@@ -6,6 +6,7 @@ import { ReferenceField } from "@/components/admin/reference-field";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
+import { DealBulkEditCategory } from "./DealBulkEditCategory";
 import { DealBulkEditOwner } from "./DealBulkEditOwner";
 import { DealBulkEditStage } from "./DealBulkEditStage";
 import { DealPriorityField } from "./DealPriorityField";
@@ -118,6 +119,7 @@ export const DealListTable = () => {
         <>
           <DealBulkEditStage />
           <DealBulkEditOwner />
+          <DealBulkEditCategory />
         </>
       }
       // <DataTable> puts its own className on the wrapper and renders <Table>

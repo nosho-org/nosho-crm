@@ -301,3 +301,59 @@ describe("toListFilter — viser des lignes nommées (NOS-1193)", () => {
     expect(filtre["sales_id"]).toBe(9);
   });
 });
+
+describe("le type d'opportunité (NOS-1399)", () => {
+  it("écrit un `@eq` sur une valeur seule, un `@in` sur plusieurs", () => {
+    // Même convention que catégorie et étape : le tableau de bord envoie une
+    // valeur, la barre de filtres en envoie plusieurs.
+    expect(toListFilter({ opportunityType: "renouvellement" })).toEqual({
+      opportunity_type: "renouvellement",
+    });
+    expect(
+      toListFilter({ opportunityType: ["renouvellement", "upsell"] }),
+    ).toEqual({ "opportunity_type@in": "(renouvellement,upsell)" });
+  });
+
+  it("n'écrit rien sur une sélection vide", () => {
+    // `in.()` est rejeté par PostgREST, et « rien de coché » veut dire « pas
+    // de filtre », pas « aucune ligne ne correspond ».
+    expect(toListFilter({ opportunityType: [] })).toEqual({});
+    expect(toListFilter({ opportunityType: null })).toEqual({});
+  });
+});
+
+describe("LIST_FILTER_KEYS couvre tout ce que le contrat écrit", () => {
+  /*
+   * L'invariant que le défaut de NOS-1193 a révélé : une clé écrite par
+   * `toListFilter` mais absente de cette liste devient un filtre fantôme —
+   * invisible dans la barre, non effacé par « Réinitialiser », et persisté par
+   * `ra-core` dans le navigateur. L'utilisateur revient sur une liste amputée
+   * sans qu'aucun filtre affiché ne l'explique.
+   */
+  it("n'oublie aucune clé, y compris les identifiants nommés", () => {
+    const complet = toListFilter({
+      ids: [1, 2],
+      periodStart: "2026-01-01",
+      periodEnd: "2026-12-31",
+      salesId: [1, 2],
+      category: ["hopital"],
+      opportunityType: ["renouvellement"],
+      priority: ["urgent"],
+      stage: ["lead"],
+      products: ["no-show"],
+      staleForDays: 14,
+      overdueAction: true,
+      missingClosingDate: true,
+      missingNextAction: true,
+    });
+
+    const connues = new Set<string>(LIST_FILTER_KEYS);
+    const orphelines = Object.keys(complet).filter((k) => !connues.has(k));
+    expect(orphelines).toEqual([]);
+  });
+
+  it("efface un filtre par identifiants — le cas qui manquait", () => {
+    expect(LIST_FILTER_KEYS).toContain("id@in");
+    expect(LIST_FILTER_KEYS).toContain("opportunity_type@in");
+  });
+});
