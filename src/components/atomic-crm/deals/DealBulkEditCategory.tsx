@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Tags } from "lucide-react";
+import { Check, Tags } from "lucide-react";
 import {
   useListContext,
   useNotify,
@@ -17,12 +17,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
@@ -116,18 +117,35 @@ export const DealBulkEditCategory = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger aria-label="Nouvelle catégorie">
-              <SelectValue placeholder="Choisir une catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              {dealCategories.map((choice) => (
-                <SelectItem key={choice.value} value={choice.value}>
-                  {choice.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/*
+            Cherchable, comme le champ du formulaire (NOS-1400) : la liste
+            compte seize entrées, et ce dialogue sert précisément à ranger des
+            lots d'opportunités — dérouler seize lignes à chaque passage
+            annulerait le temps que l'action de masse fait gagner.
+          */}
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Chercher une catégorie…" />
+            <CommandList>
+              <CommandEmpty>Aucune catégorie de ce nom.</CommandEmpty>
+              <CommandGroup>
+                {dealCategories.map((choice) => (
+                  <CommandItem
+                    key={choice.value}
+                    value={choice.label}
+                    onSelect={() => setCategory(choice.value)}
+                  >
+                    <Check
+                      className={`w-4 h-4 ${
+                        category === choice.value ? "opacity-100" : "opacity-0"
+                      }`}
+                      aria-hidden
+                    />
+                    {choice.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
 
           <DialogFooter>
             <Button

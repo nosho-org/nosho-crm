@@ -534,6 +534,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealBulkEditCategory.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealBulkEditOwner.tsx",
           "type": "registry:component"
         },

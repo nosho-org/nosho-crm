@@ -14,6 +14,7 @@ import { arrToMrr, formatCurrency } from "../misc/formatCurrency";
 import {
   archivedDealStages,
   defaultCompanyTypes,
+  defaultDealCategories,
   defaultDealPipelineStatuses,
   defaultDealStageProbabilities,
   defaultDealStages,
@@ -467,5 +468,53 @@ describe("ARR tiers and prefill", () => {
       arr: 0,
       changed: false,
     });
+  });
+});
+
+describe("les catégories de clientèle", () => {
+  /*
+   * Simon, le 08/09/2026 : « et classe les par ordre alphabétique ». La liste
+   * est passée de 8 à 16 entrées en une journée ; l'ordre par familles ne se
+   * retenait plus.
+   *
+   * Ce test vaut pour les ajouts à venir : une entrée posée en fin de liste par
+   * commodité le fera tomber, plutôt que de laisser l'ordre se dégrader une
+   * catégorie à la fois.
+   */
+  it("sont rangées par ordre alphabétique, accents ignorés", () => {
+    const sansAccent = (s: string) =>
+      s
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase();
+
+    const labels = defaultDealCategories.map((c) => sansAccent(c.label));
+    // « Éditeur » doit précéder « Esthétique » : sans le repli d'accent, le É
+    // se rangerait après le s à cause de son code de caractère.
+    expect(labels).toEqual([...labels].sort());
+  });
+
+  it("garde le repli aligné sur la base de production", () => {
+    // `defaultConfiguration` n'est qu'un repli — la table `configuration` fait
+    // foi — mais les deux doivent dire la même chose, sinon un environnement
+    // sans base configurée proposerait une autre liste.
+    expect(defaultDealCategories.map((c) => c.value)).toEqual([
+      "association",
+      "autre",
+      "cabinet",
+      "centre-de-sante",
+      "clinique",
+      "clinique-veterinaire",
+      "dentaire",
+      "editeur-plateforme",
+      "esthetique",
+      "hopital",
+      "imagerie",
+      "institution",
+      "msp",
+      "mutualiste",
+      "partenaire",
+      "scm",
+    ]);
   });
 });

@@ -9,6 +9,7 @@ import {
 } from "ra-core";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { AutocompleteArrayInput } from "@/components/admin/autocomplete-array-input";
+import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 import { ReferenceArrayInput } from "@/components/admin/reference-array-input";
 import { ReferenceInput } from "@/components/admin/reference-input";
 import { DealDoublonAlerte } from "./DealDoublonAlerte";
@@ -225,7 +226,16 @@ const DealMainInputs = ({
           "Vue" select above, which only routes the deal to a pipeline view. */}
       <DealOpportunityTypeInput choices={dealOpportunityTypes} mode={mode} />
 
-      <SelectInput
+      {/*
+        Un champ cherchable et non plus une simple liste (NOS-1400).
+
+        Simon : « permet également de taper dans le champ pour faire remonter
+        la catégorie recherchée ». La liste est passée de 8 à 16 entrées en une
+        journée ; à ce point, dérouler et parcourir coûte plus cher que taper
+        trois lettres. `AutocompleteInput` filtre à la frappe et reste
+        utilisable au clavier seul.
+      */}
+      <AutocompleteInput
         source="category"
         label="Catégorie"
         choices={dealCategories}

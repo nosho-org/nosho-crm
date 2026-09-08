@@ -316,51 +316,47 @@ export const defaultDealNextActionFromStage = "qualified";
  * n'a jamais décrit un CHU. « Aucune catégorie » dit la vérité ; « Autre »
  * aurait affirmé un classement que personne n'a fait.
  */
+/**
+ * Les catégories de clientèle, par ordre alphabétique (NOS-1400).
+ *
+ * Simon, le 08/09/2026 : « et classe les par ordre alphabétique ». La liste
+ * était rangée par familles — structures de soins, puis non soignantes — un
+ * ordre qui se défendait à huit entrées. À seize, plus personne ne retient la
+ * famille d'une catégorie : on la cherche par son nom.
+ *
+ * **Une entrée ajoutée ici va à sa place alphabétique**, accents ignorés :
+ * « Éditeur » se range avant « Esthétique », pas après. La migration qui a
+ * établi cet ordre trie par `immutable_unaccent` et vérifie son propre
+ * résultat ; ce fichier n'est qu'un repli, mais il doit dire la même chose
+ * que la base.
+ *
+ * `partenaire` n'est pas le *type de société* du même nom, qui sert lui à
+ * exclure une opportunité du pipeline commercial (NOS-1090) : c'est une
+ * catégorie de clientèle, au même titre que « Dentaire » ou « Hôpital ».
+ *
+ * `autre` reste le fourre-tout assumé. Retirée le matin du 08/09/2026 puis
+ * rendue le même jour : les catégories ajoutées couvrent l'essentiel des cas
+ * qui y tombaient, pas tous — et un fourre-tout explicite vaut mieux qu'une
+ * catégorie approchante choisie par dépit, qui fausserait les statistiques
+ * sans que personne ne le voie.
+ */
 export const defaultDealCategories = [
+  { value: "association", label: "Association" },
+  { value: "autre", label: "Autre" },
+  { value: "cabinet", label: "Cabinet" },
+  { value: "centre-de-sante", label: "Centre de santé" },
+  { value: "clinique", label: "Clinique" },
+  { value: "clinique-veterinaire", label: "Clinique vétérinaire" },
+  { value: "dentaire", label: "Dentaire" },
+  { value: "editeur-plateforme", label: "Éditeur / plateforme" },
+  { value: "esthetique", label: "Esthétique" },
   { value: "hopital", label: "Hôpital" },
   { value: "imagerie", label: "Imagerie" },
-  { value: "dentaire", label: "Dentaire" },
-  { value: "clinique", label: "Clinique" },
-  // Juste après « Clinique » : quatre opportunités ouvertes portaient des
-  // cliniques vétérinaires faute de mieux (NOS-1398).
-  { value: "clinique-veterinaire", label: "Clinique vétérinaire" },
-  { value: "esthetique", label: "Esthétique" },
-  { value: "cabinet", label: "Cabinet" },
-  /*
-   * Les trois structures d'exercice coordonné (NOS-1398, demandées par Simon
-   * le 08/09/2026). Placées à la suite de « Cabinet » : ce sont des cabinets
-   * de groupe sous des formes juridiques différentes, et les lire côte à côte
-   * évite d'avoir à parcourir la liste entière pour les comparer.
-   */
-  { value: "centre-de-sante", label: "Centre de santé" },
-  { value: "msp", label: "MSP" },
-  { value: "scm", label: "SCM" },
-  /*
-   * Ce qui n'est pas un lieu de soins (NOS-1398).
-   *
-   * « Institution » couvre la Croix Rouge, l'Ordre des Médecins, l'Institut
-   * Curie, les mutuelles et les associations ; « Éditeur / plateforme » couvre
-   * Qare, Cpage, Clikodoc. Treize opportunités ouvertes tombaient dans
-   * « Autre » faute de ces deux entrées.
-   *
-   * Le libellé est au singulier comme tout le reste de la liste : une
-   * catégorie qualifie une société, pas un ensemble.
-   */
-  { value: "editeur-plateforme", label: "Éditeur / plateforme" },
   { value: "institution", label: "Institution" },
-  // NOS-1090. À ne pas confondre avec le *type de société* `partenaire`, qui
-  // sert lui à exclure une opportunité du pipeline commercial : ici c'est une
-  // catégorie de clientèle, au même titre que « Dentaire » ou « Hôpital ».
+  { value: "msp", label: "MSP" },
+  { value: "mutualiste", label: "Mutualiste" },
   { value: "partenaire", label: "Partenaire" },
-  /*
-   * « Autre » reste le fourre-tout, et se lit mieux en dernier.
-   *
-   * Retirée le matin du 08/09/2026 puis rendue le même jour, à la demande de
-   * Simon : les catégories ajoutées couvrent l'essentiel des cas qui y
-   * tombaient, mais pas tous — un fourre-tout explicite vaut mieux qu'une
-   * catégorie approchante choisie par dépit.
-   */
-  { value: "autre", label: "Autre" },
+  { value: "scm", label: "SCM" },
 ];
 
 /**
