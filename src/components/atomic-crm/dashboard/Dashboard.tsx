@@ -8,6 +8,7 @@ import { DashboardKpiBanner } from "./DashboardKpiBanner";
 import { DashboardStepper } from "./DashboardStepper";
 import { BlurFade } from "@/components/ui/motion";
 import { CockpitQueue } from "./CockpitQueue";
+import { CategoryBreakdown } from "./CategoryBreakdown";
 import { PipelineFunnel } from "./PipelineFunnel";
 import { PipelineHealthBanner } from "./PipelineHealthBanner";
 import { RevenueForecastChart } from "./RevenueForecastChart";
@@ -87,9 +88,13 @@ const Cockpit = () => (
  * deviennent dans le temps et où ils se bloquent.
  */
 const Pilotage = () => (
-  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-    <RevenueForecastChart />
-    <PipelineFunnel />
+  <div className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <RevenueForecastChart />
+      <PipelineFunnel />
+    </div>
+    {/* Le detail de ce que le pipeline ci-dessus totalise (NOS-1401). */}
+    <CategoryBreakdown />
   </div>
 );
 

@@ -128,15 +128,15 @@ const KpiCard = ({
    * etirer, et le `MagicCard` intermediaire casse la chaine.
    */
   <MagicCard className="rounded-xl h-full">
-    <Card className="h-full p-3 flex flex-col gap-0.5 min-w-0 bg-transparent">
+    <Card className="h-full p-2 flex flex-col gap-0 min-w-0 bg-transparent">
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground line-clamp-2 min-h-[2.5em] leading-tight">
+        <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground line-clamp-2 min-h-[2.2em] leading-tight">
           {label}
         </span>
         <Icon className="w-3.5 h-3.5 shrink-0" style={{ color }} aria-hidden />
       </div>
       <span
-        className="text-xl font-semibold leading-tight truncate min-h-[1.5rem]"
+        className="text-base font-semibold leading-tight truncate min-h-[1.25rem]"
         style={{ color }}
         title={value}
       >
@@ -150,7 +150,7 @@ const KpiCard = ({
         )}
       </span>
       <span
-        className={`text-xs line-clamp-1 min-h-[1rem] ${
+        className={`text-[0.65rem] line-clamp-1 min-h-[0.9rem] ${
           contextClassName ?? "text-muted-foreground"
         }`}
       >
@@ -358,7 +358,7 @@ const CashHistoryDialog = ({
               qui donne au pourcentage une reference stable, quelle que soit
               la hauteur des etiquettes au-dessus et en dessous.
             */}
-            <div className="flex items-stretch gap-2 h-44 pt-2">
+            <div className="flex items-stretch gap-2 h-32 pt-1">
               {months.map((month) => {
                 const partial = month.month >= current;
                 return (

@@ -6,26 +6,14 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { computeStageBreakdown } from "./cockpit/dealStageBreakdown";
 import { DealCard } from "./DealCard";
-
 /**
- * One hue per stage, from the NOS-956 mockup. Drawn as a rule under the column
- * header rather than as a background: the cards carry the deal's own colours
- * (priority, products, action date) and a tinted column would compete with them.
+ * La teinte de l'étape, tirée de la table partagée (NOS-1401).
+ *
+ * Dessinée en filet sous l'en-tête de colonne plutôt qu'en fond : les cartes
+ * portent déjà leurs propres couleurs — priorité, produits, date d'action — et
+ * une colonne teintée leur ferait concurrence (NOS-956).
  */
-const STAGE_ACCENT: Record<string, string> = {
-  "a-reclasser": "var(--muted-foreground)",
-  lead: "#7cc0f0",
-  qualified: "var(--deal-series-potential)",
-  // Même dégradé que le entonnoir du tableau de bord (PipelineFunnel) : les
-  // deux écrans doivent nommer la même étape de la même couleur.
-  demo: "var(--deal-series-weighted)",
-  poc: "#c4569e",
-  proposal: "#f0993f",
-  negociation: "var(--deal-status-warning)",
-  "closed-won": "var(--deal-status-won)",
-  lost: "var(--deal-status-lost)",
-  churn: "var(--muted-foreground)",
-};
+import { STAGE_COLORS as STAGE_ACCENT } from "../dashboard/stageColors";
 
 export const DealColumn = ({
   stage,

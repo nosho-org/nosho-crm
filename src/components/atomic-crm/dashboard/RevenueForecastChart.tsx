@@ -173,7 +173,7 @@ export const RevenueForecastChart = () => {
           Aucune échéance sur cette période.
         </p>
       ) : (
-        <div className="h-[320px]">
+        <div className="h-[220px]">
           <ResponsiveBar
             data={data}
             indexBy="bucket"

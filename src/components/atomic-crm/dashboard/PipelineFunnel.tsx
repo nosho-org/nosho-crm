@@ -21,6 +21,7 @@ import {
   debutDeSemaine,
   formatVariation,
 } from "./pipelineWeek";
+import { STAGE_COLORS } from "./stageColors";
 
 /**
  * Pipeline par étape (NOS-955 §4), et sa semaine (NOS-1378).
@@ -49,23 +50,6 @@ import {
  * comme le KPI « Nouveaux leads » avant lui (NOS-1178) et pour la même raison.
  * L'interface le dit, plutôt que de laisser croire à un chiffre filtré.
  */
-
-/** One hue per stage, matching the board columns of NOS-956. */
-const STAGE_COLORS: Record<string, string> = {
-  "a-reclasser": "var(--muted-foreground)",
-  lead: "#7cc0f0",
-  qualified: "var(--deal-series-potential)",
-  // `demo` garde le violet de l'ancienne « Démo / POC » — c'est la couleur que
-  // l'équipe associe déjà à cette zone du pipeline. `poc` reçoit un magenta,
-  // interpolé entre ce violet et l'orange de « Proposition », pour que la
-  // progression du dégradé reste continue après le redécoupage du 06/09/2026.
-  demo: "var(--deal-series-weighted)",
-  poc: "#c4569e",
-  proposal: "#f0993f",
-  negociation: "var(--deal-status-warning)",
-  "closed-won": "var(--deal-status-won)",
-  lost: "var(--deal-status-lost)",
-};
 
 /**
  * Le churn est écarté de ce tableau.
@@ -119,15 +103,15 @@ const KpiSemaine = ({
         aria-hidden
       />
       <div className="min-w-0">
-        <span className="block text-lg font-semibold tabular-nums leading-tight">
+        <span className="block text-base font-semibold tabular-nums leading-tight">
           {valeur}
         </span>
-        <span className="block text-xs text-muted-foreground leading-tight">
+        <span className="block text-[0.65rem] text-muted-foreground leading-tight">
           {libelle}
         </span>
         {detail ? (
           <span
-            className="block text-xs tabular-nums leading-tight"
+            className="block text-[0.65rem] tabular-nums leading-tight"
             style={{ color: couleur ?? "var(--muted-foreground)" }}
           >
             {detail}
@@ -138,7 +122,7 @@ const KpiSemaine = ({
   );
 
   const classes =
-    "flex items-start gap-2 min-w-0 rounded-md border border-border/60 px-3 py-2";
+    "flex items-start gap-2 min-w-0 rounded-md border border-border/60 px-2 py-1.5";
 
   // Zéro n'ouvre rien : un lien vers une liste vide promet un contenu qui
   // n'existe pas, et se distingue mal d'un lien cassé.
@@ -248,7 +232,7 @@ export const PipelineFunnel = () => {
   }).format(debut);
 
   return (
-    <Card className="p-4 flex flex-col gap-3 min-w-0">
+    <Card className="p-3 flex flex-col gap-2 min-w-0">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Pipeline par étape</h2>
         <Link
@@ -313,7 +297,7 @@ export const PipelineFunnel = () => {
           Aucune opportunité sur cette sélection.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-1.5">
           {buckets.map((bucket) => {
             const mouvement = semaine.parEtape[bucket.stage] ?? {
               entrees: 0,
@@ -342,7 +326,7 @@ export const PipelineFunnel = () => {
                   <div
                     className="bg-muted overflow-hidden"
                     style={{
-                      height: "0.625rem",
+                      height: "0.5rem",
                       borderRadius: "var(--skin-bar-radius)",
                     }}
                   >
@@ -411,7 +395,7 @@ export const PipelineFunnel = () => {
         </ul>
       )}
 
-      <p className="text-xs text-muted-foreground border-t border-border/60 pt-2">
+      <p className="text-[0.65rem] text-muted-foreground border-t border-border/60 pt-1.5 leading-snug">
         <strong className="font-medium">Entrées</strong> = opportunités ayant
         rejoint l'étape cette semaine (un flux).{" "}
         <strong className="font-medium">vs W-1</strong> = variation du stock
