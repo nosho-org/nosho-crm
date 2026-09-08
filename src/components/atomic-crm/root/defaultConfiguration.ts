@@ -244,11 +244,52 @@ export const defaultLeadSources = [
   { value: "autre", label: "Autre" },
 ];
 
-/** ARR grid driving the suggested amount on a deal. Editable in the settings. */
+/**
+ * Le type d'établissement d'une société — la MÊME liste que les catégories
+ * d'opportunité (NOS-1404).
+ *
+ * Simon, le 08/09/2026 : « quand on crée une société depuis la création
+ * d'opportunité, le champ catégorie ne reprend pas toutes les catégories ».
+ *
+ * Il avait raison, et la cause était une collision de vocabulaire : deux
+ * taxonomies portaient le nom « Catégorie » à deux endroits du même
+ * formulaire. Celle de l'opportunité comptait seize entrées, celle de la
+ * société trois — Cabinet, Clinique, Hôpital. Créer une société depuis une
+ * opportunité proposait donc trois choix là où l'écran d'à côté en offrait
+ * seize.
+ *
+ * Les deux listes sont désormais identiques, slugs compris. Une société
+ * qualifiée « MSP » et une opportunité qualifiée « MSP » disent enfin la
+ * même chose.
+ *
+ * ## Le tarif reste sur trois entrées seulement
+ *
+ * `arr` alimente l'ARR proposé à la création d'une opportunité. Les trois
+ * paliers connus sont conservés tels quels ; les treize autres n'en ont pas,
+ * et `getSuggestedArr` rend alors `null` — aucune suggestion, plutôt qu'un
+ * montant inventé. Un prix faux se propagerait dans le pipeline pondéré sans
+ * que personne ne sache d'où il vient.
+ *
+ * D'où `arr` facultatif : la grille tarifaire se complète quand Simon aura
+ * les prix, pas avant.
+ */
 export const defaultEstablishmentTypes: EstablishmentType[] = [
+  { value: "association", label: "Association" },
+  { value: "autre", label: "Autre" },
   { value: "cabinet", label: "Cabinet", arr: 800 },
+  { value: "centre-de-sante", label: "Centre de santé" },
   { value: "clinique", label: "Clinique", arr: 5000 },
+  { value: "clinique-veterinaire", label: "Clinique vétérinaire" },
+  { value: "dentaire", label: "Dentaire" },
+  { value: "editeur-plateforme", label: "Éditeur / plateforme" },
+  { value: "esthetique", label: "Esthétique" },
   { value: "hopital", label: "Hôpital", arr: 15000 },
+  { value: "imagerie", label: "Imagerie" },
+  { value: "institution", label: "Institution" },
+  { value: "msp", label: "MSP" },
+  { value: "mutualiste", label: "Mutualiste" },
+  { value: "partenaire", label: "Partenaire" },
+  { value: "scm", label: "SCM" },
 ];
 
 /** Issue #94 asks for an inactivity alert after "X jours"; X defaults to 14. */

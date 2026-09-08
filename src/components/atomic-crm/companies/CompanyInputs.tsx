@@ -137,9 +137,19 @@ const CompanyContextInputs = () => {
       <SelectInput
         source="establishment_type"
         label="Type d'établissement"
+        /*
+         * Le tarif n'est affiché que là où il existe (NOS-1404).
+         *
+         * Depuis que la liste couvre les seize catégories, treize d'entre
+         * elles n'ont pas de palier d'ARR. Les formater quand même donnerait
+         * « MSP — 0 € ARR », un prix affiché qui n'a jamais été décidé.
+         */
         choices={establishmentTypes.map((type) => ({
           ...type,
-          label: `${type.label} — ${formatCurrency(type.arr, currency)} ARR`,
+          label:
+            typeof type.arr === "number"
+              ? `${type.label} — ${formatCurrency(type.arr, currency)} ARR`
+              : type.label,
         }))}
         optionText="label"
         optionValue="value"

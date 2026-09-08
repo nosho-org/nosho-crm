@@ -537,8 +537,15 @@ export interface DealPriority extends LabeledValue {
  * prefill an empty (or never manually edited) deal amount.
  */
 export interface EstablishmentType extends LabeledValue {
-  /** Suggested ARR in euros. */
-  arr: number;
+  /**
+   * ARR suggéré, en euros — FACULTATIF depuis NOS-1404.
+   *
+   * Seuls trois types portent un tarif : Cabinet, Clinique, Hôpital. Les
+   * treize autres n'en ont pas, et `getSuggestedArr` rend alors `null`.
+   * Aucune suggestion vaut mieux qu'un montant invente, qui se propagerait
+   * dans le pipeline pondere sans que personne ne sache d'ou il vient.
+   */
+  arr?: number;
 }
 
 export interface NoteStatus extends LabeledValue {
