@@ -7,6 +7,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
 import { DealBulkEditCategory } from "./DealBulkEditCategory";
+import { DealCategoryCell } from "./DealCategoryCell";
 import { DealBulkEditOwner } from "./DealBulkEditOwner";
 import { DealBulkEditStage } from "./DealBulkEditStage";
 import { DealPriorityField } from "./DealPriorityField";
@@ -105,7 +106,7 @@ const COLUMN_WIDTHS = {
 } as const;
 
 export const DealListTable = () => {
-  const { dealStages, dealCategories, currency } = useConfigurationContext();
+  const { dealStages, currency } = useConfigurationContext();
   const { data } = useListContext<Deal>();
 
   if (!data?.length) return null;
@@ -190,7 +191,9 @@ export const DealListTable = () => {
         headerClassName={COLUMN_WIDTHS.category}
         cellClassName="truncate"
       >
-        <ChoiceField choices={dealCategories} source="category" />
+        {/* Modifiable en place (NOS-1402) : changer une seule ligne ne doit
+            pas coûter l'ouverture d'une fiche. */}
+        <DealCategoryCell />
       </DataTable.Col>
       {/*
         Le nom vient de la vue, pas d'une référence (NOS-1172).
@@ -372,33 +375,6 @@ const StageField = ({
   return <span>{findDealLabel(stages, record.stage) ?? record.stage}</span>;
 };
 
-/**
- * La catégorie de l'opportunité.
- *
- * Le repli sur `legacy_category` a été retiré le 29/08/2026, avec la catégorie
- * « À reclasser » qui le déclenchait (issue #108).
- *
- * Il ne se justifiait que tant que ce placeholder existait. Et le conserver
- * serait devenu nuisible : les valeurs qu'il exhume — `copywriting`,
- * `print-project`, `ui-design` — sont celles du jeu de démonstration d'Atomic
- * CRM, restées en base avant la refonte v2. Elles n'ont jamais décrit ces
- * affaires ; les afficher sur un CHU serait pire que de n'afficher rien.
- *
- * `legacy_category` reste en base : les 25 opportunités concernées demeurent
- * identifiables par `category is null and legacy_category is not null`.
- */
-const ChoiceField = ({
-  choices,
-  source,
-}: {
-  choices: { value: string; label: string }[];
-  source: "category";
-}) => {
-  const record = useRecordContext<Deal>();
-  const value = record?.[source];
-  if (!value) return <span className="text-muted-foreground">—</span>;
-  return <span>{choices.find((c) => c.value === value)?.label ?? value}</span>;
-};
 
 const ArrField = ({ currency }: { currency: string }) => {
   const record = useRecordContext<Deal>();

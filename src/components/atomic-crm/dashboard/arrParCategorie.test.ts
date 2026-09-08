@@ -204,3 +204,26 @@ describe("computeArrParCategorie — la barre par étape", () => {
     expect(r.lignes[0].parEtape.map((p) => p.stage)).toEqual(["lead"]);
   });
 });
+
+describe("aucune étape terminale ne doit apparaître (NOS-1402)", () => {
+  /*
+   * Simon : « dans le tableau tu mets pas les closed won, lost et churn ».
+   *
+   * Le calcul les écartait déjà — c'est la LÉGENDE du composant qui les
+   * nommait encore, en listant toutes les étapes configurées plutôt que celles
+   * réellement dessinées. Ce test verrouille le côté données ; la légende, elle,
+   * se construit désormais depuis les seules étapes ouvertes.
+   */
+  it("ne les fait jamais entrer dans une barre", () => {
+    const r = calcul([
+      deal({ stage: "lead" }),
+      deal({ stage: "closed-won" }),
+      deal({ stage: "lost" }),
+    ]);
+    const etapes = r.lignes.flatMap((l) => l.parEtape.map((p) => p.stage));
+    for (const terminale of TERMINALES) {
+      expect(etapes).not.toContain(terminale);
+    }
+    expect(etapes).toEqual(["lead"]);
+  });
+});

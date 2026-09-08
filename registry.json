@@ -346,6 +346,14 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/dashboard/arrParCategorie.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/dashboard/CategoryBreakdown.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/dashboard/CockpitQueue.tsx",
           "type": "registry:component"
         },
@@ -407,6 +415,10 @@
         },
         {
           "path": "src/components/atomic-crm/dashboard/RevenueForecastChart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/dashboard/stageColors.ts",
           "type": "registry:component"
         },
         {
