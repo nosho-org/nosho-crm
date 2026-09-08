@@ -48,7 +48,6 @@ export const STAGES_REQUIRING_SIRET = [
   "demo",
   "poc",
   "proposal",
-  "negociation",
   "closed-won",
 ] as const;
 

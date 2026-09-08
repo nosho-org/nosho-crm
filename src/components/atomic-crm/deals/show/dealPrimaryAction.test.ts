@@ -21,7 +21,6 @@ describe("getDealPrimaryAction", () => {
 
   it("propose le contrat une fois la proposition partie", () => {
     expect(getDealPrimaryAction("proposal")).toBe("contract");
-    expect(getDealPrimaryAction("negociation")).toBe("contract");
   });
 
   it("ne propose rien sur une affaire close", () => {

@@ -65,7 +65,6 @@ export const defaultDealStages = [
   { value: "demo", label: "Démo" },
   { value: "poc", label: "POC" },
   { value: "proposal", label: "Proposition" },
-  { value: "negociation", label: "Négociation" },
   { value: "closed-won", label: "Close Won" },
   { value: "lost", label: "Lost" },
   { value: "churn", label: "Churn" },
@@ -89,6 +88,18 @@ export const archivedDealStages = [
   // reste résoluble si un enregistrement égaré la porte encore, plutôt que
   // d'afficher son slug brut.
   { value: "a-reclasser", label: "À reclasser" },
+  /*
+   * Retirée du pipeline le 08/09/2026, à la demande de Simon.
+   *
+   * Le retrait a été mesuré avant d'être fait : **aucune opportunité ne l'a
+   * jamais portée**, et le journal des changements n'enregistre aucun passage
+   * vers cette étape depuis mars 2026. C'était une case du tunnel que
+   * personne n'a jamais cochée.
+   *
+   * Archivée plutôt que supprimée, par principe : une étape effacée tout
+   * court afficherait son slug brut si une ligne égarée la mentionnait.
+   */
+  { value: "negociation", label: "Négociation" },
   /*
    * Redécoupée en `demo` + `poc` le 06/09/2026. Archivée plutôt que
    * supprimée, et c'est indispensable : `deal_change_log` conserve des
@@ -287,7 +298,6 @@ export const defaultDealStageProbabilities: Record<string, number> = {
   demo: 40,
   poc: 55,
   proposal: 70,
-  negociation: 85,
 };
 
 /**

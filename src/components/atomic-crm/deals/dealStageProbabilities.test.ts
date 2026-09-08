@@ -29,7 +29,6 @@ describe("pondération par étape", () => {
     // utilisateurs, souvent un contrat POC — sans que le prix soit acté.
     expect(getDealProbability(deal("poc"), config).value).toBe(0.55);
     expect(getDealProbability(deal("proposal"), config).value).toBe(0.7);
-    expect(getDealProbability(deal("negociation"), config).value).toBe(0.85);
   });
 
   it("treats a closed outcome as a fact, not an estimate", () => {

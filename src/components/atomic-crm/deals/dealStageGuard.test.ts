@@ -32,7 +32,6 @@ describe("stageRequiresSiret", () => {
     // démo comme le POC sont au-dessus de qualifié.
     expect(stageRequiresSiret("poc")).toBe(true);
     expect(stageRequiresSiret("proposal")).toBe(true);
-    expect(stageRequiresSiret("negociation")).toBe(true);
     expect(stageRequiresSiret("closed-won")).toBe(true);
   });
 

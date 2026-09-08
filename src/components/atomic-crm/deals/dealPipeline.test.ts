@@ -31,7 +31,10 @@ const view = (id: string, label: string, companyType: string): CustomView => ({
 
 // NOS-796, revised by NOS-956 (seven-stage pipeline)
 describe("canonical pipeline", () => {
-  it("has the 7 commercial stages, in order, closed by churn", () => {
+  it("has the 6 commercial stages, in order, closed by churn", () => {
+    // « Négociation » retirée le 08/09/2026 : aucune opportunité ne l'a jamais
+    // portée, et le journal n'enregistre aucun passage vers elle depuis mars.
+    // Une case du tunnel que personne n'avait jamais cochée.
     // « Démo / POC » redécoupée le 06/09/2026 : `demo` puis `poc`, dans cet
     // ordre. Une démo est une présentation, un POC un déploiement d'essai —
     // on ne lance pas le second avant d'avoir fait la première.
@@ -41,7 +44,6 @@ describe("canonical pipeline", () => {
       "demo",
       "poc",
       "proposal",
-      "negociation",
       "closed-won",
       "lost",
       // Terminal, still counted in lost ARR, only hidden from the board.

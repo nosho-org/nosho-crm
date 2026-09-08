@@ -566,6 +566,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/DealCategoryCell.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/DealColumn.tsx",
           "type": "registry:component"
         },

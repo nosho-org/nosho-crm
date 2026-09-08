@@ -36,7 +36,7 @@ export type DealPrimaryAction = "task" | "contract" | null;
  * - `demo`, `poc` : la démo est passée, la suite est le POC puis la
  *   proposition. C'est précisément le goulot relevé par l'audit — aucun deal
  *   n'a franchi Démo → Proposition ce trimestre.
- * - `proposal`, `negociation` : la proposition est partie, ce qui reste à
+ * - `proposal` : la proposition est partie, ce qui reste à
  *   produire est le contrat.
  */
 const PRIMARY_BY_STAGE: Record<string, DealPrimaryAction> = {
@@ -59,7 +59,6 @@ const PRIMARY_BY_STAGE: Record<string, DealPrimaryAction> = {
   demo: "contract",
   poc: "contract",
   proposal: "contract",
-  negociation: "contract",
   "closed-won": null,
   lost: null,
   churn: null,
