@@ -8,7 +8,7 @@
  * couleur du kanban à l'entonnoir au tableau, sinon chaque graphique demande un
  * effort de traduction.
  *
- * ## La palette, choisie par Simon (NOS-1403)
+ * ## La palette, choisie par Simon (NOS-1430)
  *
  * « change les couleurs : gris, bleu, vert, violet, rouge » — une par étape
  * ouverte, dans l'ordre du tunnel. Le noir de sa liste revenait à
@@ -39,7 +39,7 @@ export const STAGE_COLORS: Record<string, string> = {
   // ne pas la confondre avec une affaire jamais gagnée.
   churn: "var(--muted-foreground)",
   /*
-   * « Négociation » a quitté le pipeline le 08/09/2026 (NOS-1403) : aucune
+   * « Négociation » a quitté le pipeline le 08/09/2026 (NOS-1430) : aucune
    * opportunité ne l'a jamais portée, et son historique était vide. La teinte
    * reste ici pour que le journal des changements sache encore la dessiner si
    * une ligne égarée la mentionne.

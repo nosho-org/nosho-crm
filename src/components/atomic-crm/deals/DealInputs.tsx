@@ -227,7 +227,7 @@ const DealMainInputs = ({
       <DealOpportunityTypeInput choices={dealOpportunityTypes} mode={mode} />
 
       {/*
-        Un champ cherchable et non plus une simple liste (NOS-1400).
+        Un champ cherchable et non plus une simple liste (NOS-1426).
 
         Simon : « permet également de taper dans le champ pour faire remonter
         la catégorie recherchée ». La liste est passée de 8 à 16 entrées en une

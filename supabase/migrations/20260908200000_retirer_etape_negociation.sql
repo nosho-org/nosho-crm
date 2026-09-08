@@ -1,4 +1,4 @@
--- Retirer l'etape "Negociation" du pipeline (NOS-1403).
+-- Retirer l'etape "Negociation" du pipeline (NOS-1430).
 --
 -- Simon, le 08/09/2026 : "supprime en negociation".
 --

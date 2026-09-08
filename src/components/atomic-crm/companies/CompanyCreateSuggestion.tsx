@@ -11,6 +11,7 @@ import { TextInput } from "@/components/admin/text-input";
 import { AutocompleteInput } from "@/components/admin/autocomplete-input";
 
 import { CreateSheet } from "../misc/CreateSheet";
+import { BoutonEnrichirFormulaire } from "./BoutonEnrichirFormulaire";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company } from "../types";
 
@@ -89,6 +90,17 @@ export const CompanyCreateSuggestion = ({
           validate={required()}
           helperText={false}
         />
+
+        {/*
+          L'enrichissement, ici aussi (NOS-1432).
+
+          Il n'existait que sur la page complète de création. Une société créée
+          depuis une opportunité naissait donc avec un nom et rien d'autre, et
+          ne déclenchait ensuite ni ARR suggéré — qui se lit sur
+          `establishment_type` — ni descriptif dans le bloc « Le client ».
+        */}
+        <BoutonEnrichirFormulaire />
+
         <SelectInput
           source="establishment_type"
           label="Catégorie"

@@ -205,7 +205,7 @@ describe("computeArrParCategorie — la barre par étape", () => {
   });
 });
 
-describe("aucune étape terminale ne doit apparaître (NOS-1402)", () => {
+describe("aucune étape terminale ne doit apparaître (NOS-1428)", () => {
   /*
    * Simon : « dans le tableau tu mets pas les closed won, lost et churn ».
    *

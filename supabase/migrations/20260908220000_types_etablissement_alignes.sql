@@ -1,4 +1,4 @@
--- Aligner les types d'etablissement sur les categories d'opportunite (NOS-1404).
+-- Aligner les types d'etablissement sur les categories d'opportunite (NOS-1431).
 --
 -- Simon, le 08/09/2026 : "quand on cree une opportunite et qu'on cree une
 -- societe depuis la creation d'opportunite, le champ categorie ne reprend pas

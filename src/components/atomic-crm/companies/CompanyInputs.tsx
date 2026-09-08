@@ -138,7 +138,7 @@ const CompanyContextInputs = () => {
         source="establishment_type"
         label="Type d'établissement"
         /*
-         * Le tarif n'est affiché que là où il existe (NOS-1404).
+         * Le tarif n'est affiché que là où il existe (NOS-1431).
          *
          * Depuis que la liste couvre les seize catégories, treize d'entre
          * elles n'ont pas de palier d'ARR. Les formater quand même donnerait

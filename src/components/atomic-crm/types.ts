@@ -538,7 +538,7 @@ export interface DealPriority extends LabeledValue {
  */
 export interface EstablishmentType extends LabeledValue {
   /**
-   * ARR suggéré, en euros — FACULTATIF depuis NOS-1404.
+   * ARR suggéré, en euros — FACULTATIF depuis NOS-1431.
    *
    * Seuls trois types portent un tarif : Cabinet, Clinique, Hôpital. Les
    * treize autres n'en ont pas, et `getSuggestedArr` rend alors `null`.

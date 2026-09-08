@@ -191,7 +191,7 @@ export const DealListTable = () => {
         headerClassName={COLUMN_WIDTHS.category}
         cellClassName="truncate"
       >
-        {/* Modifiable en place (NOS-1402) : changer une seule ligne ne doit
+        {/* Modifiable en place (NOS-1429) : changer une seule ligne ne doit
             pas coûter l'ouverture d'une fiche. */}
         <DealCategoryCell />
       </DataTable.Col>

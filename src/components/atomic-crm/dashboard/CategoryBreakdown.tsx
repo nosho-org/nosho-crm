@@ -18,7 +18,7 @@ import { STAGE_COLORS } from "./stageColors";
 import { SANS_CATEGORIE, computeArrParCategorie } from "./arrParCategorie";
 
 /**
- * L'ARR par catégorie de clientèle, et l'avancement de chacune (NOS-1401).
+ * L'ARR par catégorie de clientèle, et l'avancement de chacune (NOS-1427).
  *
  * Simon : « ajoute un tableau qui donne l'ARR par catégorie, et tu mets des
  * diagrammes en barre en pourcentage par étapes des leads ».
@@ -42,7 +42,7 @@ export const CategoryBreakdown = () => {
   const { deals, weighting, selectionFilter } = useDashboard();
 
   /*
-   * Le filtre d'étape, local à cette carte (NOS-1402).
+   * Le filtre d'étape, local à cette carte (NOS-1428).
    *
    * Simon : « mets un filtre sur ce tableau qui permet de choisir l'état de
    * l'opportunité ». Local et non branché sur le filtre global : le tableau de
@@ -237,7 +237,7 @@ export const CategoryBreakdown = () => {
         figuraient encore alors qu'aucune barre ne les emploie — le tableau
         écarte les affaires closes depuis l'origine. Une légende qui nomme des
         couleurs absentes du graphique fait chercher au lecteur ce qui n'y est
-        pas (NOS-1402, signalé par Simon).
+        pas (NOS-1428, signalé par Simon).
       */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border/60 pt-2">
         {etapesOuvertes

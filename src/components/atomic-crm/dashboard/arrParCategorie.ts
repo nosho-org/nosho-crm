@@ -2,7 +2,7 @@ import type { DealStage, LabeledValue } from "../types";
 
 /**
  * ---------------------------------------------------------------------------
- * L'ARR par catégorie de clientèle, et son avancement (NOS-1401)
+ * L'ARR par catégorie de clientèle, et son avancement (NOS-1427)
  * ---------------------------------------------------------------------------
  * Simon, le 08/09/2026 : « ajoute un tableau qui donne l'ARR par catégorie, et
  * tu mets des diagrammes en barre en pourcentage par étapes des leads ».

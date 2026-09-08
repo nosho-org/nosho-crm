@@ -19,7 +19,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 
 /**
- * La catégorie, modifiable depuis la liste (NOS-1402).
+ * La catégorie, modifiable depuis la liste (NOS-1429).
  *
  * Simon, le 08/09/2026 : « depuis la page opportunité, permet aussi de pouvoir
  * changer la catégorie en masse ou par ligne ».

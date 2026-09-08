@@ -118,7 +118,7 @@ export const DealBulkEditCategory = () => {
           </DialogHeader>
 
           {/*
-            Cherchable, comme le champ du formulaire (NOS-1400) : la liste
+            Cherchable, comme le champ du formulaire (NOS-1426) : la liste
             compte seize entrées, et ce dialogue sert précisément à ranger des
             lots d'opportunités — dérouler seize lignes à chaque passage
             annulerait le temps que l'action de masse fait gagner.

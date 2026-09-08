@@ -7,7 +7,7 @@ import type { Deal } from "../types";
 import { computeStageBreakdown } from "./cockpit/dealStageBreakdown";
 import { DealCard } from "./DealCard";
 /**
- * La teinte de l'étape, tirée de la table partagée (NOS-1401).
+ * La teinte de l'étape, tirée de la table partagée (NOS-1430).
  *
  * Dessinée en filet sous l'en-tête de colonne plutôt qu'en fond : les cartes
  * portent déjà leurs propres couleurs — priorité, produits, date d'action — et

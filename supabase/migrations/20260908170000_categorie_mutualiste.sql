@@ -1,4 +1,4 @@
--- Ajouter les categories "Mutualiste" et "Association" (NOS-1400).
+-- Ajouter les categories "Mutualiste" et "Association" (NOS-1426).
 --
 -- Simon, le 08/09/2026 : "ajoute mutualiste dans les categories", puis
 -- "ajoute Association aussi".
@@ -61,7 +61,7 @@ where not exists (
   where cat ->> 'value' = 'association'
 );
 
--- 3. Trier la liste par ordre alphabetique (NOS-1400).
+-- 3. Trier la liste par ordre alphabetique (NOS-1426).
 --
 -- Simon : "et classe les par ordre alphabetique". Elle etait rangee par
 -- familles -- structures de soins, puis non soignantes -- un ordre qui se

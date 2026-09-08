@@ -93,7 +93,7 @@ const Pilotage = () => (
       <RevenueForecastChart />
       <PipelineFunnel />
     </div>
-    {/* Le detail de ce que le pipeline ci-dessus totalise (NOS-1401). */}
+    {/* Le detail de ce que le pipeline ci-dessus totalise (NOS-1427). */}
     <CategoryBreakdown />
   </div>
 );

@@ -246,7 +246,7 @@ export const defaultLeadSources = [
 
 /**
  * Le type d'établissement d'une société — la MÊME liste que les catégories
- * d'opportunité (NOS-1404).
+ * d'opportunité (NOS-1431).
  *
  * Simon, le 08/09/2026 : « quand on crée une société depuis la création
  * d'opportunité, le champ catégorie ne reprend pas toutes les catégories ».
@@ -368,7 +368,7 @@ export const defaultDealNextActionFromStage = "qualified";
  * aurait affirmé un classement que personne n'a fait.
  */
 /**
- * Les catégories de clientèle, par ordre alphabétique (NOS-1400).
+ * Les catégories de clientèle, par ordre alphabétique (NOS-1426).
  *
  * Simon, le 08/09/2026 : « et classe les par ordre alphabétique ». La liste
  * était rangée par familles — structures de soins, puis non soignantes — un
