@@ -13,7 +13,7 @@ import { findDealLabel } from "../deals/deal";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Contact, Deal } from "../types";
-import { ordonnerOpportunites } from "./opportunitesDuContact";
+import { opportunitesOuvertes } from "./opportunitesDuContact";
 
 /**
  * ---------------------------------------------------------------------------
@@ -28,27 +28,26 @@ import { ordonnerOpportunites } from "./opportunitesDuContact";
  * fiche d'une personne, il fallait passer par sa société puis retrouver la
  * bonne affaire. Or c'est en parlant à quelqu'un qu'on a besoin du dossier.
  *
+ * ## Les ouvertes seulement
+ *
+ * Simon, après un premier jet qui listait tout : « mets que les opportunités
+ * ouvertes en fait ». Ni les affaires arrivées à leur terme, ni les archivées
+ * — {@link opportunitesOuvertes} porte la règle et le prix mesuré du filtre.
+ *
  * ## Un bouton, ou une liste, selon ce que le contact porte vraiment
  *
- * Compté en production avant d'écrire : sur 516 contacts, **307 portent
- * exactement une opportunité**, 195 aucune, et 14 en portent plusieurs.
+ * Compté en production : sur 516 contacts, **223 ont exactement une
+ * opportunité ouverte**, deux en ont plusieurs (l'un en a cinq), et 291 n'en
+ * ont aucune.
  *
  * Le cas courant mérite donc un lien direct — un menu à un seul élément serait
- * un clic ajouté pour rien. Les quatorze autres méritent le menu : afficher
+ * un clic ajouté pour rien. Les deux autres méritent le menu : afficher
  * « l'opportunité » au singulier en en cachant quatre ferait passer un choix
  * arbitraire pour un fait.
  *
- * Aucun bouton quand il n'y a rien à ouvrir : un bouton désactivé occuperait
- * la même place sans jamais rien faire.
- *
- * ## Les archivées sont exclues
- *
- * `DealList` filtre `archived_at@is: null` ; ce raccourci fait de même, pour
- * que le mot « opportunité » désigne la même chose des deux côtés. Treize
- * contacts n'ont que des opportunités archivées et n'auront donc pas de
- * bouton — ils restent atteignables par la liste des opportunités archivées,
- * et un raccourci qui ouvrirait une affaire archivée sans le dire tromperait
- * plus qu'il n'aiderait.
+ * Aucun bouton quand il n'y a rien d'ouvert : un bouton désactivé occuperait
+ * la même place sans jamais rien faire, et la fiche de la société reste le
+ * chemin complet vers les affaires closes.
  */
 export const BoutonOpportunites = ({
   className,
@@ -62,14 +61,12 @@ export const BoutonOpportunites = ({
   const { data, isPending } = useGetList<Deal>(
     "deals",
     {
-      // Le maximum observé est de cinq ; vingt-cinq laisse de la marge sans
-      // jamais paginer.
+      // Le maximum observé est de cinq, toutes étapes confondues ; vingt-cinq
+      // laisse de la marge sans jamais paginer. Le tri des ouvertes se fait
+      // ensuite côté client, sur si peu de lignes.
       pagination: { page: 1, perPage: 25 },
       sort: { field: "updated_at", order: "DESC" },
-      filter: {
-        "contact_ids@cs": `{${contact?.id}}`,
-        "archived_at@is": null,
-      },
+      filter: { "contact_ids@cs": `{${contact?.id}}` },
     },
     { enabled: contact?.id != null },
   );
@@ -78,7 +75,10 @@ export const BoutonOpportunites = ({
   // déplacerait l'en-tête sous le curseur.
   if (isPending || !data?.length) return null;
 
-  const opportunites = ordonnerOpportunites(data, dealPipelineStatuses);
+  const opportunites = opportunitesOuvertes(data, dealPipelineStatuses);
+
+  // Le contact a des affaires, mais aucune en cours : 96 contacts sur 516.
+  if (!opportunites.length) return null;
 
   if (opportunites.length === 1) {
     const seule = opportunites[0];
