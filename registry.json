@@ -94,6 +94,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/companies/BoutonEnrichirFormulaire.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/companies/CompanyAside.tsx",
           "type": "registry:component"
         },
@@ -155,6 +159,10 @@
         },
         {
           "path": "src/components/atomic-crm/companies/companyTypology.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/companies/enrichirSociete.ts",
           "type": "registry:component"
         },
         {

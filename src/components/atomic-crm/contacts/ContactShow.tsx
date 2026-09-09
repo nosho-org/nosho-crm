@@ -24,6 +24,7 @@ import { CompanyAvatar } from "../companies/CompanyAvatar";
 import { NoteCreate, NotesIterator, NotesIteratorMobile } from "../notes";
 import { NoteCreateSheet } from "../notes/NoteCreateSheet";
 import { ContactEditSheet } from "./ContactEditSheet";
+import { BoutonOpportunites } from "./BoutonOpportunites";
 import { TagsListEdit } from "./TagsListEdit";
 import { ContactPersonalInfo } from "./ContactPersonalInfo";
 import { ContactBackgroundInfo } from "./ContactBackgroundInfo";
@@ -139,6 +140,14 @@ const ContactShowContentMobile = () => {
               </ReferenceField>
             </div>
           </div>
+        </div>
+
+        {/*
+          Sur mobile l'en-tête n'a de place que pour le retour et la modification :
+          le raccourci descend sous l'identité, pleine largeur (NOS-1483).
+        */}
+        <div className="mb-4 empty:mb-0">
+          <BoutonOpportunites className="w-full" />
         </div>
 
         <Tabs defaultValue="notes" className="w-full">
@@ -299,6 +308,11 @@ const ContactShowContent = () => {
             >
               <CompanyAvatar />
             </ReferenceField>
+            {/*
+              Le raccourci vers l'affaire (NOS-1483), posé avant « Modifier » :
+              on vient bien plus souvent lire un dossier que corriger une fiche.
+            */}
+            <BoutonOpportunites />
             <EditButton
               label="Modifier le contact"
               variant="outline"
