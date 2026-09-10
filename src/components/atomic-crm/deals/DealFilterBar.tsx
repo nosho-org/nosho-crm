@@ -178,7 +178,13 @@ const FilterMultiSelect = ({
  */
 const contractKeyOf = (
   field: string,
-): "salesId" | "category" | "opportunityType" | "priority" | "stage" => {
+):
+  | "salesId"
+  | "category"
+  | "opportunityType"
+  | "motion"
+  | "priority"
+  | "stage" => {
   /*
    * Les deux colonnes dont le nom PostgREST diffère du champ du contrat.
    *
@@ -194,7 +200,8 @@ const contractKeyOf = (
     opportunity_type: "opportunityType",
   };
   return (
-    EXCEPTIONS[field] ?? (field as "category" | "priority" | "stage")
+    EXCEPTIONS[field] ??
+    (field as "category" | "motion" | "priority" | "stage")
   );
 };
 
@@ -242,6 +249,7 @@ const FilterSelect = ({
 export const DealFilterBar = () => {
   const {
     dealCategories,
+    dealMotions,
     dealOpportunityTypes,
     dealPriorities,
     dealProducts,
@@ -450,6 +458,25 @@ export const DealFilterBar = () => {
         allLabel="Tous"
         choices={dealOpportunityTypes}
         className="w-44"
+      />
+
+      {/*
+        Motion (NOS-1485), dans le même groupe : catégorie, type et motion
+        qualifient tous les trois l'affaire — à qui on vend, ce qu'on vend, et
+        ce que la vendre va coûter. Les filtres voisins portent sur son
+        avancement ou son responsable.
+
+        Combinable avec les autres, comme la spec le demande : la barre passe
+        toute sa sélection par `toListFilter`, donc « Motion = Strategic » et
+        « Étape = Qualifié » s'additionnent sans traitement particulier.
+      */}
+      <FilterMultiSelect
+        label="Motion"
+        selected={readSelection(filterValues, "motion")}
+        onToggle={(value) => toggleSelection("motion", value)}
+        onClear={() => clearSelection("motion")}
+        allLabel="Toutes"
+        choices={dealMotions}
       />
 
       {/* Multi-select, so pills again: "Produit = No-show + Entrant" means

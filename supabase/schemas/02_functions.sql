@@ -726,9 +726,9 @@ DECLARE
   --   * updated_at            rewritten on every single save, so it changes on
   --                           100% of updates and would double every entry;
   --   * index                 kanban ordering, rewritten for a whole column on
-  --                           one drag & drop — tens of rows per gesture;
+  --                           one drag & drop - tens of rows per gesture;
   --   * mrr, priority_rank    generated columns; they would duplicate every
-  --     name_search, …        amount / priority entry;
+  --     name_search, ...      amount / priority entry;
   --   * won_at                derived from stage, same;
   --   * arr_is_manual         flipped as a side effect of typing an amount;
   --   * legacy_stage/category migration bookkeeping, never business.
@@ -736,6 +736,7 @@ DECLARE
     'stage', 'amount', 'priority', 'sales_id', 'expected_closing_date',
     'contact_ids', 'products', 'contact_roles',
     'name', 'company_id', 'company_type', 'opportunity_type', 'category',
+    'motion',
     'lead_source', 'referrer_id', 'probability', 'description',
     'next_action', 'next_action_date', 'next_action_owner_id',
     'trial_start_date', 'entered_at', 'archived_at'

@@ -78,7 +78,13 @@ import { formatISODateString } from "./dealUtils";
  * proportionally, which is still stage-independent.
  */
 const COLUMN_WIDTHS = {
-  priority: "w-[100px]",
+  // Resserrée de 100 à 76 px (NOS-1485) : la colonne ne porte plus le point et
+  // son libellé « P0 Critique » mais la seule pastille « P0 ». Les 24 px
+  // récupérés paient une partie de la colonne Motion voisine.
+  priority: "w-[76px]",
+  // « Strategic » est la plus longue des trois valeurs ; l'en-tête « Motion »
+  // tient dans la même largeur.
+  motion: "w-[96px]",
   enteredAt: "w-[100px]",
   category: "w-[88px]",
   // En-tête « Type » et non « Type d'opportunité » (NOS-1093) : l'intitulé
@@ -160,7 +166,10 @@ export const DealListTable = () => {
        * déjà la colonne Priorité, prise ici pour repère : c'est son contenu qui
        * fait 12 px, pas son titre.
        */
-      className="[&_table]:table-fixed [&_table]:min-w-[1276px] [&_table]:text-xs [&_thead_th]:text-sm"
+      // 1276 → 1348 px (NOS-1485) : Motion ajoute 96 px, Priorité en rend 24.
+      // La somme doit rester égale au total des largeurs de colonnes, sinon la
+      // table redevient élastique et les colonnes bougent selon le filtre.
+      className="[&_table]:table-fixed [&_table]:min-w-[1348px] [&_table]:text-xs [&_thead_th]:text-sm"
     >
       <DataTable.Col
         source="entered_at"
@@ -175,7 +184,21 @@ export const DealListTable = () => {
         label="Priorité"
         headerClassName={COLUMN_WIDTHS.priority}
       >
-        <DealPriorityField />
+        {/*
+          Une pastille, et non plus le point suivi du libellé (NOS-1485). La
+          spec le demande — « rendu des badges dans la liste » — et le kanban
+          affichait déjà exactement cette pastille : la même donnée se lisait
+          de deux façons selon l'écran.
+        */}
+        <DealPriorityField compact />
+      </DataTable.Col>
+      <DataTable.Col
+        source="motion"
+        label="Motion"
+        headerClassName={COLUMN_WIDTHS.motion}
+        cellClassName="truncate"
+      >
+        <MotionField />
       </DataTable.Col>
       <DataTable.Col
         source="opportunity_type"
@@ -363,6 +386,26 @@ const OpportunityTypeField = () => {
       label={findDealLabel(dealOpportunityTypes, value) ?? value}
     />
   );
+};
+
+/**
+ * Motion, en texte simple (NOS-1485).
+ *
+ * La spec y insiste — « pas de code couleur pour Motion », « la valeur
+ * s'affiche en texte simple, sans couleur ni badge ». La colonne voisine porte
+ * déjà une pastille colorée pour la priorité ; deux échelles teintées sur la
+ * même ligne se liraient l'une pour l'autre.
+ *
+ * Le tiret sera la règle longtemps : les 263 opportunités de production
+ * naissent sans motion, la spec interdisant toute reprise. C'est l'état de la
+ * donnée, et le montrer vaut mieux que d'inventer un défaut.
+ */
+const MotionField = () => {
+  const record = useRecordContext<Deal>();
+  const { dealMotions } = useConfigurationContext();
+  const value = record?.motion;
+  if (!value) return <span className="text-muted-foreground">–</span>;
+  return <span>{findDealLabel(dealMotions, value) ?? value}</span>;
 };
 
 const StageField = ({

@@ -322,6 +322,38 @@ describe("le type d'opportunité (NOS-1399)", () => {
   });
 });
 
+describe("Motion (NOS-1485)", () => {
+  it("écrit un `@eq` sur une valeur seule, un `@in` sur plusieurs", () => {
+    // Même convention que catégorie, type et étape.
+    expect(toListFilter({ motion: "strategic" })).toEqual({
+      motion: "strategic",
+    });
+    expect(toListFilter({ motion: ["strategic", "core"] })).toEqual({
+      "motion@in": "(strategic,core)",
+    });
+  });
+
+  it("n'écrit rien sur une sélection vide", () => {
+    // `in.()` est rejeté par PostgREST, et « rien de coché » veut dire « pas
+    // de filtre », pas « aucune ligne ne correspond ».
+    expect(toListFilter({ motion: [] })).toEqual({});
+    expect(toListFilter({ motion: null })).toEqual({});
+  });
+
+  it("se combine avec les autres filtres, comme la spec l'exige", () => {
+    /*
+     * « Les filtres doivent être combinables avec les autres filtres
+     * existants ». Ils le sont par construction — chaque champ écrit sa propre
+     * clé dans le même objet — mais c'est la promesse faite au demandeur, et
+     * une promesse non testée finit par cesser d'être vraie.
+     */
+    expect(toListFilter({ motion: ["smb"], stage: ["qualified"] })).toEqual({
+      "motion@in": "(smb)",
+      "stage@in": "(qualified)",
+    });
+  });
+});
+
 describe("LIST_FILTER_KEYS couvre tout ce que le contrat écrit", () => {
   /*
    * L'invariant que le défaut de NOS-1193 a révélé : une clé écrite par
@@ -338,6 +370,7 @@ describe("LIST_FILTER_KEYS couvre tout ce que le contrat écrit", () => {
       salesId: [1, 2],
       category: ["hopital"],
       opportunityType: ["renouvellement"],
+      motion: ["strategic"],
       priority: ["urgent"],
       stage: ["lead"],
       products: ["no-show"],
@@ -355,5 +388,6 @@ describe("LIST_FILTER_KEYS couvre tout ce que le contrat écrit", () => {
   it("efface un filtre par identifiants — le cas qui manquait", () => {
     expect(LIST_FILTER_KEYS).toContain("id@in");
     expect(LIST_FILTER_KEYS).toContain("opportunity_type@in");
+    expect(LIST_FILTER_KEYS).toContain("motion@in");
   });
 });

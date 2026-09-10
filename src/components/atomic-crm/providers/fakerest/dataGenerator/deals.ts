@@ -4,6 +4,7 @@ import { datatype, lorem, random } from "faker/locale/en_US";
 import {
   defaultDealCategories,
   defaultDealContactRoles,
+  defaultDealMotions,
   defaultDealOpportunityTypes,
   defaultDealPriorities,
   defaultDealProducts,
@@ -60,6 +61,12 @@ export const generateDeals = (db: Db): Deal[] => {
       contact_ids,
       contact_names,
       category: random.arrayElement(defaultDealCategories).value,
+      // Une affaire sur trois reste sans motion, comme en production ou le champ
+      // vient de naitre vide : la demo doit montrer le tiret aussi.
+      motion:
+        datatype.number({ min: 0, max: 2 }) === 0
+          ? null
+          : random.arrayElement(defaultDealMotions).value,
       opportunity_type: random.arrayElement(defaultDealOpportunityTypes).value,
       // Decision-making role per contact, keyed by contact id — mirrors the
       // `deals.contact_roles` jsonb column.

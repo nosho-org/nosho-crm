@@ -186,6 +186,7 @@ const DealMainInputs = ({
   const {
     dealStages,
     dealCategories,
+    dealMotions,
     dealOpportunityTypes,
     dealPriorities,
     dealProducts,
@@ -243,6 +244,28 @@ const DealMainInputs = ({
         optionValue="value"
         helperText={false}
         validate={requiredOnCreate(mode)}
+      />
+
+      {/*
+        Motion, juste après la catégorie (NOS-1485).
+
+        Les deux qualifient l'affaire elle-même : la catégorie dit à qui on
+        vend, Motion dit ce que la vendre va coûter — effort, cycle, ARR,
+        volume, quatre critères qui varient ensemble et tiennent en un mot.
+
+        **Facultatif, et sans valeur par défaut**, comme la spec l'exige : « le
+        champ Motion est vide par défaut pour toutes les nouvelles
+        opportunités ». Un défaut à « Core » ferait passer pour une
+        qualification ce qui n'est qu'un formulaire non rempli, et la
+        segmentation ne vaudrait plus rien.
+      */}
+      <SelectInput
+        source="motion"
+        label="Motion"
+        choices={dealMotions}
+        optionText="label"
+        optionValue="value"
+        helperText="Effort, cycle de vente et ARR attendus — laissez vide tant que ce n'est pas tranché"
       />
 
       {/*

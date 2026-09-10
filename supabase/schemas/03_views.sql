@@ -106,7 +106,7 @@ select
     d.*,
     -- Filterable mirror of company_type with NULL folded to '' (NOS-797).
     -- PostgREST evaluates `not.in.(...)` as NULL for a NULL column and drops
-    -- the row, which would have hidden every untyped opportunity — exactly the
+    -- the row, which would have hidden every untyped opportunity - exactly the
     -- ones the commercial pipeline is made of.
     coalesce(d.company_type, '')                                                                                       as company_type_key,
     comp.name                                                                                                          as company_name,
@@ -123,7 +123,7 @@ select
     -- read. Computed rather than materialised: a denormalised column kept in
     -- sync by four triggers is exactly the kind of value that drifts unnoticed.
     --
-    -- Scalar subqueries, NOT joins — a 1-N join would multiply the rows feeding
+    -- Scalar subqueries, NOT joins - a 1-N join would multiply the rows feeding
     -- the string_agg above and repeat every contact name once per note.
     -- GREATEST ignores NULLs, so a deal with no note and no call falls back to
     -- updated_at on its own.
@@ -140,7 +140,7 @@ select
     -- next steps as tasks, so that is where the list must read them from.
     --
     -- A task reaches a deal either directly (`tasks.deal_id`, the link the
-    -- Tasks UI does not create yet) or through one of the deal's contacts —
+    -- Tasks UI does not create yet) or through one of the deal's contacts -
     -- which is how all 124 production tasks are attached today.
     --
     -- Scalar subqueries for the same reason as above: joining `tasks` here

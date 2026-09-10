@@ -102,6 +102,7 @@ const FIELD_LABELS: Record<string, string> = {
   company_type: "Type de société",
   opportunity_type: "Type d'opportunité",
   category: "Catégorie",
+  motion: "Motion",
   lead_source: "Source",
   referrer_id: "Apporteur",
   probability: "Probabilité",

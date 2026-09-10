@@ -47,6 +47,13 @@ export interface DealFilterState {
    * étaient des renouvellements sans pouvoir demander à ne voir qu'eux.
    */
   opportunityType?: FilterSelection;
+  /**
+   * Motion — `strategic` / `core` / `smb` (NOS-1485).
+   *
+   * Vide sur la quasi-totalité des affaires tant que personne ne les a
+   * qualifiées : le filtre sert justement à retrouver celles qui le sont.
+   */
+  motion?: FilterSelection;
   /** Stored slugs: `urgent` (P0) / `important` (P1) / `normal` (P2). */
   priority?: FilterSelection;
   stage?: FilterSelection;
@@ -131,6 +138,7 @@ export function toListFilter(
   assignIn(filter, "sales_id", state.salesId);
   assignIn(filter, "category", state.category);
   assignIn(filter, "opportunity_type", state.opportunityType);
+  assignIn(filter, "motion", state.motion);
   assignIn(filter, "priority", state.priority);
   assignIn(filter, "stage", state.stage);
 
@@ -277,6 +285,8 @@ export const LIST_FILTER_KEYS = [
   "category@in",
   "opportunity_type",
   "opportunity_type@in",
+  "motion",
+  "motion@in",
   "priority",
   "priority@in",
   "stage",

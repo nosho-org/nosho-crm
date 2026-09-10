@@ -325,6 +325,14 @@ export type Deal = {
   contact_ids: Identifier[];
   category: string;
   /**
+   * Segmentation commerciale — `strategic` / `core` / `smb` (NOS-1485).
+   *
+   * Facultatif, et vide tant que personne ne l'a qualifiée : la spec demande
+   * explicitement qu'aucune valeur ne soit imposée à la création et que les
+   * opportunités existantes ne soient pas reprises.
+   */
+  motion?: string | null;
+  /**
    * Products the deal covers (`no-show` / `entrant` / `data`). A set: a deal can
    * carry several at once. Never null in the database — `'{}'` is the default,
    * because PostgREST's `ov.`/`cs.` operators evaluate to NULL against a NULL

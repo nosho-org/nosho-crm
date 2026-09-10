@@ -74,6 +74,11 @@ export const createDealExporter =
       etape_historique: deal.legacy_stage ?? "",
       priorite: getDealPriority(deal.priority, dealPriorities)?.label ?? "",
       categorie: labelOf(dealCategories, deal.category),
+      // Le slug brut, comme `type_opportunite` juste en dessous : « strategic »
+      // / « core » / « smb » se lisent tels quels, et le libellé n'en diffère
+      // que par la casse. Ajouter un cinquième paramètre positionnel à cette
+      // fabrique pour retrouver « Strategic » coûterait quatre sites d'appel.
+      motion: deal.motion ?? "",
       arr_eur: deal.amount ?? "",
       mrr_eur: deal.mrr ?? arrToMrr(deal.amount) ?? "",
       arr_saisi_manuellement: deal.arr_is_manual ? "oui" : "non",

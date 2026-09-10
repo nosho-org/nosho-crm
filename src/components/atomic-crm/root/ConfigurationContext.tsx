@@ -39,6 +39,8 @@ export interface ConfigurationContextValue {
   archivedDealContactRoles?: LabeledValue[];
   /** Nouveau client / Upsell / Renouvellement — set per deal. */
   dealOpportunityTypes: LabeledValue[];
+  /** Strategic / Core / SMB — la segmentation commerciale (NOS-1485). */
+  dealMotions: LabeledValue[];
   /** No-show / Entrant / Data. A deal can carry several at once. */
   dealProducts: LabeledValue[];
   dealPipelineStatuses: string[];

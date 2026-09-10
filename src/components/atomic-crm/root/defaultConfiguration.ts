@@ -3,6 +3,7 @@ import type {
   DealPriority,
   DealPriorityValue,
   EstablishmentType,
+  LabeledValue,
 } from "../types";
 import type { ConfigurationContextValue } from "./ConfigurationContext";
 
@@ -196,27 +197,65 @@ export const defaultDealPriorities: DealPriority[] = [
   {
     value: "urgent",
     label: "P0 Critique",
-    dotClassName: "bg-red-500",
+    /*
+     * Vert, orange, gris : la palette imposée par la spec « Motion × Priorité »
+     * de Marc-Henri (NOS-1485), qui en fait un point explicite.
+     *
+     * Elle revient sur deux décisions antérieures, et il faut le savoir avant
+     * de la juger :
+     *
+     *   * NOS-1067 avait écarté l'orange pour P1, parce que dans ce CRM
+     *     l'orange veut déjà dire « quelque chose ne va pas » — inactivité,
+     *     alerte, échéance dépassée. Deux sens sur une même teinte ;
+     *   * le vert désigne ailleurs une affaire gagnée
+     *     (`--deal-status-won`), et le porte ici sur la priorité la plus
+     *     critique.
+     *
+     * Appliqué tel que demandé : c'est le choix de celui qui lit l'écran tous
+     * les jours, et il tient en trois valeurs — revenir dessus se fait ici et
+     * dans une migration de `configuration`.
+     */
+    dotClassName: "bg-green-600",
     weight: 2,
   },
   {
     value: "important",
     label: "P1 Élevée",
-    // Bleu et non orange (NOS-1067) : dans ce CRM l'orange veut déjà dire
-    // « quelque chose ne va pas » — inactivité, alerte, échéance dépassée. Une
-    // affaire P1 n'est pas en difficulté, elle est importante. Deux sens sur
-    // une même teinte, et on ne sait plus lequel on lit.
-    dotClassName: "bg-blue-500",
+    dotClassName: "bg-orange-500",
     weight: 1,
   },
   {
     value: "normal",
     label: "P2 Normale",
-    // Gris volontairement pâle : le cas courant ne doit pas attirer l'œil, ce
-    // sont les deux autres qui doivent ressortir.
-    dotClassName: "bg-muted-foreground/40",
+    // Gris plein et non plus `/40` : la pastille compacte de la liste écrit
+    // « P2 » en blanc par-dessus, et un gris à 40 % ne le laisse pas lire.
+    dotClassName: "bg-muted-foreground",
     weight: 0,
   },
+];
+
+/**
+ * ---------------------------------------------------------------------------
+ * Motion — la segmentation commerciale (NOS-1485)
+ * ---------------------------------------------------------------------------
+ * Marc-Henri, le 09/09/2026 : « obtenir une segmentation prospects plus
+ * précise, plus stratégique en fonction du niveau d'effort, cycle de vente,
+ * ARR et volumes ».
+ *
+ * Quatre critères cités, **un seul champ**. Ils ne varient pas
+ * indépendamment : une affaire Strategic est par construction celle qui
+ * demande le plus d'effort, prend le plus de temps et rapporte le plus. Les
+ * porter en quatre colonnes réclamerait quatre saisies pour une seule réalité,
+ * et laisserait la porte ouverte aux combinaisons qui n'existent pas.
+ *
+ * Sans code couleur, et la spec y insiste : « pas de code couleur pour
+ * Motion ». La couleur est réservée à la priorité — deux échelles colorées
+ * côte à côte sur la même ligne se liraient l'une pour l'autre.
+ */
+export const defaultDealMotions: LabeledValue[] = [
+  { value: "strategic", label: "Strategic" },
+  { value: "core", label: "Core" },
+  { value: "smb", label: "SMB" },
 ];
 
 export const defaultDealPriority: DealPriorityValue = "normal";
@@ -532,6 +571,7 @@ export const defaultConfiguration: ConfigurationContextValue = {
   dealContactRoles: defaultDealContactRoles,
   archivedDealContactRoles,
   dealOpportunityTypes: defaultDealOpportunityTypes,
+  dealMotions: defaultDealMotions,
   dealProducts: defaultDealProducts,
   dealPipelineStatuses: defaultDealPipelineStatuses,
   dealPriorities: defaultDealPriorities,

@@ -77,6 +77,11 @@ create table public.deals (
     company_type text,
     contact_ids bigint[],
     category text,
+    -- Commercial segmentation (NOS-1485): Strategic / Core / SMB. Free text
+    -- like `category`, with no CHECK: the values live in
+    -- `configuration.dealMotions`, where the list can grow without a migration.
+    -- NULL by default and never backfilled -- an unqualified deal has no motion.
+    motion text,
     stage text not null,
     -- Stage value held before the migration to the canonical 8-stage pipeline,
     -- then before the v2 seven-stage one. Kept so the mapping stays reversible;
