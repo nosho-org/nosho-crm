@@ -7,6 +7,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal } from "../types";
 import { DealBulkEditCategory } from "./DealBulkEditCategory";
+import { DealBulkEditMotion } from "./DealBulkEditMotion";
 import { DealCategoryCell } from "./DealCategoryCell";
 import { DealBulkEditOwner } from "./DealBulkEditOwner";
 import { DealBulkEditStage } from "./DealBulkEditStage";
@@ -127,13 +128,19 @@ export const DealListTable = () => {
           <DealBulkEditStage />
           <DealBulkEditOwner />
           <DealBulkEditCategory />
+          {/*
+            Le Motion en masse (NOS-1515), à côté de la catégorie : les deux
+            qualifient l'affaire, et le champ est né vide sur toutes les
+            opportunités — c'est par lots qu'il sera rempli, pas fiche à fiche.
+          */}
+          <DealBulkEditMotion />
         </>
       }
       // <DataTable> puts its own className on the wrapper and renders <Table>
       // with no way through, so the layout lands on the nested table.
       //
-      // 1276px = la somme exacte de `COLUMN_WIDTHS` après NOS-1093 :
-      // 100 + 100 + 88 + 112 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce
+      // 1348px = la somme exacte de `COLUMN_WIDTHS` après NOS-1485 :
+      // 76 + 96 + 100 + 88 + 112 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce
       // `min-w` doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière
       // qu'#124 avait fait disparaître « Dernière activité » du bout de la
       // ligne.
