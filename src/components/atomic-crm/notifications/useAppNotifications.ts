@@ -10,9 +10,11 @@ import {
 import { startOfToday } from "../deals/cockpit/dealDates";
 import type { Task } from "../types";
 import { toDealsLink } from "../deals/dealFilterContract";
-import { bucketFor } from "../dashboard/actionQueue";
+import { bucketFor, estSurAffairePerdue } from "../dashboard/actionQueue";
+import { LOST_DEAL_STAGE } from "../deals/dealUtils";
 import { explainFocus, rankDealsByFocus } from "../dashboard/dealFocus";
 import { lienFileActions } from "../dashboard/useFocusCible";
+import { useAffairesPourTaches } from "../dashboard/useAffairesPourTaches";
 import { focusMeriteNotification } from "./regleFocus";
 import { sansProchaineAction } from "./sansProchaineAction";
 import type { AppNotification } from "./notifications";
@@ -102,6 +104,16 @@ export function useAppNotifications(): AppNotification[] {
     { enabled: !!identity },
   );
 
+  /*
+   * Le lot qui sert à juger « tout est perdu » (NOS-1578).
+   *
+   * Distinct de `deals` ci-dessus, qui est borné au responsable : une tâche
+   * appartient à qui l'a créée, l'opportunité à qui la suit, et ce n'est pas la
+   * même personne. Juger sur le lot du propriétaire laissait la tâche affichée
+   * alors que son affaire venait de passer en Lost — vérifié à l'écran.
+   */
+  const affairesPourTaches = useAffairesPourTaches();
+
   const ranked = rankDealsByFocus(deals ?? [], {
     stageProbabilities: dealStageProbabilities ?? {},
     pipelineStatuses: dealPipelineStatuses,
@@ -168,10 +180,24 @@ export function useAppNotifications(): AppNotification[] {
    * demandent pas le même geste : la première est un rattrapage, la seconde
    * un programme.
    */
-  const enRetard = (tasks ?? []).filter(
+  /*
+   * Les tâches des affaires perdues ne comptent pas (NOS-1578).
+   *
+   * La file d'actions les écarte ; les laisser ici ferait annoncer « 6 tâches
+   * en retard » par une cloche qui mène à une liste qui en montre cinq. Deux
+   * compteurs qui se contredisent valent moins qu'un seul.
+   *
+   * Le jugement porte sur `affairesPourTaches`, le lot complet des affaires non
+   * archivées — ni période, ni responsable.
+   */
+  const aFaire = (tasks ?? []).filter(
+    (task) => !estSurAffairePerdue(task, affairesPourTaches ?? [], LOST_DEAL_STAGE),
+  );
+
+  const enRetard = aFaire.filter(
     (task) => bucketFor(task.due_date, today).bucket === "overdue",
   );
-  const aujourdhui = (tasks ?? []).filter(
+  const aujourdhui = aFaire.filter(
     (task) => bucketFor(task.due_date, today).bucket === "today",
   );
 

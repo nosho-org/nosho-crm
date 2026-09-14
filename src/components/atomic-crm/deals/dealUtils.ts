@@ -250,6 +250,15 @@ export function resolvePrefilledArr({
 export const SIGNED_DEAL_STAGE = "closed-won";
 
 /**
+ * L'étape qui veut dire « l'affaire est perdue » (NOS-1578).
+ *
+ * Distincte de `dealPipelineStatuses`, qui regroupe les trois étapes
+ * terminales : une affaire gagnée garde de l'onboarding à faire et un churn se
+ * travaille encore, alors qu'une affaire perdue n'a plus d'action.
+ */
+export const LOST_DEAL_STAGE = "lost";
+
+/**
  * Le type d'opportunité « Partenariat » et la catégorie qu'il implique
  * (NOS-1093).
  *

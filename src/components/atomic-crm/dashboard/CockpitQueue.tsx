@@ -3,12 +3,14 @@ import { useGetIdentity, useGetList } from "ra-core";
 import { Card } from "@/components/ui/card";
 
 import { Task } from "../tasks/Task";
+import { LOST_DEAL_STAGE } from "../deals/dealUtils";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { formatCurrencyCompact } from "../misc/formatCurrency";
 import type { Deal, Task as TaskRecord } from "../types";
 import { AnimatedListItem } from "@/components/ui/motion";
 import { useDashboard } from "./DashboardContext";
 import { FOCUS_FILE_ACTIONS, useFocusCible } from "./useFocusCible";
+import { useAffairesPourTaches } from "./useAffairesPourTaches";
 import {
   BUCKET_LABELS,
   type QueueBucket,
@@ -79,7 +81,17 @@ export const CockpitQueue = () => {
    */
   const { deals } = useDashboard();
 
-  const queue = buildQueue(tasks ?? [], deals as unknown as Deal[], today);
+  /*
+   * Un second jeu d'affaires, ni borné par la période ni par le responsable
+   * (NOS-1578) — voir `useAffairesPourTaches` pour pourquoi aucun des deux lots
+   * déjà chargés ne pouvait servir.
+   */
+  const affaires = useAffairesPourTaches();
+
+  const queue = buildQueue(tasks ?? [], deals as unknown as Deal[], today, {
+    affaires,
+    etapePerdue: LOST_DEAL_STAGE,
+  });
   const amount = (value: number) => formatCurrencyCompact(value, currency);
 
   if (isPending) return null;

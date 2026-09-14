@@ -115,6 +115,83 @@ export function bucketFor(
 const ORDER: QueueBucket[] = ["overdue", "today", "week", "later"];
 
 /**
+ * Le strict nécessaire pour savoir qu'une tâche appartient à une affaire.
+ *
+ * Volontairement plus étroit que `Deal` : la règle ne lit que trois champs, et
+ * les tests n'ont pas à fabriquer une opportunité complète pour l'exercer.
+ */
+export interface AffaireAtteignable {
+  id: string | number;
+  stage: string;
+  contact_ids?: (string | number)[] | null;
+}
+
+/**
+ * Les affaires qu'une tâche atteint.
+ *
+ * Deux chemins, et c'est la règle que `deals_summary` applique déjà pour la
+ * « prochaine action » — la copier ici plutôt que d'en inventer une autre :
+ *
+ *   * `deal_id` — le lien direct, celui que le formulaire de tâche pose ;
+ *   * `contact_id` parmi les `contact_ids` de l'affaire — le lien indirect,
+ *     de loin le plus fréquent.
+ *
+ * Mesuré en production avant d'écrire : sur les cinq tâches rattachées à une
+ * affaire perdue, **une seule** porte le lien direct. S'en tenir à `deal_id`
+ * aurait masqué une tâche sur cinq et laissé le défaut à l'écran.
+ */
+export function affairesAtteintes<T extends AffaireAtteignable>(
+  task: Task,
+  affaires: readonly T[],
+): T[] {
+  const dealId = task.deal_id != null ? String(task.deal_id) : null;
+  const contactId = task.contact_id != null ? String(task.contact_id) : null;
+
+  return affaires.filter((affaire) => {
+    if (dealId !== null && String(affaire.id) === dealId) return true;
+    if (contactId === null) return false;
+    return (affaire.contact_ids ?? []).some(
+      (id) => String(id) === contactId,
+    );
+  });
+}
+
+/**
+ * Une tâche dont il n'y a plus rien à faire, parce que tout ce qu'elle touche
+ * est perdu (NOS-1578).
+ *
+ * Simon, le 14/09/2026 : « si une opportunité est en lost alors ne plus faire
+ * apparaître les tâches ». Une affaire perdue n'a plus d'action commerciale ;
+ * son retard, lui, ne se rattrapera jamais et s'accumule en tête de file à la
+ * place du travail vivant.
+ *
+ * ## « Toutes », et pas « au moins une »
+ *
+ * Un contact peut porter une affaire perdue et une affaire en cours. Masquer
+ * dès qu'une perdue apparaît ferait disparaître du travail encore dû.
+ *
+ * Aucune tâche n'est dans ce cas aujourd'hui en production — c'est exactement
+ * pourquoi la règle se fixe maintenant, à froid, plutôt que le jour où un
+ * commercial constatera qu'une relance s'est évaporée.
+ *
+ * ## Une tâche sans affaire n'est jamais masquée
+ *
+ * 57 tâches ouvertes sur 105 ne touchent aucune opportunité : ce sont des
+ * rappels sur un contact. Elles ne sont perdues avec rien, et `every` sur une
+ * liste vide rendrait `true` — d'où le test de non-vacuité, qui n'est pas une
+ * précaution mais la moitié de la règle.
+ */
+export function estSurAffairePerdue(
+  task: Task,
+  affaires: readonly AffaireAtteignable[],
+  etapePerdue: string,
+): boolean {
+  const atteintes = affairesAtteintes(task, affaires);
+  if (atteintes.length === 0) return false;
+  return atteintes.every((affaire) => affaire.stage === etapePerdue);
+}
+
+/**
  * Assemble la file : tâches non terminées, rangées par échéance, et à
  * échéance égale la plus grosse affaire d'abord.
  *
@@ -126,11 +203,34 @@ export function buildQueue(
   tasks: Task[],
   deals: Deal[],
   today: Date,
+  options: {
+    /**
+     * Les affaires sur lesquelles se juge « tout est perdu » (NOS-1578).
+     *
+     * Séparé de `deals`, qui sert à afficher le montant : ce dernier est filtré
+     * par la période du tableau de bord, et une règle de masquage qui dépendrait
+     * de la période choisie ferait apparaître et disparaître les mêmes tâches
+     * selon le filtre. Le jugement doit porter sur l'ensemble des affaires, pas
+     * sur la fenêtre regardée.
+     *
+     * Omis, aucune tâche n'est masquée : le comportement d'avant.
+     */
+    affaires?: readonly AffaireAtteignable[];
+    /** L'étape qui vaut « perdue ». Voir `LOST_DEAL_STAGE`. */
+    etapePerdue?: string;
+  } = {},
 ): QueueEntry[] {
   const dealsById = new Map(deals.map((deal) => [String(deal.id), deal]));
+  const { affaires, etapePerdue } = options;
 
   return tasks
     .filter((task) => !task.done_date)
+    .filter(
+      (task) =>
+        !affaires ||
+        !etapePerdue ||
+        !estSurAffairePerdue(task, affaires, etapePerdue),
+    )
     .map((task): QueueEntry => {
       const { bucket, daysOverdue } = bucketFor(task.due_date, today);
       const deal =
