@@ -36,6 +36,22 @@ export interface GoogleCalendarEvent {
   organizer?: { email: string; displayName?: string; self?: boolean };
 }
 
+/**
+ * La boîte d'où un message a été lu (NOS-1607).
+ *
+ * Le bloc « Mails » balaie désormais toutes les boîtes connectées de l'équipe,
+ * et non plus la seule boîte de la personne qui regarde. Chaque ligne dit donc
+ * d'où elle vient : sans cela, on lirait la correspondance d'un collègue en
+ * croyant lire la sienne.
+ */
+export interface GoogleMailbox {
+  salesId: number;
+  name: string;
+  email: string | null;
+  /** Vrai quand c'est la boîte de la personne qui regarde. */
+  own: boolean;
+}
+
 export interface GoogleEmailMessage {
   id: string;
   threadId: string;
@@ -45,4 +61,21 @@ export interface GoogleEmailMessage {
   date: string;
   snippet: string;
   internalDate: string;
+  /** En-tête RFC `Message-ID`, la seule clé stable d'une boîte à l'autre. */
+  messageId?: string;
+  /**
+   * Facultatif : une réponse servie avant le déploiement de NOS-1607 n'en
+   * porte pas, et le cache de react-query peut en garder cinq minutes.
+   */
+  mailbox?: GoogleMailbox;
+}
+
+export interface GoogleEmailList {
+  messages: GoogleEmailMessage[];
+  nextPageToken: string | null;
+  totalEstimate: number;
+  /** Combien de boîtes ont été interrogées (NOS-1607). */
+  boitesInterrogees?: number;
+  /** Celles qui n'ont pas répondu, nommées plutôt que tues. */
+  boitesEnPanne?: string[];
 }

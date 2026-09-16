@@ -88,13 +88,22 @@ export const EmailItem = ({ message }: { message: GoogleEmailMessage }) => {
     .trim()
     .replace(/^"(.*)"$/, "$1");
 
-  return (
-    <a
-      href={`https://mail.google.com/mail/u/0/#inbox/${message.threadId}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex gap-2 p-1.5 rounded-md hover:bg-muted/50 transition-colors group"
-    >
+  /*
+   * Le lien Gmail ne vaut que pour SA propre boîte (NOS-1607).
+   *
+   * `mail.google.com/mail/u/0/#inbox/<threadId>` ouvre le fil dans le compte
+   * Google de celui qui clique. Depuis que le bloc montre aussi les messages
+   * des collègues, un `threadId` venu d'une autre boîte n'existe pas dans la
+   * sienne : le lien menait à une page vide, ce qui se lit comme une panne.
+   *
+   * Une réponse servie avant ce changement ne porte pas de `mailbox` — le cache
+   * de react-query en garde cinq minutes. On la traite comme sienne, ce qu'elle
+   * était.
+   */
+  const sienne = message.mailbox?.own ?? true;
+
+  const corps = (
+    <>
       <Mail className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
@@ -107,11 +116,44 @@ export const EmailItem = ({ message }: { message: GoogleEmailMessage }) => {
         </div>
         <div className="text-[10px] text-muted-foreground truncate">
           {fromName}
+          {/*
+            De quelle boîte vient la ligne, quand ce n'est pas la sienne. Sans
+            cette mention on lirait la correspondance d'un collègue en croyant
+            lire la sienne — et on chercherait en vain ce message dans son
+            propre Gmail.
+          */}
+          {!sienne && message.mailbox?.name ? (
+            <span className="ml-1 text-muted-foreground/70">
+              · boîte de {message.mailbox.name}
+            </span>
+          ) : null}
         </div>
         <div className="text-[10px] text-muted-foreground truncate mt-0.5">
           {message.snippet}
         </div>
       </div>
+    </>
+  );
+
+  if (!sienne) {
+    return (
+      <div
+        className="flex gap-2 p-1.5 rounded-md"
+        title={`Lu depuis la boîte de ${message.mailbox?.name ?? "un collègue"}`}
+      >
+        {corps}
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={`https://mail.google.com/mail/u/0/#inbox/${message.threadId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex gap-2 p-1.5 rounded-md hover:bg-muted/50 transition-colors group"
+    >
+      {corps}
       <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 mt-1" />
     </a>
   );

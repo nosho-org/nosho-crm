@@ -458,6 +458,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/dashboard/useAffairesPourTaches.ts",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/dashboard/useFocusCible.ts",
           "type": "registry:component"
         },

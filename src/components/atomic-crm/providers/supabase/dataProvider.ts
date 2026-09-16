@@ -20,7 +20,7 @@ import type { ConfigurationContextValue } from "../../root/ConfigurationContext"
 import type {
   GoogleCalendarEvent,
   GoogleConnectionStatus,
-  GoogleEmailMessage,
+  GoogleEmailList,
   GooglePreferences,
 } from "../../google/types";
 import { defaultGooglePreferences } from "../../google/types";
@@ -485,11 +485,7 @@ const getDataProviderWithCustomMethods = () => {
     },
     async getContactEmails(emails: string[], maxResults?: number) {
       const { data, error } = await getSupabaseClient().functions.invoke<{
-        data: {
-          messages: GoogleEmailMessage[];
-          nextPageToken: string | null;
-          totalEstimate: number;
-        };
+        data: GoogleEmailList;
       }>("google-gmail", {
         method: "POST",
         body: {
