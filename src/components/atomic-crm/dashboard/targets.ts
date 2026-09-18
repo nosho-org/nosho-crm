@@ -265,3 +265,77 @@ export function formatTargetPeriod(target: Target): string {
     new Date(`${target.period_end}T12:00:00Z`),
   )}`;
 }
+
+/**
+ * ---------------------------------------------------------------------------
+ * L'ARR objectif se déduit du MRR objectif (NOS-1630)
+ * ---------------------------------------------------------------------------
+ * Simon, le 18/09/2026 : « je veux que le MRR sur la partie tableau de bord
+ * soit éditable à la main et qu'ensuite l'ARR soit le MRR multiplié par 12 ».
+ *
+ * Jusqu'ici la carte stockait un objectif PAR métrique, et chaque titulaire en
+ * avait deux, qui disaient la même chose dans deux unités. Mesuré avant
+ * d'écrire : les deux paires de production étaient déjà exactement au facteur
+ * douze — 25 k€ / 300 k€ pour l'équipe, 10 k€ / 120 k€ pour Simon. La relation
+ * existait dans sa tête, pas dans le code, et rien n'empêchait les deux chiffres
+ * de diverger au prochain arbitrage.
+ *
+ * ## Seule la CIBLE est dérivée, jamais la mesure
+ *
+ * C'est le point à ne pas manquer. Un objectif MRR se mesure sur la moyenne des
+ * trois derniers mois complets ; un objectif ARR sur le cumul encaissé de
+ * l'année (NOS-1182, NOS-1255). Deux définitions différentes, établies chacune
+ * sur un fait de Qonto. Multiplier la cible par douze ne les rapproche pas : les
+ * deux pourcentages resteront différents, et c'est normal.
+ */
+export const MOIS_PAR_AN = 12;
+
+/** L'ARR que vise un MRR donné. */
+export function arrDepuisMrr(mrr: number): number {
+  return mrr * MOIS_PAR_AN;
+}
+
+/** Un objectif tel que la carte l'affiche, et s'il se saisit ou se déduit. */
+export interface ObjectifAffiche {
+  target: Target;
+  /** Vrai quand la ligne est calculée : elle s'affiche, elle ne s'édite pas. */
+  derive: boolean;
+}
+
+/**
+ * Ce qu'une ligne de la carte montre pour un titulaire : ses objectifs
+ * stockés, plus l'ARR déduit quand il n'est pas déjà stocké.
+ *
+ * Le MRR d'abord — c'est la métrique de pilotage, l'ARR en est la projection.
+ *
+ * L'objectif dérivé **garde l'identifiant** de celui dont il découle : les deux
+ * lignes désignent le même enregistrement, et l'écran doit pouvoir le dire.
+ * C'est `derive` qui distingue celle qui s'édite de celle qui suit.
+ */
+export function objectifsAffiches(stockes: Target[]): ObjectifAffiche[] {
+  const metriqueDe = (t: Target) => (t.metric ?? "mrr") as TargetMetric;
+
+  const affiches: ObjectifAffiche[] = stockes.map((target) => ({
+    target,
+    derive: false,
+  }));
+
+  const mrr = stockes.find((t) => metriqueDe(t) === "mrr");
+  const arrDejaStocke = stockes.some((t) => metriqueDe(t) === "arr");
+
+  /*
+   * Un ARR stocké n'est jamais écrasé. Les anciens objectifs le sont encore le
+   * temps que la reprise passe, et un ARR saisi volontairement -- sans MRR en
+   * face -- reste ce que son auteur a voulu.
+   */
+  if (mrr && !arrDejaStocke) {
+    affiches.push({
+      target: { ...mrr, metric: "arr", amount: arrDepuisMrr(mrr.amount) },
+      derive: true,
+    });
+  }
+
+  return affiches.sort((a, b) =>
+    metriqueDe(a.target) === "mrr" ? -1 : metriqueDe(b.target) === "mrr" ? 1 : 0,
+  );
+}

@@ -1,9 +1,11 @@
 import type { Deal, Target } from "../types";
 import {
+  arrDepuisMrr,
   computeTargetProgress,
   countsTowardTarget,
   dealValue,
   findActiveTarget,
+  objectifsAffiches,
 } from "./targets";
 
 const target = (over: Partial<Target> = {}): Target =>
@@ -251,5 +253,97 @@ describe("computeTargetProgress — l'objectif d'équipe sur l'encaisse réelle"
       actuals,
     );
     expect(progress.achieved).toBe(0);
+  });
+});
+
+describe("objectifsAffiches — l'ARR se déduit du MRR (NOS-1630)", () => {
+  const objectif = (over = {}) => ({
+    id: 1,
+    sales_id: null,
+    metric: "mrr",
+    amount: 25000,
+    period_start: "2026-01-01",
+    period_end: "2026-12-31",
+    ...over,
+  });
+
+  it("ajoute l'ARR manquant, douze fois le MRR", () => {
+    /*
+     * Les deux paires de production etaient deja exactement au facteur douze --
+     * 25 k / 300 k pour l'equipe. La relation existait, elle n'etait ecrite
+     * nulle part.
+     */
+    const lignes = objectifsAffiches([objectif({ amount: 25000 })]);
+    expect(lignes).toHaveLength(2);
+    expect(lignes[1].target.metric).toBe("arr");
+    expect(lignes[1].target.amount).toBe(300000);
+    expect(lignes[1].derive).toBe(true);
+  });
+
+  it("place le MRR en premier : c'est la metrique de pilotage", () => {
+    const lignes = objectifsAffiches([objectif()]);
+    expect(lignes.map((l) => l.target.metric)).toEqual(["mrr", "arr"]);
+  });
+
+  it("marque l'objectif saisi comme non derive", () => {
+    const lignes = objectifsAffiches([objectif()]);
+    expect(lignes[0].derive).toBe(false);
+  });
+
+  it("n'ecrase jamais un ARR deja stocke", () => {
+    /*
+     * Le temps que la reprise passe, les anciens objectifs ARR existent encore.
+     * Et un ARR saisi volontairement -- sans MRR en face -- reste ce que son
+     * auteur a voulu.
+     */
+    const lignes = objectifsAffiches([
+      objectif({ id: 1, amount: 25000 }),
+      objectif({ id: 3, metric: "arr", amount: 999999 }),
+    ]);
+    expect(lignes).toHaveLength(2);
+    expect(
+      lignes.filter((l) => l.target.metric === "arr").map((l) => l.target.amount),
+    ).toEqual([999999]);
+    expect(lignes.every((l) => l.derive === false)).toBe(true);
+  });
+
+  it("ne deduit rien quand il n'y a pas de MRR", () => {
+    const lignes = objectifsAffiches([
+      objectif({ id: 3, metric: "arr", amount: 120000 }),
+    ]);
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0].derive).toBe(false);
+  });
+
+  it("garde l'identifiant de l'objectif dont il decoule", () => {
+    // Les deux lignes designent le meme enregistrement ; c'est `derive` qui
+    // distingue celle qui s'edite de celle qui suit.
+    const lignes = objectifsAffiches([objectif({ id: 7 })]);
+    expect(lignes[1].target.id).toBe(7);
+  });
+
+  it("rend une liste vide sur une liste vide", () => {
+    expect(objectifsAffiches([])).toEqual([]);
+  });
+
+  it("traite une metrique absente comme un MRR", () => {
+    // `metric` est facultatif en base ; le reste du module retombe deja sur MRR.
+    const lignes = objectifsAffiches([objectif({ metric: undefined })]);
+    expect(lignes).toHaveLength(2);
+    expect(lignes[1].target.amount).toBe(300000);
+  });
+});
+
+describe("arrDepuisMrr", () => {
+  it("multiplie par douze", () => {
+    expect(arrDepuisMrr(10000)).toBe(120000);
+  });
+
+  it("supporte un montant a la virgule", () => {
+    expect(arrDepuisMrr(1250.5)).toBe(15006);
+  });
+
+  it("rend zero pour zero", () => {
+    expect(arrDepuisMrr(0)).toBe(0);
   });
 });

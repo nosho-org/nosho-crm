@@ -32,10 +32,13 @@ import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal, RevenueActual, Sale, Target } from "../types";
 import { type MonthlyRevenue, groupByMonth } from "./revenueActuals";
 import {
+  type ObjectifAffiche,
   TARGET_METRIC_LABELS,
   type TargetMetric,
+  arrDepuisMrr,
   computeTargetProgress,
   formatTargetPeriod,
+  objectifsAffiches,
 } from "./targets";
 
 /**
@@ -77,8 +80,12 @@ const TargetRow = ({
   onEdit,
   emphasis = false,
 }: {
-  /** Les objectifs d'un meme titulaire, une metrique chacun. */
-  targets: Target[];
+  /**
+   * Les lignes a afficher pour ce titulaire : l'objectif saisi, et l'ARR
+   * qui s'en deduit (NOS-1630). `derive` distingue celle qui s'edite de
+   * celle qui suit.
+   */
+  targets: ObjectifAffiche[];
   deals: Deal[];
   /** Encaisse reelle. Seul l'objectif d'equipe s'en sert. */
   actuals: MonthlyRevenue[];
@@ -86,7 +93,7 @@ const TargetRow = ({
   onEdit: (target: Target) => void;
   emphasis?: boolean;
 }) => {
-  const isTeam = targets[0]?.sales_id == null;
+  const isTeam = targets[0]?.target.sales_id == null;
 
   /*
    * L'objectif d'EQUIPE se mesure sur l'encaisse reelle, le personnel sur les
@@ -95,20 +102,19 @@ const TargetRow = ({
    * Un virement bancaire ne porte pas de commercial : un objectif personnel
    * ne peut pas s'y mesurer.
    */
-  const measured = targets
-    .map((target) => ({
+  // Le tri -- le MRR d'abord -- vit maintenant dans `objectifsAffiches`,
+  // avec la derivation qu'il ordonne.
+  const measured = targets.map(({ target, derive }) => ({
+    target,
+    derive,
+    metric: (target.metric ?? "mrr") as TargetMetric,
+    progress: computeTargetProgress(
       target,
-      metric: (target.metric ?? "mrr") as TargetMetric,
-      progress: computeTargetProgress(
-        target,
-        deals,
-        undefined,
-        isTeam ? actuals : undefined,
-      ),
-    }))
-    // Le MRR d'abord : c'est la metrique de pilotage, l'ARR en est la
-    // projection.
-    .sort((a, b) => (a.metric === "mrr" ? -1 : b.metric === "mrr" ? 1 : 0));
+      deals,
+      undefined,
+      isTeam ? actuals : undefined,
+    ),
+  }));
 
   if (measured.length === 0) return null;
 
@@ -140,9 +146,14 @@ const TargetRow = ({
 
         {/* Les metriques sur une seule ligne, qui se replie sur mobile. */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-0.5">
-          {measured.map(({ target, metric, progress }) => (
+          {measured.map(({ target, metric, progress, derive }) => (
             <span
-              key={target.id}
+              /*
+                La cle porte la metrique : l'ARR deduit garde l'identifiant de
+                l'objectif dont il decoule, donc l'identifiant seul ne distingue
+                plus les deux lignes.
+              */
+              key={`${target.id}-${metric}`}
               className="inline-flex items-baseline gap-1.5 group"
             >
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -158,15 +169,29 @@ const TargetRow = ({
                   {Math.round(progress.ratio * 100)} %
                 </span>
               </span>
-              <button
-                type="button"
-                onClick={() => onEdit(target)}
-                aria-label={`Modifier l'objectif ${TARGET_METRIC_LABELS[metric]} ${owner ?? "de l'équipe"}`}
-                title="Modifier"
-                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <Pencil className="w-3 h-3" aria-hidden />
-              </button>
+              {/*
+                Pas de crayon sur une ligne calculee (NOS-1630) : l'ARR suit le
+                MRR, et offrir de le modifier promettrait une saisie qui serait
+                ecrasee au prochain rendu.
+              */}
+              {derive ? (
+                <span
+                  className="text-[10px] text-muted-foreground/70"
+                  title="Calculé : douze fois l'objectif MRR"
+                >
+                  (× 12)
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onEdit(target)}
+                  aria-label={`Modifier l'objectif ${TARGET_METRIC_LABELS[metric]} ${owner ?? "de l'équipe"}`}
+                  title="Modifier"
+                  className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <Pencil className="w-3 h-3" aria-hidden />
+                </button>
+              )}
             </span>
           ))}
         </div>
@@ -233,7 +258,12 @@ const TargetDialog = ({
   const [salesId, setSalesId] = useState(
     target?.sales_id != null ? String(target.sales_id) : "equipe",
   );
-  const [metric, setMetric] = useState(target?.metric ?? "mrr");
+  /*
+   * Plus de choix de metrique (NOS-1630) : un objectif se saisit en MRR, et
+   * l ARR en decoule. Editer la ligne ARR calculee est impossible -- elle ne
+   * porte pas de crayon -- donc `target` recu ici est toujours le MRR.
+   */
+  const metric = "mrr" as const;
   const [amount, setAmount] = useState(
     target?.amount != null ? String(target.amount) : "",
   );
@@ -316,28 +346,36 @@ const TargetDialog = ({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Mesure</Label>
-              <Select value={metric} onValueChange={setMetric}>
-                <SelectTrigger aria-label="Mesure">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mrr">MRR — mensuel récurrent</SelectItem>
-                  <SelectItem value="arr">ARR — annuel récurrent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Montant (€)</Label>
-              <Input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="25000"
-                inputMode="decimal"
-              />
-            </div>
+          {/*
+            Un seul montant, en MRR (NOS-1630).
+
+            Le choix de la mesure a disparu : Simon saisissait les deux
+            métriques, qui disaient la même chose dans deux unités — et rien
+            n'empêchait les deux chiffres de diverger au prochain arbitrage.
+            L'ARR se lit maintenant sous le champ, pendant la frappe, pour que
+            le facteur douze soit visible au moment où l'on décide.
+          */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Objectif MRR (€ par mois)</Label>
+            <Input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="25000"
+              inputMode="decimal"
+            />
+            <p className="text-xs text-muted-foreground">
+              {isValid ? (
+                <>
+                  Soit{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {formatCurrency(arrDepuisMrr(parsedAmount))}
+                  </span>{" "}
+                  d'ARR sur douze mois.
+                </>
+              ) : (
+                "L'objectif ARR en découle : douze fois le montant mensuel."
+              )}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -526,7 +564,7 @@ export const TargetsCard = () => {
                 Équipe
               </span>
               <TargetRow
-                targets={team}
+                targets={objectifsAffiches(team)}
                 deals={deals}
                 actuals={actuals}
                 onEdit={setEditing}
@@ -543,7 +581,7 @@ export const TargetsCard = () => {
               {[...byOwner.entries()].map(([salesId, owned]) => (
                 <TargetRow
                   key={salesId}
-                  targets={owned}
+                  targets={objectifsAffiches(owned)}
                   deals={deals}
                   actuals={actuals}
                   owner={ownerName(owned[0].sales_id)}
