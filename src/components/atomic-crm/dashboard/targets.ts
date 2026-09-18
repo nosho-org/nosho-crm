@@ -186,11 +186,41 @@ export function computeTargetProgress(
    * comparables.
    */
   actuals?: MonthlyRevenue[],
+  /**
+   * Le MRR reel saisi a la main, quand Simon en a pose un (NOS-1631).
+   *
+   * « Je te parle de la partie MRR reel, le fameux 3284. Je veux pouvoir le
+   * modifier manuellement. »
+   *
+   * Ce 3 284 EUR est la moyenne des trois derniers mois complets releves chez
+   * Qonto -- juin, juillet, aout. Deux raisons de vouloir la main dessus : la
+   * collecte bancaire est a l'arret depuis le 3 septembre, et une moyenne
+   * glissante ne dit pas toujours ce qu'on veut annoncer.
+   *
+   * Ne vaut que pour l'objectif d'EQUIPE : un chiffre d'encaisse n'a pas de
+   * commercial, et un objectif personnel continue de se mesurer sur les
+   * affaires signees du CRM.
+   *
+   * L'ARR realise en decoule -- douze fois -- comme l'objectif. C'est ce que
+   * Simon a demande, et cela REMPLACE la definition « cumul encaisse de
+   * l'annee » tranchee en NOS-1255 : tant qu'une valeur manuelle est posee,
+   * c'est elle qui parle, et le cumul n'est plus lu.
+   */
+  mrrReelManuel?: number | null,
 ): TargetProgress {
   const metric = (target.metric ?? "mrr") as TargetMetric;
 
+  const manuel =
+    mrrReelManuel != null && target.sales_id == null
+      ? metric === "arr"
+        ? arrDepuisMrr(mrrReelManuel)
+        : mrrReelManuel
+      : null;
+
   const achieved =
-    actuals && target.sales_id == null
+    manuel != null
+      ? manuel
+      : actuals && target.sales_id == null
       ? runRateInPeriod(actuals, target, metric, now)
       : deals
           .filter((deal) => countsTowardTarget(deal, target))

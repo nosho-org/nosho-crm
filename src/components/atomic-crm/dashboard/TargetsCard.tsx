@@ -28,10 +28,19 @@ import {
 } from "@/components/ui/select";
 
 import { AnimatedRing } from "@/components/ui/motion";
+import {
+  useConfigurationContext,
+  useConfigurationUpdater,
+} from "../root/ConfigurationContext";
 import { formatCurrency } from "../misc/formatCurrency";
 import type { Deal, RevenueActual, Sale, Target } from "../types";
-import { type MonthlyRevenue, groupByMonth } from "./revenueActuals";
 import {
+  type MonthlyRevenue,
+  currentMonthStart,
+  groupByMonth,
+} from "./revenueActuals";
+import {
+  FENETRE_MOIS,
   type ObjectifAffiche,
   TARGET_METRIC_LABELS,
   type TargetMetric,
@@ -76,6 +85,7 @@ const TargetRow = ({
   targets,
   deals,
   actuals,
+  mrrReel,
   owner,
   onEdit,
   emphasis = false,
@@ -89,6 +99,8 @@ const TargetRow = ({
   deals: Deal[];
   /** Encaisse reelle. Seul l'objectif d'equipe s'en sert. */
   actuals: MonthlyRevenue[];
+  /** Le MRR reel saisi a la main, quand il y en a un (NOS-1631). */
+  mrrReel?: number | null;
   owner?: string;
   onEdit: (target: Target) => void;
   emphasis?: boolean;
@@ -113,6 +125,9 @@ const TargetRow = ({
       deals,
       undefined,
       isTeam ? actuals : undefined,
+      // Un chiffre d'encaisse n'a pas de commercial : la saisie manuelle ne
+      // vaut que pour l'equipe.
+      isTeam ? mrrReel : undefined,
     ),
   }));
 
@@ -450,9 +465,163 @@ const TargetDialog = ({
   );
 };
 
+
+/**
+ * ---------------------------------------------------------------------------
+ * Saisir le MRR reellement encaisse (NOS-1631)
+ * ---------------------------------------------------------------------------
+ * Simon : « je te parle de la partie MRR reel, le fameux 3284. Je veux pouvoir
+ * le modifier manuellement. »
+ *
+ * Ce 3 284 EUR est la moyenne des trois derniers mois complets releves chez
+ * Qonto. Deux raisons de vouloir la main dessus, et la premiere est un fait :
+ * la collecte bancaire est a l'arret depuis le 3 septembre, donc le chiffre ne
+ * bouge plus tout seul. La seconde est un choix : une moyenne glissante ne dit
+ * pas toujours ce qu'on veut annoncer.
+ *
+ * ## Le calcul reste visible
+ *
+ * Le montant calcule est affiche a cote du champ, et un bouton y revient. Une
+ * surcharge qui effacerait sa propre reference laisserait sans moyen de savoir
+ * de combien on s'en ecarte -- ni de constater qu'elle a vieilli.
+ */
+const MrrReelDialog = ({
+  calcule,
+  open,
+  onClose,
+}: {
+  /** Ce que la moyenne des trois derniers mois complets donne. */
+  calcule: number;
+  open: boolean;
+  onClose: () => void;
+}) => {
+  const config = useConfigurationContext();
+  const updateConfig = useConfigurationUpdater();
+  const notify = useNotify();
+
+  const [montant, setMontant] = useState(
+    config.mrrReel?.montant != null ? String(config.mrrReel.montant) : "",
+  );
+  const [enCours, setEnCours] = useState(false);
+
+  const parse = Number(montant.replace(",", ".").replace(/\s/g, ""));
+  const valide = Number.isFinite(parse) && parse >= 0;
+
+  const enregistrer = async () => {
+    if (!valide) return;
+    setEnCours(true);
+    try {
+      await updateConfig({
+        ...config,
+        mrrReel: {
+          montant: parse,
+          saisiLe: new Date().toISOString().slice(0, 10),
+        },
+      });
+      notify("MRR réel enregistré");
+      onClose();
+    } catch {
+      notify("Enregistrement impossible", { type: "error" });
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const revenirAuCalcul = async () => {
+    setEnCours(true);
+    try {
+      const { mrrReel: _retire, ...reste } = config;
+      await updateConfig(reste);
+      notify("Retour au calcul automatique");
+      onClose();
+    } catch {
+      notify("Enregistrement impossible", { type: "error" });
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>MRR réellement encaissé</DialogTitle>
+          <DialogDescription>
+            Ce montant remplace la moyenne des trois derniers mois complets
+            relevés sur le compte. L'ARR réalisé en découle : douze fois plus.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs">MRR réel (€ par mois)</Label>
+          <Input
+            value={montant}
+            onChange={(e) => setMontant(e.target.value)}
+            placeholder={String(Math.round(calcule))}
+            inputMode="decimal"
+          />
+          <p className="text-xs text-muted-foreground">
+            Calculé automatiquement :{" "}
+            <span className="tabular-nums">{formatCurrency(calcule)}</span>
+            {valide && parse > 0 ? (
+              <>
+                {" "}
+                · soit{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatCurrency(arrDepuisMrr(parse))}
+                </span>{" "}
+                d'ARR
+              </>
+            ) : null}
+          </p>
+          {config.mrrReel ? (
+            <p className="text-xs text-muted-foreground">
+              Valeur actuelle saisie le{" "}
+              {new Date(`${config.mrrReel.saisiLe}T12:00:00Z`).toLocaleDateString(
+                "fr-FR",
+              )}
+              .
+            </p>
+          ) : null}
+        </div>
+
+        <DialogFooter className="gap-2">
+          {config.mrrReel ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={revenirAuCalcul}
+              disabled={enCours}
+            >
+              Revenir au calcul
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={enCours}
+          >
+            Annuler
+          </Button>
+          <Button
+            type="button"
+            onClick={enregistrer}
+            disabled={!valide || enCours}
+          >
+            Enregistrer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const TargetsCard = () => {
   const [editing, setEditing] = useState<Target | null>(null);
   const [creating, setCreating] = useState(false);
+  const [saisieMrr, setSaisieMrr] = useState(false);
+  const config = useConfigurationContext();
 
   const { data: targets, isPending } = useGetList<Target>("targets", {
     pagination: { page: 1, perPage: 50 },
@@ -471,6 +640,22 @@ export const TargetsCard = () => {
     sort: { field: "month", order: "DESC" },
   });
   const actuals = groupByMonth(revenueRows ?? []);
+
+  /*
+   * Le MRR calcule, garde pour reference dans le dialogue de saisie : la
+   * moyenne des mois complets, celle que la valeur manuelle remplace.
+   *
+   * Reconstitue ici plutot que lu depuis une ligne de la carte -- celle-ci
+   * affiche deja la valeur manuelle quand il y en a une, et le dialogue doit
+   * pouvoir montrer les deux.
+   */
+  const moisComplets = actuals
+    .filter((m) => m.month < currentMonthStart())
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-FENETRE_MOIS);
+  const mrrCalcule = moisComplets.length
+    ? moisComplets.reduce((t, m) => t + m.amount, 0) / moisComplets.length
+    : 0;
 
   /*
    * Toutes les affaires signées, pas seulement celles de la période affichée.
@@ -539,10 +724,31 @@ export const TargetsCard = () => {
             </span>
           )}
         </span>
-        <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-          <Plus className="w-3.5 h-3.5" aria-hidden />
-          Définir un objectif
-        </Button>
+        <div className="flex items-center gap-2">
+          {/*
+            La saisie du MRR reel (NOS-1631), a cote de celle des objectifs :
+            les deux chiffres se lisent l'un contre l'autre, et se revisent au
+            meme moment.
+          */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSaisieMrr(true)}
+            title="Saisir le MRR réellement encaissé"
+          >
+            <Pencil className="w-3.5 h-3.5" aria-hidden />
+            MRR réel
+            {config.mrrReel ? (
+              <span className="text-[10px] text-muted-foreground">
+                (saisi)
+              </span>
+            ) : null}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+            <Plus className="w-3.5 h-3.5" aria-hidden />
+            Définir un objectif
+          </Button>
+        </div>
       </div>
 
       {isPending ? null : all.length === 0 ? (
@@ -567,6 +773,7 @@ export const TargetsCard = () => {
                 targets={objectifsAffiches(team)}
                 deals={deals}
                 actuals={actuals}
+                mrrReel={config.mrrReel?.montant}
                 onEdit={setEditing}
                 emphasis
               />
@@ -604,6 +811,14 @@ export const TargetsCard = () => {
             </p>
           )}
         </div>
+      )}
+
+      {saisieMrr && (
+        <MrrReelDialog
+          calcule={mrrCalcule}
+          open
+          onClose={() => setSaisieMrr(false)}
+        />
       )}
 
       {(creating || editing) && (

@@ -85,6 +85,17 @@ export interface ConfigurationContextValue {
   disableEmailPasswordAuthentication?: boolean;
   dropcontactApiKey?: string;
   alloApiKey?: string;
+  /**
+   * Le MRR réellement encaissé, saisi à la main (NOS-1631).
+   *
+   * Absent, le tableau de bord calcule la moyenne des trois derniers mois
+   * complets relevés chez Qonto. Présent, c'est lui qui parle — et l'ARR
+   * réalisé vaut douze fois ce montant.
+   *
+   * `saisiLe` n'est pas décoratif : un chiffre posé à la main ne se périme pas
+   * tout seul, et l'écran doit pouvoir dire de quand il date.
+   */
+  mrrReel?: { montant: number; saisiLe: string };
 }
 
 export const useConfigurationContext = () => {
