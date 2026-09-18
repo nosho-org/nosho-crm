@@ -139,6 +139,76 @@ async function mergeContacts(
           .execute();
       }
 
+      /*
+       * 4 bis. Les appels, les SMS et le lien Allo suivent le contact
+       * (NOS-1622).
+       *
+       * Sans cela, la suppression du perdant plus bas detruit ce que la fusion
+       * servait a sauver :
+       *
+       *   call_logs         `on delete set null` -- l'appel perd son contact,
+       *                     et sa transcription devient orpheline ;
+       *   sms_messages      idem ;
+       *   allo_contact_links `on delete CASCADE` -- le pivot Allo disparait, et
+       *                     le prochain appel du meme numero recree un contact
+       *                     fantome. Celui-la ne fait pas qu'oublier le passe :
+       *                     il condamne l'avenir a repeter l'erreur.
+       *
+       * Mesure avant ecriture : 83 des 104 appels de production sont tombes sur
+       * un contact cree automatiquement par Allo, et aucun n'est rattache a une
+       * opportunite. La reconciliation manuelle est la seule voie de rattrapage,
+       * et elle passe par cette fusion.
+       *
+       * Le pivot se deplace par un simple UPDATE : `uq_allo_contact_links_allo_id`
+       * rend un identifiant Allo unique toutes lignes confondues, donc le
+       * gagnant ne peut pas deja porter celui du perdant.
+       */
+      await trx
+        .updateTable("call_logs")
+        .set({ contact_id: winnerId })
+        .where("contact_id", "=", loserId)
+        .execute();
+
+      await trx
+        .updateTable("sms_messages")
+        .set({ contact_id: winnerId })
+        .where("contact_id", "=", loserId)
+        .execute();
+
+      await trx
+        .updateTable("allo_contact_links")
+        .set({ contact_id: winnerId })
+        .where("contact_id", "=", loserId)
+        .execute();
+
+      /*
+       * 4 ter. Rattacher a une opportunite les appels qui n'en avaient pas.
+       *
+       * `process_allo_call` calcule ce lien UNE FOIS, a l'arrivee du webhook.
+       * Un appel passe avant que l'opportunite n'existe -- le cas normal en
+       * prospection -- reste donc sans rattachement pour toujours.
+       *
+       * Meme regle que la fonction SQL, volontairement : affaire non archivee
+       * contenant le contact, la plus recemment modifiee d'abord. En ecrire une
+       * seconde, differente, ferait diverger deux definitions du meme lien.
+       *
+       * `deal_id is null` seulement : un rattachement deja etabli, fut-il a une
+       * autre affaire, a ete decide ailleurs et n'est pas a rediscuter ici.
+       */
+      await sql`
+        update public.call_logs cl
+           set deal_id = (
+                 select d.id
+                   from public.deals d
+                  where d.archived_at is null
+                    and d.contact_ids @> array[${winnerId}]::bigint[]
+                  order by d.updated_at desc, d.id desc
+                  limit 1
+               )
+         where cl.contact_id = ${winnerId}
+           and cl.deal_id is null
+      `.execute(trx);
+
       // 5. Merge and update winner contact
       const mergedData = mergeContactData(winner as Contact, loser as Contact);
       await trx

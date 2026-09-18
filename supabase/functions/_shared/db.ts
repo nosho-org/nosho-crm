@@ -74,11 +74,40 @@ interface DealsTable {
   index: number | null;
 }
 
+/*
+ * Les trois tables Allo, reduites a ce que la fusion de contacts manipule
+ * (NOS-1622) : le rattachement au contact, et rien de plus.
+ *
+ * Declarer ici les vingt colonnes de `call_logs` donnerait une seconde
+ * definition du schema, a cote de `supabase/schemas/01_tables.sql`, qui
+ * divergerait au premier ajout de colonne. Kysely n'a besoin que des colonnes
+ * qu'on lit ou ecrit.
+ */
+interface CallLogsTable {
+  id: Generated<number>;
+  contact_id: number | null;
+  deal_id: number | null;
+}
+
+interface SmsMessagesTable {
+  id: Generated<number>;
+  contact_id: number | null;
+}
+
+/** Cle composee (contact_id, allo_contact_id) : pas de colonne `id`. */
+interface AlloContactLinksTable {
+  contact_id: number;
+  allo_contact_id: string;
+}
+
 interface Database {
   contacts: ContactsTable;
   tasks: TasksTable;
   contact_notes: ContactNotesTable;
   deals: DealsTable;
+  call_logs: CallLogsTable;
+  sms_messages: SmsMessagesTable;
+  allo_contact_links: AlloContactLinksTable;
 }
 
 // Deno Postgres Driver for Kysely
