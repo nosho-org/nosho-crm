@@ -892,3 +892,36 @@ begin
   return new;
 end;
 $$;
+
+-- Un prospect cree par Allo ne porte pas le nom du commercial (NOS-1624).
+--
+-- `process_allo_call` nomme le contact avec `coalesce(from_name, 'Allo')`. Sur
+-- un appel ENTRANT, `from_name` est bien le correspondant. Sur un appel
+-- SORTANT, c'est le libelle de la ligne Allo -- donc le nom du commercial, et
+-- le prospect heritait du nom de celui qui l'appelait. Mesure : 26 des 39
+-- contacts crees par Allo etaient dans ce cas.
+CREATE OR REPLACE FUNCTION "public"."allo_nom_prospect_neutre"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  if new._sync_origin is distinct from 'allo' then
+    return new;
+  end if;
+
+  if nullif(btrim(new.first_name), '') is null then
+    return new;
+  end if;
+
+  if exists (
+    select 1 from public.sales s
+     where lower(btrim(s.first_name || ' ' || s.last_name))
+         = lower(btrim(new.first_name))
+  ) then
+    new.first_name := 'Allo';
+  end if;
+
+  return new;
+end;
+$$;

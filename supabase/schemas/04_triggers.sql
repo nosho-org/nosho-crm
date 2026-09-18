@@ -135,3 +135,9 @@ create or replace trigger on_auth_user_updated
 create or replace trigger trg_allo_sales_depuis_user_email
     before insert on public.call_logs
     for each row execute function public.allo_sales_depuis_user_email();
+
+-- Un prospect cree par Allo ne porte pas le nom d'un commercial de la maison
+-- (NOS-1624). Voir la fonction dans 02_functions.sql.
+create or replace trigger trg_allo_nom_prospect_neutre
+    before insert on public.contacts
+    for each row execute function public.allo_nom_prospect_neutre();
