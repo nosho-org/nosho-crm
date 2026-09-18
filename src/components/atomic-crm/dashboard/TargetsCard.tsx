@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import {
   useCreate,
+  useDataProvider,
   useDelete,
   useGetList,
   useNotify,
   useUpdate,
 } from "ra-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -28,6 +30,7 @@ import {
 } from "@/components/ui/select";
 
 import { AnimatedRing } from "@/components/ui/motion";
+import type { CrmDataProvider } from "../providers/types";
 import {
   useConfigurationContext,
   useConfigurationUpdater,
@@ -497,7 +500,29 @@ const MrrReelDialog = ({
 }) => {
   const config = useConfigurationContext();
   const updateConfig = useConfigurationUpdater();
+  const dataProvider = useDataProvider<CrmDataProvider>();
+  const queryClient = useQueryClient();
   const notify = useNotify();
+
+  /*
+   * Trois gestes, et il en faut trois (NOS-1646).
+   *
+   * La premiere version n'appelait que `updateConfig`, dont le nom laisse
+   * croire a une persistance : il n'ecrit que dans le magasin local de
+   * `ra-core`. Le chiffre s'affichait, et disparaissait au rechargement -- la
+   * configuration etant alors relue depuis la base, ou il n'avait jamais ete
+   * ecrit. Simon l'a constate en une actualisation.
+   *
+   * Meme enchainement que `CreateViewDialog`, qui avait deja resolu la
+   * question : la base d'abord, puis le cache react-query, puis le magasin.
+   * Ecrire en base sans amorcer le cache laisserait le prochain lecteur sur
+   * l'ancienne valeur.
+   */
+  const persister = async (suivant: typeof config) => {
+    await dataProvider.updateConfiguration(suivant);
+    queryClient.setQueryData(["configuration"], suivant);
+    updateConfig(suivant);
+  };
 
   const [montant, setMontant] = useState(
     config.mrrReel?.montant != null ? String(config.mrrReel.montant) : "",
@@ -511,7 +536,7 @@ const MrrReelDialog = ({
     if (!valide) return;
     setEnCours(true);
     try {
-      await updateConfig({
+      await persister({
         ...config,
         mrrReel: {
           montant: parse,
@@ -531,7 +556,7 @@ const MrrReelDialog = ({
     setEnCours(true);
     try {
       const { mrrReel: _retire, ...reste } = config;
-      await updateConfig(reste);
+      await persister(reste);
       notify("Retour au calcul automatique");
       onClose();
     } catch {
