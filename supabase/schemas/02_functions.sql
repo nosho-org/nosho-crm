@@ -854,3 +854,41 @@ EXCEPTION
     RETURN NULL;
 END;
 $$;
+
+-- Attribuer un appel Allo a celui qui l'a reellement traite (NOS-1623).
+--
+-- `process_allo_call` resout le commercial depuis la LIGNE utilisee
+-- (`allo_line_owners`). Mesure en production : cette regle ne remplissait que
+-- 66 appels sur 104, et se trompait sur 5 -- une ligne sert a plusieurs
+-- personnes. Allo transmet pourtant `user_email`, present sur 104 / 104.
+--
+-- Ce declencheur porte donc la regle a un seul endroit, pour tous les chemins
+-- d'ecriture (webhook, reprise, import), plutot que d'etre enfoui au milieu des
+-- deux cents lignes de `process_allo_call`.
+--
+-- Il ne parle que lorsque `user_email` designe un compte connu : sinon il laisse
+-- passer l'attribution calculee depuis la ligne, qui reste le repli.
+CREATE OR REPLACE FUNCTION "public"."allo_sales_depuis_user_email"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_sales_id bigint;
+begin
+  if nullif(btrim(new.user_email), '') is null then
+    return new;
+  end if;
+
+  select s.id into v_sales_id
+    from public.sales s
+   where lower(s.email) = lower(btrim(new.user_email))
+   limit 1;
+
+  if v_sales_id is not null then
+    new.sales_id := v_sales_id;
+  end if;
+
+  return new;
+end;
+$$;

@@ -129,3 +129,9 @@ create or replace trigger on_auth_user_created
 create or replace trigger on_auth_user_updated
     after update on auth.users
     for each row execute function public.handle_update_user();
+
+-- L'utilisateur Allo qui a decroche prime sur le proprietaire de la ligne
+-- (NOS-1623). Voir la fonction dans 02_functions.sql.
+create or replace trigger trg_allo_sales_depuis_user_email
+    before insert on public.call_logs
+    for each row execute function public.allo_sales_depuis_user_email();
