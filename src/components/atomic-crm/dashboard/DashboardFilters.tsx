@@ -189,7 +189,19 @@ export const DashboardFilters = () => {
   return (
     <div className="flex flex-wrap items-end gap-3">
       <FilterSelect
-        label="Période"
+        /*
+          Le libelle dit sur quelle date il porte (NOS-1648).
+
+          Il annoncait « Période » tout court. Simon a choisi une semaine en
+          pensant « l'activite de cette semaine » et a obtenu « les affaires
+          dont la cloture est prevue cette semaine-la » -- une seule, perdue,
+          donc des zeros partout. Les chiffres etaient justes ; la question
+          posee n'etait pas celle qu'il croyait poser.
+
+          Meme intitule que sur la liste des opportunites, ou le filtre
+          equivalent le precise depuis toujours.
+        */
+        label="Période (date de clôture prévue)"
         // `null` rather than "all": FilterSelect maps null onto its own ALL
         // sentinel, and passing the raw "all" matched no item — the trigger
         // rendered blank instead of "Toutes périodes".

@@ -151,6 +151,13 @@ export const PipelineFunnel = () => {
     [selection.salesId],
   );
 
+  // Le meme perimetre que `filtreResponsable`, exprime dans le vocabulaire du
+  // contrat de filtres : le lien et les chiffres partent de la meme selection.
+  const lienPipeline = useMemo(
+    () => toDealsLink({ salesId: selection.salesId ?? null }),
+    [selection.salesId],
+  );
+
   const { data: dealsSemaine } = useGetList<DealRecord>("deals", {
     pagination: { page: 1, perPage: 1000 },
     sort: { field: "id", order: "ASC" },
@@ -234,9 +241,30 @@ export const PipelineFunnel = () => {
   return (
     <Card className="p-3 flex flex-col gap-2 min-w-0">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">Pipeline par étape</h2>
+        <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+          <h2 className="text-sm font-semibold">Pipeline par étape</h2>
+          {/*
+            Ce bloc ne suit PAS la periode choisie en haut de page (NOS-1648) :
+            il montre le pipeline ouvert, filtre sur le seul responsable. Ses
+            voisins annoncent deja leur propre perimetre -- « aout 2026 »,
+            « semaine du 21 septembre », « 1 janv. -> 31 dec. » -- celui-ci se
+            taisait, et c'est lui qui affichait un million d'euros en face des
+            zeros du bandeau.
+          */}
+          <span className="text-[10px] text-muted-foreground">
+            tout le pipeline ouvert, hors période choisie
+          </span>
+        </div>
         <Link
-          to={toDealsLink(selectionFilter)}
+          /*
+            Le lien filtre comme les chiffres qu'il accompagne (NOS-1648).
+
+            Il passait `selectionFilter`, periode comprise, alors que les
+            totaux au-dessus l'ignorent : cliquer sur un pipeline d'un million
+            ouvrait une liste reduite a la semaine. C'est la derive que
+            `dealFilterContract` existe pour empecher.
+          */
+          to={lienPipeline}
           className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
         >
           Voir le pipeline complet
