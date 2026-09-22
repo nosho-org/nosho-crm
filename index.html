@@ -143,6 +143,177 @@
       </div>
     </div>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!--
+      Out-of-bundle boot watchdog.
+
+      Everything able to recover from a failed boot — Sentry.init (src/sentry.ts),
+      the vite:preloadError listener (src/main.tsx) and nukeCachesAndReload()
+      (layout/useVersionCheck.ts) — lives INSIDE the entry bundle. When that
+      bundle itself fails to load (deleted by a deploy, or a frozen service worker
+      precaching a build that no longer exists), none of it runs: the spinner
+      above spins forever over a blank page and nothing is reported.
+
+      This inline script is the only code left standing, so it must stay
+      self-contained — no imports, no module syntax.
+    -->
+    <script>
+      (function () {
+        var GUARD = "nosho.boot-recovery";
+        var BOOT_TIMEOUT_MS = 20000;
+        var settled = false;
+
+        function mounted() {
+          var root = document.getElementById("root");
+          return !!root && !root.querySelector(".loader-container");
+        }
+
+        // Best effort only: never let telemetry get in the way of recovery.
+        function report(reason) {
+          try {
+            var id =
+              window.crypto && window.crypto.randomUUID
+                ? window.crypto.randomUUID().replace(/-/g, "")
+                : String(Math.random()).slice(2, 34);
+            var now = new Date().toISOString();
+            navigator.sendBeacon(
+              "https://o4510487498588160.ingest.de.sentry.io/api/4511047848427600/envelope/?sentry_key=a318a734cf9c27db5f2b890b5688b1a0&sentry_version=7",
+              JSON.stringify({ event_id: id, sent_at: now }) +
+                "\n" +
+                JSON.stringify({ type: "event" }) +
+                "\n" +
+                JSON.stringify({
+                  event_id: id,
+                  timestamp: now,
+                  level: "fatal",
+                  platform: "javascript",
+                  logger: "boot-watchdog",
+                  message: { formatted: "App failed to boot: " + reason },
+                  tags: { boot_failure: reason },
+                  request: { url: location.href },
+                }),
+            );
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        // Same sequence as nukeCachesAndReload() in useVersionCheck.ts, 3s
+        // fallback timer included. Duplicated rather than imported: by
+        // definition, the bundle exporting it is what failed to load.
+        function purge() {
+          var fallback = setTimeout(function () {
+            location.reload();
+          }, 3000);
+          var jobs = [];
+          if ("serviceWorker" in navigator) {
+            jobs.push(
+              navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(
+                  regs.map(function (r) {
+                    return r.unregister();
+                  }),
+                );
+              }),
+            );
+          }
+          if ("caches" in window) {
+            jobs.push(
+              caches.keys().then(function (keys) {
+                return Promise.all(
+                  keys.map(function (k) {
+                    return caches.delete(k);
+                  }),
+                );
+              }),
+            );
+          }
+          Promise.all(jobs)
+            .catch(function () {})
+            .then(function () {
+              clearTimeout(fallback);
+              location.reload();
+            });
+        }
+
+        function showFailure() {
+          var root = document.getElementById("root");
+          if (!root) return;
+          root.innerHTML =
+            '<div class="loader-container" style="gap:16px;text-align:center;padding:24px">' +
+            "<p>Impossible de charger l'application.</p>" +
+            '<button type="button" id="boot-retry" style="padding:8px 16px;cursor:pointer">' +
+            "Réparer et recharger</button></div>";
+          var btn = document.getElementById("boot-retry");
+          if (btn) btn.addEventListener("click", purge);
+        }
+
+        function recover(reason) {
+          if (settled || mounted()) return;
+          settled = true;
+          var tried = null;
+          try {
+            tried = sessionStorage.getItem(GUARD);
+          } catch (e) {
+            /* ignore */
+          }
+          // One automatic attempt only: a purge that does not fix it must never
+          // turn into a reload loop. The two outcomes are reported under
+          // distinct reasons — "-after-purge" means self-repair did not work
+          // and a human needs to look, which is the one worth alerting on.
+          if (tried) {
+            report(reason + "-after-purge");
+            showFailure();
+            return;
+          }
+          report(reason);
+          try {
+            sessionStorage.setItem(GUARD, "1");
+          } catch (e) {
+            /* ignore */
+          }
+          purge();
+        }
+
+        // The entry <script> failed to fetch (404/503). error events do not
+        // bubble, hence the capture phase. This is the precise signal for a
+        // stale service worker pointing at a deleted bundle.
+        document.addEventListener(
+          "error",
+          function (e) {
+            var el = e.target;
+            if (el && el.tagName === "SCRIPT" && el.type === "module") {
+              recover("entry-script-failed");
+            }
+          },
+          true,
+        );
+
+        // Wider net: the script loaded but React never mounted. Reports and
+        // shows the failure screen, but does NOT purge — a slow connection must
+        // not cost the user a healthy service worker.
+        setTimeout(function () {
+          if (settled || mounted()) return;
+          settled = true;
+          report("boot-timeout");
+          showFailure();
+        }, BOOT_TIMEOUT_MS);
+
+        // Booted cleanly: drop the guard so a future failure gets its own
+        // automatic repair attempt.
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            if (!mounted()) return;
+            settled = true;
+            try {
+              sessionStorage.removeItem(GUARD);
+            } catch (e) {
+              /* ignore */
+            }
+          }, 2000);
+        });
+      })();
+    </script>
+
     <script type="module" src="<%= mainScript %>"></script>
   </body>
 </html>
