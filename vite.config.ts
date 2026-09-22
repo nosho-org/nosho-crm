@@ -44,7 +44,10 @@ export default defineConfig({
     versionJsonPlugin(),
     visualizer({
       open: process.env.NODE_ENV !== "CI",
-      filename: "./dist/stats.html",
+      // Hors de dist/ : cette analyse expose la structure complete du bundle.
+      // Emise dans dist/, elle etait publiee sur crm.nosho.cc/stats.html (1,7 Mo,
+      // accessible sans authentification) et precachee par le service worker.
+      filename: "./.stats/bundle.html",
     }),
     createHtmlPlugin({
       minify: true,
