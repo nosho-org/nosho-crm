@@ -52,3 +52,6 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Analyse de bundle (rollup-plugin-visualizer)
+.stats/
