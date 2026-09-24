@@ -25,6 +25,7 @@ import { getCompanyAvatar } from "../commons/getCompanyAvatar";
 import { getContactAvatar } from "../commons/getContactAvatar";
 import { mergeCompanies } from "../commons/mergeCompanies";
 import { mergeContacts } from "../commons/mergeContacts";
+import { mergeDeals } from "../commons/mergeDeals";
 import type { CrmDataProvider } from "../types";
 import { authProvider, USER_STORAGE_KEY } from "./authProvider";
 import generateData from "./dataGenerator";
@@ -227,6 +228,9 @@ const dataProviderWithCustomMethod: CrmDataProvider = {
   },
   mergeCompanies: async (sourceId: Identifier, targetId: Identifier) => {
     return mergeCompanies(sourceId, targetId, baseDataProvider);
+  },
+  mergeDeals: async (sourceId: Identifier, targetId: Identifier) => {
+    return mergeDeals(sourceId, targetId, baseDataProvider);
   },
   mergeContacts: async (sourceId: Identifier, targetId: Identifier) => {
     return mergeContacts(sourceId, targetId, baseDataProvider);

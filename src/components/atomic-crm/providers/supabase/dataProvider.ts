@@ -372,6 +372,31 @@ const getDataProviderWithCustomMethods = () => {
 
       return data;
     },
+    /**
+     * Fusionne deux opportunités.
+     *
+     * `targetId` est gardée, `sourceId` est absorbée puis **archivée** — pas
+     * supprimée, contrairement aux contacts et aux sociétés. Le raisonnement
+     * est écrit en tête de `supabase/functions/merge_deals/fusionOpportunites.ts`
+     * et tient en une phrase : une opportunité porte des chiffres qui ont déjà
+     * été lus.
+     */
+    async mergeDeals(sourceId: Identifier, targetId: Identifier) {
+      const { data, error } = await getSupabaseClient().functions.invoke(
+        "merge_deals",
+        {
+          method: "POST",
+          body: { loserId: sourceId, winnerId: targetId },
+        },
+      );
+
+      if (error) {
+        console.error("merge_deals.error", error);
+        throw new Error(await messageDeFusion(error));
+      }
+
+      return data;
+    },
     async getConfiguration(): Promise<ConfigurationContextValue> {
       const { data } = await baseDataProvider.getOne("configuration", {
         id: 1,

@@ -21,6 +21,7 @@ import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
 import { DealDuplicateButton } from "./DealDuplicateButton";
+import { DealMergeButton } from "./DealMergeButton";
 import { DealStageStepper, useCelebrateWin } from "./DealStageStepper";
 import { getDealPrimaryAction } from "./dealPrimaryAction";
 import { DealEmailHistory } from "./DealEmailHistory";
@@ -220,6 +221,17 @@ const DealActions = () => {
             menu. `onSelect` est neutralisé pour que le menu ne se ferme pas
             sous la boîte de dialogue qu'il ouvre.
           */}
+          {/*
+            La fusion voisine avec l'archivage : elle archive, justement. Et
+            c'est une action de rangement, qu'on ne vient pas faire — on tombe
+            dessus en constatant le doublon.
+          */}
+          <DropdownMenuItem
+            onSelect={(event) => event.preventDefault()}
+            className="p-0 focus:bg-transparent"
+          >
+            <DealMergeButton record={record} />
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={(event) => event.preventDefault()}
             className="p-0 focus:bg-transparent"

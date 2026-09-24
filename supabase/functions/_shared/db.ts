@@ -40,6 +40,8 @@ export interface ContactsTable {
 interface TasksTable {
   id: Generated<number>;
   contact_id: number;
+  /** Rattachement a une opportunite -- deplace par `merge_deals`. */
+  deal_id: number | null;
   type: string | null;
   text: string | null;
   due_date: Date;
@@ -72,6 +74,39 @@ interface DealsTable {
   expected_closing_date: Date | null;
   sales_id: number | null;
   index: number | null;
+  /* Lues et parfois ecrites par `merge_deals` -- voir `fusionOpportunites.ts`
+     pour la regle qui decide de chacune. */
+  contact_roles: Record<string, string> | null;
+  products: string[] | null;
+  motion: string | null;
+  opportunity_type: string | null;
+  company_type: string | null;
+  lead_source: string | null;
+  referrer_id: number | null;
+}
+
+/**
+ * Les trois tables que `merge_deals` deplace et qui n'etaient pas encore
+ * declarees. Memes limites qu'ailleurs dans ce fichier : uniquement les
+ * colonnes qu'on lit ou qu'on ecrit, pour ne pas tenir un second schema a
+ * cote de `supabase/schemas/01_tables.sql`.
+ */
+interface DealNotesTable {
+  id: Generated<number>;
+  deal_id: number;
+  text: string | null;
+  date: Date | null;
+  sales_id: number | null;
+}
+
+interface ContractsTable {
+  id: Generated<number>;
+  deal_id: number;
+}
+
+interface SalesTable {
+  id: Generated<number>;
+  user_id: string | null;
 }
 
 /*
@@ -105,6 +140,9 @@ interface Database {
   tasks: TasksTable;
   contact_notes: ContactNotesTable;
   deals: DealsTable;
+  deal_notes: DealNotesTable;
+  contracts: ContractsTable;
+  sales: SalesTable;
   call_logs: CallLogsTable;
   sms_messages: SmsMessagesTable;
   allo_contact_links: AlloContactLinksTable;
