@@ -1,4 +1,5 @@
-import { ArrowLeft, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Merge, MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ShowBase, useRecordContext } from "ra-core";
 import { EditButton } from "@/components/admin/edit-button";
@@ -21,7 +22,7 @@ import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
 import { DealDuplicateButton } from "./DealDuplicateButton";
-import { DealMergeButton } from "./DealMergeButton";
+import { DealMergeDialog } from "./DealMergeDialog";
 import { DealStageStepper, useCelebrateWin } from "./DealStageStepper";
 import { getDealPrimaryAction } from "./dealPrimaryAction";
 import { DealEmailHistory } from "./DealEmailHistory";
@@ -164,6 +165,7 @@ const DealHeader = () => {
  */
 const DealActions = () => {
   const record = useRecordContext<Deal>();
+  const [fusionOuverte, setFusionOuverte] = useState(false);
   if (!record) return null;
 
   if (record.archived_at) {
@@ -216,22 +218,27 @@ const DealActions = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {/*
-            `DealArchiveButton` porte sa propre confirmation et son propre
-            appel : on l'enveloppe plutôt que de le réécrire en élément de
-            menu. `onSelect` est neutralisé pour que le menu ne se ferme pas
-            sous la boîte de dialogue qu'il ouvre.
-          */}
-          {/*
             La fusion voisine avec l'archivage : elle archive, justement. Et
             c'est une action de rangement, qu'on ne vient pas faire — on tombe
             dessus en constatant le doublon.
+
+            L'entrée ne fait que lever un drapeau, et le menu se ferme
+            normalement : sa boîte de dialogue se monte plus bas, en dehors du
+            menu. Montée dedans, elle était démontée avec lui dès qu'on ouvrait
+            son champ de recherche — une troisième couche Radix comptant comme
+            un clic hors de la première.
           */}
-          <DropdownMenuItem
-            onSelect={(event) => event.preventDefault()}
-            className="p-0 focus:bg-transparent"
-          >
-            <DealMergeButton record={record} />
+          <DropdownMenuItem onSelect={() => setFusionOuverte(true)}>
+            <Merge className="w-4 h-4" aria-hidden />
+            Fusionner
           </DropdownMenuItem>
+          {/*
+            `DealArchiveButton` porte sa propre confirmation et son propre
+            appel : on l'enveloppe plutôt que de le réécrire en élément de
+            menu. `onSelect` est neutralisé pour que le menu ne se ferme pas
+            sous la boîte de dialogue qu'il ouvre — `window.confirm` n'étant
+            pas une couche Radix, elle ne souffre pas du même empilement.
+          */}
           <DropdownMenuItem
             onSelect={(event) => event.preventDefault()}
             className="p-0 focus:bg-transparent"
@@ -240,6 +247,13 @@ const DealActions = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {fusionOuverte && (
+        <DealMergeDialog
+          perdante={record}
+          onClose={() => setFusionOuverte(false)}
+        />
+      )}
     </div>
   );
 };

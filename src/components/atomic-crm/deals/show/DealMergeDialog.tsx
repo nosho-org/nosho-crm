@@ -51,32 +51,42 @@ import type { Deal } from "../../types";
  * n'est pas additionné, et les deux fiches peuvent porter des sociétés
  * différentes. Les annoncer après coup dans une note ne sert qu'à celui qui
  * relit ; les annoncer avant sert à celui qui décide.
+ *
+ * ## Le dialogue ne vit pas dans le menu ⋯
+ *
+ * Il y a vécu, et Simon l'a trouvé tout de suite : « le champ de recherche
+ * déconne totalement ». Cliquer dedans fermait la boîte entière.
+ *
+ * Trois couches Radix empilées : le menu déroulant, la boîte de dialogue qu'il
+ * contenait, et le popover du champ de recherche. Ouvrir la troisième compte
+ * comme un clic hors de la première, qui se ferme — et le dialogue, monté dans
+ * un `DropdownMenuItem`, était démonté avec elle. Le champ n'y était pour rien :
+ * il était seulement le premier à ouvrir une couche de plus.
+ *
+ * D'où la séparation : l'entrée de menu ne fait que lever un drapeau, et
+ * `DealMergeDialog` se monte à côté du menu, pas dedans. Deux couches au lieu
+ * de trois, et la boîte survit à ce qu'on ouvre en son sein.
  */
 /** Une seule ligne : on ne veut que le `total`, jamais les enregistrements. */
 const PREMIÈRE = { page: 1, perPage: 1 };
 
-export const DealMergeButton = ({ record }: { record: Deal }) => {
-  const [ouvert, setOuvert] = useState(false);
+/**
+ * « Nom de l'affaire — Société », quand les deux diffèrent.
+ *
+ * Le nom seul ne suffit pas à choisir : les fiches que Simon voulait fusionner
+ * s'appellent « Emilie Garrido-Pradalie — Hôpital » et « Hôpital Nord
+ * (AP-HM) ». Rien dans le premier ne dit qu'il s'agit de l'AP-HM ; la société,
+ * elle, le dit. `deals_summary` la porte, donc elle ne coûte pas une requête.
+ *
+ * Omise quand elle répète le nom — c'est le cas le plus fréquent depuis que
+ * l'intitulé se reprend de la société.
+ */
+const optionTexteOpportunite = (deal: Deal) =>
+  deal.company_name && deal.company_name !== deal.name
+    ? `${deal.name} — ${deal.company_name}`
+    : deal.name;
 
-  return (
-    <>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => setOuvert(true)}
-      >
-        <Merge className="w-4 h-4" aria-hidden />
-        Fusionner
-      </Button>
-      {ouvert && (
-        <DealMergeDialog perdante={record} onClose={() => setOuvert(false)} />
-      )}
-    </>
-  );
-};
-
-const DealMergeDialog = ({
+export const DealMergeDialog = ({
   perdante,
   onClose,
 }: {
@@ -169,10 +179,19 @@ const DealMergeDialog = ({
                   "id@neq": perdante.id,
                   "archived_at@is": null,
                 }}
+                /*
+                 * Par ordre alphabétique, faute de mieux : sans tri explicite
+                 * la liste arrive dans l'ordre de la base, qui ne veut rien
+                 * dire pour qui la parcourt. La recherche reste le vrai
+                 * chemin — c'est la même que celle de la liste des
+                 * opportunités, et elle couvre le nom, la société et les
+                 * contacts.
+                 */
+                sort={{ field: "name", order: "ASC" }}
               >
                 <AutocompleteInput
                   label=""
-                  optionText="name"
+                  optionText={optionTexteOpportunite}
                   validate={required()}
                   onChange={setGagnanteId}
                   helperText={false}
