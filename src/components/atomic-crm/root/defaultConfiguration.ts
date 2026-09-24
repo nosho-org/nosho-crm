@@ -266,10 +266,24 @@ export const defaultDealPriority: DealPriorityValue = "normal";
  * Multi-select: a deal can carry several at once, stored in `deals.products`.
  * The colours are imposed by the mockups — green / blue / violet.
  */
+/**
+ * Les produits vendus. Une opportunité peut en porter plusieurs.
+ *
+ * Simon, le 24/09/2026 : « ajoute également Réactivation client et Marketing ».
+ * La liste passe de trois à cinq, ce qui a aussi décidé du passage du filtre
+ * du tableau de bord en liste déroulante — trois pastilles tenaient sur une
+ * ligne, cinq débordent.
+ *
+ * Le slug reste en minuscules sans accent : c'est lui qui est stocké dans
+ * `deals.products`, et un accent dans une valeur de tableau Postgres se paie
+ * au premier filtre mal encodé. Le libellé, lui, s'écrit correctement.
+ */
 export const defaultDealProducts = [
   { value: "no-show", label: "No-show" },
   { value: "entrant", label: "Entrant" },
   { value: "data", label: "Data" },
+  { value: "reactivation-client", label: "Réactivation client" },
+  { value: "marketing", label: "Marketing" },
 ];
 
 export const defaultLeadSources = [

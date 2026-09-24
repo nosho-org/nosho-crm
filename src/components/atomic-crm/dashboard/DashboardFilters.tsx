@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { FilterMultiSelect } from "../filters/FilterMultiSelect";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Sale } from "../types";
 import {
@@ -64,52 +65,36 @@ const FilterSelect = ({
 );
 
 /**
- * Products are multi-select, so they get toggle pills rather than a Select:
- * "Produit = No-show + Entrant" means either, and a dropdown cannot show two
- * values at once without lying about which is active.
+ * Le produit, en liste deroulante a cocher (demande de Simon, 24/09/2026).
+ *
+ * C'etaient des pastilles cote a cote, et le commentaire qui le justifiait
+ * disait vrai d'un `Select` ordinaire : « a dropdown cannot show two values at
+ * once without lying about which is active ». `FilterMultiSelect` n'en est pas
+ * un : il coche, et il resume la selection en toutes lettres.
+ *
+ * Le declencheur est arithmetique : la liste passe de trois a cinq produits
+ * avec « Reactivation client » et « Marketing ». Trois pastilles tenaient sur
+ * une ligne ; cinq debordent.
  */
 const ProductFilter = () => {
   const { dealProducts } = useConfigurationContext();
   const { selection, setProducts } = useDashboard();
 
-  const toggle = (value: string) => {
-    setProducts(
-      selection.products.includes(value)
-        ? selection.products.filter((product) => product !== value)
-        : [...selection.products, value],
-    );
-  };
-
   return (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs font-medium text-muted-foreground">
-        Produit{" "}
-        <span className="font-normal">
-          {selection.products.length ? `(${selection.products.length})` : ""}
-        </span>
-      </span>
-      <div
-        className="flex items-center gap-1 flex-wrap"
-        role="group"
-        aria-label="Produit"
-      >
-        {dealProducts.map((product) => {
-          const active = selection.products.includes(product.value);
-          return (
-            <Button
-              key={product.value}
-              type="button"
-              size="sm"
-              variant={active ? "default" : "outline"}
-              aria-pressed={active}
-              onClick={() => toggle(product.value)}
-            >
-              {product.label}
-            </Button>
-          );
-        })}
-      </div>
-    </div>
+    <FilterMultiSelect
+      label="Produit"
+      selected={selection.products}
+      onToggle={(value) =>
+        setProducts(
+          selection.products.includes(value)
+            ? selection.products.filter((produit) => produit !== value)
+            : [...selection.products, value],
+        )
+      }
+      onClear={() => setProducts([])}
+      allLabel="Tous"
+      choices={dealProducts}
+    />
   );
 };
 

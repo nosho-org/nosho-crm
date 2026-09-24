@@ -1,12 +1,6 @@
-import { AlertTriangle, ChevronDown, RotateCcw } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 import { useGetList, useListFilterContext } from "ra-core";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -15,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { FilterMultiSelect } from "../filters/FilterMultiSelect";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Sale } from "../types";
 import { startOfToday } from "./cockpit/dealDates";
@@ -72,102 +67,6 @@ const readSelection = (
   const single = filterValues?.[field];
   return single == null || single === "" ? [] : [String(single)];
 };
-
-/** Étiquette compacte demandée par la spec : « Qualifié + Démo/POC +1 ». */
-const summarise = (
-  selected: string[],
-  choices: { value: string; label: string }[],
-  allLabel: string,
-): string => {
-  if (selected.length === 0) return allLabel;
-  const labels = selected.map(
-    /*
-     * Une valeur sans libellé s'écrit « … », jamais sa valeur brute.
-     *
-     * Les choix des étapes et des priorités viennent de la configuration et
-     * sont là immédiatement ; ceux des responsables arrivent d'une requête.
-     * Depuis que la liste s'ouvre filtrée sur l'utilisateur courant (NOS-1085),
-     * ce filtre est toujours posé au premier rendu — et affichait donc « 0 »,
-     * l'identifiant nu, le temps que les commerciaux répondent. Un identifiant
-     * technique ne dit rien à personne ; l'ellipse dit « ça arrive ».
-     */
-    (value) => choices.find((choice) => choice.value === value)?.label ?? "…",
-  );
-  if (labels.length <= 2) return labels.join(" + ");
-  return `${labels[0]} + ${labels[1]} +${labels.length - 2}`;
-};
-
-/**
- * Un filtre à cocher, pour les axes où « Lead + Qualifié + Démo/POC » a un sens.
- *
- * `DropdownMenuCheckboxItem` plutôt qu'un composant multi-select maison : la
- * brique existe déjà dans `ui/`, elle est accessible au clavier, et elle évite
- * d'introduire un cinquième patron de sélection dans cet écran. Le menu ne se
- * referme pas à chaque clic — `onSelect` annule l'événement — sinon cocher
- * trois étapes demanderait d'ouvrir le menu trois fois.
- */
-const FilterMultiSelect = ({
-  label,
-  selected,
-  onToggle,
-  onClear,
-  allLabel,
-  choices,
-  className = "w-40",
-}: {
-  label: string;
-  selected: string[];
-  onToggle: (value: string) => void;
-  onClear: () => void;
-  allLabel: string;
-  choices: { value: string; label: string }[];
-  className?: string;
-}) => (
-  <div className="flex flex-col gap-1 min-w-0">
-    <span className="text-xs font-medium text-muted-foreground">
-      {label} {selected.length > 1 && `(${selected.length})`}
-    </span>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-label={label}
-          className={`${className} justify-between font-normal`}
-        >
-          <span className="truncate">
-            {summarise(selected, choices, allLabel)}
-          </span>
-          <ChevronDown className="w-4 h-4 opacity-50 shrink-0" aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
-        <DropdownMenuCheckboxItem
-          checked={selected.length === 0}
-          onSelect={(event) => {
-            event.preventDefault();
-            onClear();
-          }}
-        >
-          {allLabel}
-        </DropdownMenuCheckboxItem>
-        {choices.map((choice) => (
-          <DropdownMenuCheckboxItem
-            key={choice.value}
-            checked={selected.includes(choice.value)}
-            onSelect={(event) => {
-              event.preventDefault();
-              onToggle(choice.value);
-            }}
-          >
-            {choice.label}
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  </div>
-);
 
 /**
  * Colonne PostgREST → champ du contrat partagé.
