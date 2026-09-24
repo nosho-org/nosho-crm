@@ -249,23 +249,38 @@ export const Task = ({
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
+/** Au-delà, la file redeviendrait une liste : le reste tient dans un lien. */
+const OPPORTUNITES_AFFICHEES = 10;
+
 /**
- * L'opportunité derrière une tâche de contact — ou leur nombre.
+ * Les opportunités derrière une tâche de contact, nommées une par une.
  *
- * Simon, le 24/09/2026, devant « Francis ROTH · 3 opportunités » : « pourquoi
- * Francis ROTH remonte comme une opportunité ? » Il ne remontait pas comme
- * telle — c'est le contact de la tâche, et le segment suivant compte ses
- * affaires. Deux séparateurs identiques, et la ligne se lit d'un bloc.
+ * Simon, le 24/09/2026, devant « Francis ROTH · 3 opportunités » : d'abord
+ * « pourquoi Francis ROTH remonte comme une opportunité ? », puis, une fois
+ * le décompte corrigé, « c'est mal fait, moi je veux une ligne par
+ * opportunité ».
  *
- * Deux corrections, donc, dont une vraie panne :
+ * Il a raison, et la tâche qu'il regardait le prouve toute seule : elle
+ * s'intitule « point 30 min sur les mises en relation SIMSE et AMIM ». Le
+ * texte nomme deux affaires ; la ligne d'en dessous répondait « 5
+ * opportunités ». Un décompte dit qu'il y a quelque chose à aller voir —
+ * ailleurs, plus tard, en cliquant. Passer l'appel demande de savoir
+ * lesquelles, maintenant.
  *
- * 1. **Le nombre était faux.** `perPage: 3` bornait la requête, et
- *    `deals.length` comptait ce qui était revenu. Francis ROTH a cinq
- *    opportunités ouvertes ; la ligne en annonçait trois. `total` vient de
- *    l'en-tête `Content-Range` de la même requête : le vrai nombre, sans
- *    seconde requête ni page entière rapatriée.
- * 2. **Le contact porte son icône.** Un pictogramme de personne coûte un
- *    caractère et dit ce que trois mots diraient plus mal.
+ * ## Une seule affaire reste en ligne
+ *
+ * Elle était déjà nommée, sur la même ligne que l'échéance : lui donner une
+ * ligne à elle n'apprendrait rien et allongerait la file partout. Mesure en
+ * production : 68 des 79 tâches ouvertes rattachées à un contact n'ont qu'une
+ * affaire, 4 en ont plusieurs. Le déploiement en ligne ne coûte donc que
+ * quatre endroits, et c'est exactement là qu'il sert.
+ *
+ * ## Le décompte disparaît, mais la panne qu'il cachait mérite mémoire
+ *
+ * Il affichait `deals.length` sur une requête bornée à `perPage: 3` : quel que
+ * soit le nombre réel, il annonçait trois au maximum. Francis ROTH en a cinq.
+ * D'où `total`, l'en-tête `Content-Range`, pour le lien de débordement qui
+ * subsiste au-delà de dix.
  */
 const TaskDealLink = ({
   contactId,
@@ -281,9 +296,7 @@ const TaskDealLink = ({
   } = useGetList<Deal>(
     "deals",
     {
-      // Une seule ligne suffit tant qu'il n'y en a qu'une : au-delà, on
-      // n'affiche qu'un décompte, et `total` le donne sans les rapatrier.
-      pagination: { page: 1, perPage: 1 },
+      pagination: { page: 1, perPage: OPPORTUNITES_AFFICHEES },
       sort: { field: "updated_at", order: "DESC" },
       filter: {
         "contact_ids@cs": `{${contactId}}`,
@@ -295,32 +308,56 @@ const TaskDealLink = ({
 
   if (isPending || !deals || deals.length === 0) return null;
 
-  if (total === 1) {
-    const deal = deals[0];
+  const lien = (deal: Deal) => (
+    <Link
+      to={`/deals/${deal.id}/show`}
+      onClick={stopPropagation}
+      className="text-foreground hover:underline"
+    >
+      {deal.name}
+    </Link>
+  );
+
+  if (deals.length === 1) {
     return (
       <>
         {" · "}
-        <Link
-          to={`/deals/${deal.id}/show`}
-          onClick={stopPropagation}
-          className="text-foreground hover:underline"
-        >
-          {deal.name}
-        </Link>
+        {lien(deals[0])}
       </>
     );
   }
 
+  const reste = (total ?? deals.length) - deals.length;
+
   return (
-    <>
-      {" · "}
-      <Link
-        to={`/contacts/${contactId}/show`}
-        onClick={stopPropagation}
-        className="text-foreground hover:underline"
-      >
-        {total} opportunités
-      </Link>
-    </>
+    /*
+     * Un `ul` dans le `div` de l'échéance : la liste appartient à la ligne du
+     * dessus, et l'aligner sous le pictogramme du contact dit de qui elle
+     * relève sans avoir à l'écrire.
+     */
+    <ul className="mt-0.5 ml-4 flex flex-col">
+      {deals.map((deal) => (
+        <li key={deal.id} className="leading-5">
+          <span aria-hidden className="mr-1 opacity-60">
+            ↳
+          </span>
+          {lien(deal)}
+        </li>
+      ))}
+      {reste > 0 && (
+        <li className="leading-5">
+          <span aria-hidden className="mr-1 opacity-60">
+            ↳
+          </span>
+          <Link
+            to={`/contacts/${contactId}/show`}
+            onClick={stopPropagation}
+            className="text-foreground hover:underline"
+          >
+            et {reste} autre{reste > 1 ? "s" : ""}
+          </Link>
+        </li>
+      )}
+    </ul>
   );
 };
