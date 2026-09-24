@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import createHtmlPlugin from "vite-plugin-simple-html";
 import { VitePWA } from "vite-plugin-pwa";
+import { bootEntryIdPlugin } from "./vite.bootEntryId.ts";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -28,6 +29,7 @@ export default defineConfig({
       manifest: false,
       devOptions: { enabled: false },
     }),
+    bootEntryIdPlugin(),
   ],
   define: {
     "import.meta.env.VITE_IS_DEMO": JSON.stringify("true"),

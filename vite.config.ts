@@ -7,6 +7,7 @@ import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import createHtmlPlugin from "vite-plugin-simple-html";
 import { VitePWA } from "vite-plugin-pwa";
+import { bootEntryIdPlugin } from "./vite.bootEntryId.ts";
 
 function readAppVersion(): string {
   const src = readFileSync(path.resolve(__dirname, "src/version.ts"), "utf-8");
@@ -65,6 +66,7 @@ export default defineConfig({
       },
       manifest: false, // Use existing manifest.json from public/
     }),
+    bootEntryIdPlugin(),
   ],
   define:
     process.env.NODE_ENV === "production" && process.env.VITE_SUPABASE_URL

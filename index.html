@@ -159,8 +159,45 @@
     <script>
       (function () {
         var GUARD = "nosho.boot-recovery";
+        var FORCE = "nosho.boot-watchdog.force";
         var BOOT_TIMEOUT_MS = 20000;
+        var PROBE_TIMEOUT_MS = 4000;
         var settled = false;
+
+        // None of this applies to a Vite dev server: VitePWA declares no
+        // devOptions, so there is no service worker and no precache to repair,
+        // and no deploy has deleted anything. What localhost DOES produce is a
+        // failing entry whenever the dev server restarts or a compile error
+        // makes Vite answer 500 — and the watchdog used to answer that with a
+        // fatal alert in the production Sentry project, a wipe of the origin's
+        // caches, and a failure screen hiding Vite's real error message
+        // (NOSHO-CRM-W / NOSHO-CRM-V).
+        //
+        // `vite preview` also serves from localhost, so keep a way back in to
+        // exercise this code against a real production build.
+        function localOrigin() {
+          var h = location.hostname;
+          return (
+            h === "localhost" ||
+            h === "127.0.0.1" ||
+            h === "::1" ||
+            h === "[::1]" ||
+            /\.local$/.test(h)
+          );
+        }
+
+        function forced() {
+          try {
+            return (
+              location.search.indexOf("bootwatchdog=1") !== -1 ||
+              localStorage.getItem(FORCE) === "1"
+            );
+          } catch (e) {
+            return false;
+          }
+        }
+
+        if (localOrigin() && !forced()) return;
 
         function mounted() {
           var root = document.getElementById("root");
@@ -235,6 +272,38 @@
             });
         }
 
+        // An error event on a <script> carries no status code, so "the deploy
+        // deleted this bundle" and "the phone went into a tunnel" arrive here
+        // looking identical. Purging repairs the first and is pure damage for
+        // the second — it throws away a healthy precache over a blip — so ask
+        // the network which one it is before touching anything. Anything other
+        // than a clear "gone" answer, timeout included, counts as reachable:
+        // the destructive branch has to be the one that earns its way in.
+        function confirmGone(src, done) {
+          if (!src || navigator.onLine === false) return done(false);
+          var answered = false;
+          function answer(gone) {
+            if (answered) return;
+            answered = true;
+            clearTimeout(timer);
+            done(gone);
+          }
+          var timer = setTimeout(function () {
+            answer(false);
+          }, PROBE_TIMEOUT_MS);
+          try {
+            fetch(src, { cache: "no-store" })
+              .then(function (res) {
+                answer(res.status === 404 || res.status === 403);
+              })
+              .catch(function () {
+                answer(false);
+              });
+          } catch (e) {
+            answer(false);
+          }
+        }
+
         function showFailure() {
           var root = document.getElementById("root");
           if (!root) return;
@@ -247,7 +316,15 @@
           if (btn) btn.addEventListener("click", purge);
         }
 
-        function recover(reason) {
+        // One automatic attempt only: a repair that does not fix it must never
+        // turn into a reload loop. The guard records WHICH repair was tried, so
+        // the second failure reports under its own reason — the "-after-" ones
+        // mean self-repair did not work and a human needs to look, which is the
+        // one worth alerting on.
+        function recover(reason, src) {
+          // Claim the boot synchronously: the probe below is async, and neither
+          // a second error event nor the boot timeout may slip through while it
+          // is in flight.
           if (settled || mounted()) return;
           settled = true;
           var tried = null;
@@ -256,33 +333,39 @@
           } catch (e) {
             /* ignore */
           }
-          // One automatic attempt only: a purge that does not fix it must never
-          // turn into a reload loop. The two outcomes are reported under
-          // distinct reasons — "-after-purge" means self-repair did not work
-          // and a human needs to look, which is the one worth alerting on.
           if (tried) {
-            report(reason + "-after-purge");
+            report(
+              reason + "-after-" + (tried === "reload" ? "reload" : "purge"),
+            );
             showFailure();
             return;
           }
-          report(reason);
-          try {
-            sessionStorage.setItem(GUARD, "1");
-          } catch (e) {
-            /* ignore */
-          }
-          purge();
+          confirmGone(src, function (gone) {
+            report(gone ? reason : "entry-script-unreachable");
+            try {
+              sessionStorage.setItem(GUARD, gone ? "purge" : "reload");
+            } catch (e) {
+              /* ignore */
+            }
+            // Reachable, just not right now: retry once without unregistering
+            // the service worker, so a transient blip costs a reload and not
+            // the user's offline copy of the app.
+            if (gone) purge();
+            else location.reload();
+          });
         }
 
         // The entry <script> failed to fetch (404/503). error events do not
-        // bubble, hence the capture phase. This is the precise signal for a
-        // stale service worker pointing at a deleted bundle.
+        // bubble, hence the capture phase. Matching the id rather than
+        // `type === "module"` keeps /@vite/client, the react-refresh preamble
+        // and any future third-party module script out of this: only the tag
+        // that actually boots the app counts as a failed boot.
         document.addEventListener(
           "error",
           function (e) {
             var el = e.target;
-            if (el && el.tagName === "SCRIPT" && el.type === "module") {
-              recover("entry-script-failed");
+            if (el && el.id === "app-entry") {
+              recover("entry-script-failed", el.src);
             }
           },
           true,
@@ -314,6 +397,6 @@
       })();
     </script>
 
-    <script type="module" src="<%= mainScript %>"></script>
+    <script type="module" id="app-entry" src="<%= mainScript %>"></script>
   </body>
 </html>
