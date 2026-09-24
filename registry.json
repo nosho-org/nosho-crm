@@ -726,6 +726,10 @@
           "type": "registry:component"
         },
         {
+          "path": "src/components/atomic-crm/deals/show/DealMergeButton.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "src/components/atomic-crm/deals/show/DealNextMeetingCard.tsx",
           "type": "registry:component"
         },
@@ -1099,6 +1103,10 @@
         },
         {
           "path": "src/components/atomic-crm/providers/commons/mergeContacts.ts",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/components/atomic-crm/providers/commons/mergeDeals.ts",
           "type": "registry:component"
         },
         {

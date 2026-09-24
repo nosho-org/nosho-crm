@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, User } from "lucide-react";
 import {
   type Identifier,
   useDeleteWithUndoController,
@@ -154,6 +154,13 @@ export const Task = ({
                       if (!referenceRecord) return null;
                       return (
                         <>
+                          {/* Le segment suivant compte des opportunités ; sans
+                              ce pictogramme, les deux se lisent d'un bloc et le
+                              contact passe pour l'une d'elles. */}
+                          <User
+                            className="inline w-3 h-3 mr-0.5 -mt-0.5"
+                            aria-hidden
+                          />
                           {referenceRecord?.first_name}{" "}
                           {referenceRecord?.last_name}
                         </>
@@ -242,6 +249,24 @@ export const Task = ({
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
+/**
+ * L'opportunité derrière une tâche de contact — ou leur nombre.
+ *
+ * Simon, le 24/09/2026, devant « Francis ROTH · 3 opportunités » : « pourquoi
+ * Francis ROTH remonte comme une opportunité ? » Il ne remontait pas comme
+ * telle — c'est le contact de la tâche, et le segment suivant compte ses
+ * affaires. Deux séparateurs identiques, et la ligne se lit d'un bloc.
+ *
+ * Deux corrections, donc, dont une vraie panne :
+ *
+ * 1. **Le nombre était faux.** `perPage: 3` bornait la requête, et
+ *    `deals.length` comptait ce qui était revenu. Francis ROTH a cinq
+ *    opportunités ouvertes ; la ligne en annonçait trois. `total` vient de
+ *    l'en-tête `Content-Range` de la même requête : le vrai nombre, sans
+ *    seconde requête ni page entière rapatriée.
+ * 2. **Le contact porte son icône.** Un pictogramme de personne coûte un
+ *    caractère et dit ce que trois mots diraient plus mal.
+ */
 const TaskDealLink = ({
   contactId,
 }: {
@@ -249,10 +274,16 @@ const TaskDealLink = ({
   // is no contact to walk back from, so there is no deal to guess.
   contactId?: Identifier | null;
 }) => {
-  const { data: deals, isPending } = useGetList<Deal>(
+  const {
+    data: deals,
+    total,
+    isPending,
+  } = useGetList<Deal>(
     "deals",
     {
-      pagination: { page: 1, perPage: 3 },
+      // Une seule ligne suffit tant qu'il n'y en a qu'une : au-delà, on
+      // n'affiche qu'un décompte, et `total` le donne sans les rapatrier.
+      pagination: { page: 1, perPage: 1 },
       sort: { field: "updated_at", order: "DESC" },
       filter: {
         "contact_ids@cs": `{${contactId}}`,
@@ -264,7 +295,7 @@ const TaskDealLink = ({
 
   if (isPending || !deals || deals.length === 0) return null;
 
-  if (deals.length === 1) {
+  if (total === 1) {
     const deal = deals[0];
     return (
       <>
@@ -288,7 +319,7 @@ const TaskDealLink = ({
         onClick={stopPropagation}
         className="text-foreground hover:underline"
       >
-        {deals.length} opportunités
+        {total} opportunités
       </Link>
     </>
   );
