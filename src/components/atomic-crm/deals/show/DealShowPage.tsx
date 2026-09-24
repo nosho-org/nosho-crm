@@ -20,6 +20,7 @@ import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
+import { DealDuplicateButton } from "./DealDuplicateButton";
 import { DealStageStepper, useCelebrateWin } from "./DealStageStepper";
 import { getDealPrimaryAction } from "./dealPrimaryAction";
 import { DealEmailHistory } from "./DealEmailHistory";
@@ -167,6 +168,13 @@ const DealActions = () => {
   if (record.archived_at) {
     return (
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {/*
+          Dupliquer reste offert sur une affaire archivée : c'est même le cas
+          le plus probable — on reprend une Close Won rangée il y a trois mois
+          parce que le client redemande autre chose. Rien n'est écrit sur
+          l'affaire d'origine, qui reste archivée.
+        */}
+        <DealDuplicateButton record={record} />
         <DealUnarchiveButton record={record} />
       </div>
     );
@@ -186,6 +194,13 @@ const DealActions = () => {
       <ContractAction
         variant={primary === "contract" ? "default" : "outline"}
       />
+
+      {/*
+        En contour, à côté des autres, et non dans le menu ⋯ : celui-ci
+        accueille les actions *terminales*, pas les actions rares. Dupliquer
+        n'enterre rien et n'écrit même rien — elle ouvre un formulaire.
+      */}
+      <DealDuplicateButton record={record} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
