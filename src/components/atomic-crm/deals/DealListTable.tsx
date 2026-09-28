@@ -107,6 +107,19 @@ const COLUMN_WIDTHS = {
   // Un peu plus large que ses voisines : elle porte en plus le pictogramme
   // d'avertissement quand la date est dépassée (NOS-1091).
   closingDate: "w-[120px]",
+  /*
+   * L'action à venir, demandée par Simon le 28/09/2026.
+   *
+   * La plus large de la table, et ce n'est pas un confort : l'intitulé d'une
+   * tâche fait 84 caractères en moyenne en production, et jusqu'à 480. À
+   * 200 px on ne lirait que « Relance téléphonique suite au… », c'est-à-dire
+   * la moitié des actions réduites au mot « relance ». À 240 px on lit la
+   * phrase utile ; le reste vit dans l'infobulle.
+   */
+  nextAction: "w-[240px]",
+  // Même largeur que « Clôture prévue », et pour la même raison : elle porte
+  // aussi le pictogramme quand l'échéance est passée.
+  nextActionDate: "w-[120px]",
   // Widest header of the lot, and it is last: anything narrower and the label
   // is the one thing clipped on an otherwise complete row.
   lastActivity: "w-[136px]",
@@ -139,11 +152,10 @@ export const DealListTable = () => {
       // <DataTable> puts its own className on the wrapper and renders <Table>
       // with no way through, so the layout lands on the nested table.
       //
-      // 1348px = la somme exacte de `COLUMN_WIDTHS` après NOS-1485 :
-      // 76 + 96 + 100 + 88 + 112 + 200 + 124 + 84 + 104 + 108 + 120 + 136. Ce
-      // `min-w` doit suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière
-      // qu'#124 avait fait disparaître « Dernière activité » du bout de la
-      // ligne.
+      // 1708px = la somme exacte de `COLUMN_WIDTHS` : 76 + 96 + 100 + 88 + 112
+      // + 200 + 124 + 84 + 104 + 108 + 120 + 240 + 120 + 136. Ce `min-w` doit
+      // suivre `COLUMN_WIDTHS` : c'est en le laissant en arrière qu'#124 avait
+      // fait disparaître « Dernière activité » du bout de la ligne.
       /*
        * `text-xs` sur toute la table (NOS-1094).
        *
@@ -173,10 +185,11 @@ export const DealListTable = () => {
        * déjà la colonne Priorité, prise ici pour repère : c'est son contenu qui
        * fait 12 px, pas son titre.
        */
-      // 1276 → 1348 px (NOS-1485) : Motion ajoute 96 px, Priorité en rend 24.
-      // La somme doit rester égale au total des largeurs de colonnes, sinon la
-      // table redevient élastique et les colonnes bougent selon le filtre.
-      className="[&_table]:table-fixed [&_table]:min-w-[1348px] [&_table]:text-xs [&_thead_th]:text-sm"
+      // 1348 → 1708 px (28/09/2026) : « Action » ajoute 240 px et « Date de
+      // l'action » 120 px. La somme doit rester égale au total des largeurs de
+      // colonnes, sinon la table redevient élastique et les colonnes bougent
+      // selon le filtre.
+      className="[&_table]:table-fixed [&_table]:min-w-[1708px] [&_table]:text-xs [&_thead_th]:text-sm"
     >
       <DataTable.Col
         source="entered_at"
@@ -281,6 +294,32 @@ export const DealListTable = () => {
       >
         <ClosingDateField />
       </DataTable.Col>
+      {/*
+        L'action à venir et son échéance, entre la clôture prévue et la
+        dernière activité (demande de Simon, 28/09/2026).
+
+        Placées là parce que la ligne se lit alors dans l'ordre du temps : ce
+        qu'on a prévu de clore, ce qu'on doit faire ensuite, et depuis quand
+        plus rien n'a bougé. Mises en bout de table, elles auraient été le
+        premier rognage sur un écran étroit — c'est justement ce qu'on vient y
+        chercher.
+      */}
+      <DataTable.Col
+        source="next_task_text"
+        label="Action"
+        headerClassName={COLUMN_WIDTHS.nextAction}
+        cellClassName="truncate"
+      >
+        <NextActionField />
+      </DataTable.Col>
+      <DataTable.Col
+        source="next_task_date"
+        label="Date de l'action"
+        headerClassName={COLUMN_WIDTHS.nextActionDate}
+        cellClassName="truncate"
+      >
+        <NextActionDateField />
+      </DataTable.Col>
       <DataTable.Col
         source="last_activity_at"
         label="Dernière activité"
@@ -344,6 +383,81 @@ const ClosingDateField = () => {
     <span
       className="inline-flex items-center gap-1 text-[var(--deal-status-critical)] font-medium"
       title="Date de clôture prévue dépassée"
+    >
+      <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
+      {formatISODateString(value)}
+    </span>
+  );
+};
+
+/**
+ * ---------------------------------------------------------------------------
+ * L'action à venir, et sa date (demande de Simon, 28/09/2026)
+ * ---------------------------------------------------------------------------
+ * « Ajoute sur la liste une colonne action et date de l'action. »
+ *
+ * ## D'où vient la donnée
+ *
+ * Des **tâches**, pas des colonnes `next_action*`. Celles-ci existent en base,
+ * sont typées et filtrables — et vides : aucune interface ne les écrit depuis
+ * que la prochaine action est devenue une tâche. Les lire ici aurait rempli
+ * deux colonnes de tirets sur 445 opportunités.
+ *
+ * `deals_summary` calcule déjà le couple : la tâche ouverte à l'échéance la
+ * plus proche, rattachée à l'affaire directement ou à l'un de ses contacts.
+ * C'est la même définition que le bloc « Prochaine action » de la fiche, donc
+ * la liste et la fiche ne peuvent pas se contredire.
+ *
+ * ## Le tiret est la valeur la plus fréquente, et c'est un résultat
+ *
+ * 132 opportunités ouvertes sur 445 portent une action ; les 313 autres n'en
+ * ont aucune. Ces deux colonnes majoritairement vides ne sont pas un défaut
+ * d'affichage : c'est l'état du pipeline, et c'est précisément ce qu'on vient
+ * y lire. 47 des 132 sont déjà en retard.
+ */
+const NextActionField = () => {
+  const record = useRecordContext<Deal>();
+  const texte = record?.next_task_text;
+  if (!texte) return <span className="text-muted-foreground">—</span>;
+  /*
+   * `title` porte le texte entier : 84 caractères en moyenne, 480 au plus,
+   * pour une colonne qui en montre une quarantaine. Tronquer sans donner accès
+   * au reste transformerait « Relancer le DSI avant l'arbitrage budgétaire du
+   * 15 » en « Relancer le DSI avant l'arbi… ».
+   */
+  return <span title={texte}>{texte}</span>;
+};
+
+/**
+ * L'échéance de cette action, en rouge quand elle est passée.
+ *
+ * Même code visuel que « Clôture prévue » juste à côté — pictogramme et
+ * couleur critique — parce que c'est le même fait : une date qu'on s'était
+ * donnée et qui est derrière nous. Deux rendus différents pour la même idée
+ * obligeraient à réapprendre la colonne.
+ *
+ * Le retard ne se signale que sur une affaire ouverte : une tâche restée
+ * ouverte sur une affaire gagnée ou perdue n'est plus un retard, c'est un
+ * oubli de ménage.
+ */
+const NextActionDateField = () => {
+  const record = useRecordContext<Deal>();
+  const { dealPipelineStatuses } = useConfigurationContext();
+  const value = record?.next_task_date;
+  if (!value) return <span className="text-muted-foreground">—</span>;
+
+  const date = parseISODateLocal(value);
+  const isOverdue =
+    date != null &&
+    date < startOfToday() &&
+    isOpenStage(record?.stage, dealPipelineStatuses);
+
+  if (!isOverdue) return <span>{formatISODateString(value)}</span>;
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[var(--deal-status-critical)] font-medium"
+      title="Action en retard"
     >
       <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
       {formatISODateString(value)}
@@ -424,7 +538,6 @@ const StageField = ({
   if (!record) return null;
   return <span>{findDealLabel(stages, record.stage) ?? record.stage}</span>;
 };
-
 
 const ArrField = ({ currency }: { currency: string }) => {
   const record = useRecordContext<Deal>();

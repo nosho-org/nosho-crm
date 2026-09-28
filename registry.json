@@ -726,7 +726,7 @@
           "type": "registry:component"
         },
         {
-          "path": "src/components/atomic-crm/deals/show/DealMergeButton.tsx",
+          "path": "src/components/atomic-crm/deals/show/DealMergeDialog.tsx",
           "type": "registry:component"
         },
         {
