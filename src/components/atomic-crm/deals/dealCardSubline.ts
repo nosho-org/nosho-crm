@@ -58,3 +58,44 @@ export function companySubline(
 
   return normalize(dealName ?? "").includes(normalizedCompany) ? null : company;
 }
+
+/**
+ * L'intitulé à écrire à côté de la société, ou `null` s'il n'apporte rien.
+ *
+ * Le miroir de `companySubline`, pour la fiche : là-bas la carte affiche
+ * l'intitulé et complète par la société ; ici le titre affiche la société et
+ * se complète par l'intitulé.
+ *
+ * Simon, le 30/09/2026 : « des POC avec différents centres, Oxance Marignane
+ * et Oxance Nîmes, sachant que la seule société est Oxance ». Deux fiches
+ * titrées « Oxance » ne se distinguent pas ; « Oxance — POC Marignane » si.
+ *
+ * La même normalisation que `companySubline`, et pour la même raison : neuf
+ * intitulés sur dix répètent la société à la casse et aux accents près, et les
+ * répéter dans le titre était exactement le défaut que NOS-1208 avait corrigé.
+ */
+export function dealSubtitle(
+  dealName: string | null | undefined,
+  companyName: string | null | undefined,
+): string | null {
+  const name = (dealName ?? "").trim();
+  if (!name) return null;
+
+  const company = (companyName ?? "").trim();
+  // Sans société, l'intitulé EST le titre : il n'a rien à compléter.
+  if (!company) return null;
+
+  const normalizedName = normalize(name);
+  if (!normalizedName) return null;
+
+  /*
+   * On se tait dès que l'intitulé n'ajoute aucun mot à la société. Comparer
+   * l'inclusion plutôt que l'égalité couvre les deux formes fréquentes :
+   * l'intitulé identique (« Oxance » / « Oxance ») et l'intitulé qui reprend
+   * la société mot pour mot sans rien y ajouter.
+   */
+  const normalizedCompany = normalize(company);
+  if (normalizedCompany && normalizedName === normalizedCompany) return null;
+
+  return name;
+}

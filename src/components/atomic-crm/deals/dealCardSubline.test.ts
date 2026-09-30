@@ -1,4 +1,4 @@
-import { companySubline } from "./dealCardSubline";
+import { companySubline, dealSubtitle } from "./dealCardSubline";
 
 /**
  * Les cas viennent de la production, relevés par l'audit du 29 août 2026.
@@ -38,5 +38,33 @@ describe("companySubline", () => {
   it("ne rend rien quand il n'y a pas de société", () => {
     expect(companySubline("Un deal", null)).toBeNull();
     expect(companySubline("Un deal", "   ")).toBeNull();
+  });
+});
+
+describe("dealSubtitle", () => {
+  it("se tait quand l'intitulé est la société", () => {
+    expect(dealSubtitle("Oxance", "Oxance")).toBeNull();
+    expect(dealSubtitle("KERSANTE", "Kersanté")).toBeNull();
+    expect(dealSubtitle("  Oxance  ", "Oxance")).toBeNull();
+  });
+
+  /*
+   * Le cas de Simon : deux POC sur le même groupe. C'est la seule chose qui
+   * sépare les deux fiches, donc elle doit sortir.
+   */
+  it("rend l'intitulé quand il ajoute quelque chose", () => {
+    expect(dealSubtitle("Oxance — POC Marignane", "Oxance")).toBe(
+      "Oxance — POC Marignane",
+    );
+    expect(dealSubtitle("Oxance — POC Nîmes", "Oxance")).toBe(
+      "Oxance — POC Nîmes",
+    );
+  });
+
+  it("se tait sur un intitulé vide ou une société absente", () => {
+    expect(dealSubtitle("", "Oxance")).toBeNull();
+    expect(dealSubtitle(null, "Oxance")).toBeNull();
+    // Sans société, l'intitulé est déjà le titre : rien à compléter.
+    expect(dealSubtitle("Oxance", null)).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ import { ContractAction } from "../../contracts/ContractAction";
 import { ContractsBlock } from "../../contracts/ContractsBlock";
 import { DealActivityTimeline } from "./DealActivityTimeline";
 import { DealArchiveButton, DealUnarchiveButton } from "./DealArchiveButtons";
+import { dealSubtitle } from "../dealCardSubline";
 import { DealCompanyGroup } from "./DealCompanyGroup";
 import { DealCreateTaskButton } from "./DealCreateTaskButton";
 import { DealDuplicateButton } from "./DealDuplicateButton";
@@ -64,6 +65,23 @@ import { DealTasksBlock } from "./DealTasksBlock";
  * Repli sur `record.name` quand la société manque : une page sans titre est
  * pire qu'un titre redondant.
  */
+/**
+ * L'intitulé, sous le titre, uniquement s'il distingue cette affaire.
+ *
+ * `company_name` vient de `deals_summary` — la fiche la lit déjà, donc aucune
+ * requête de plus. Absent d'un enregistrement écrit vers la table, d'où le
+ * repli silencieux : mieux vaut ne rien afficher qu'un doublon du titre.
+ */
+const DealSubtitle = ({ record }: { record: Deal }) => {
+  const sousTitre = dealSubtitle(record.name, record.company_name);
+  if (!sousTitre) return null;
+  return (
+    <span className="mt-1 block truncate px-1 text-sm font-normal text-muted-foreground">
+      {sousTitre}
+    </span>
+  );
+};
+
 const DealHeader = () => {
   const record = useRecordContext<Deal>();
   /*
@@ -100,6 +118,20 @@ const DealHeader = () => {
               record.name
             )}
           </span>
+          {/*
+            L'intitulé sous la société, quand il ajoute quelque chose.
+
+            Le titre est resté la société seule (NOS-1208) parce que l'intitulé
+            la répétait neuf fois sur dix. Mais quand plusieurs affaires
+            partagent une société — Simon, 30/09/2026 : « des POC avec Oxance
+            Marignane et Oxance Nîmes, sachant que la seule société est
+            Oxance » — c'est la seule chose qui sépare les deux fiches. La
+            taire, c'est les rendre identiques en haut de page.
+
+            `dealSubtitle` se tait dès que l'intitulé n'ajoute aucun mot : la
+            redondance que NOS-1208 avait retirée ne revient pas.
+          */}
+          <DealSubtitle record={record} />
         </h1>
       </div>
 

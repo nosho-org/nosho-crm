@@ -53,11 +53,7 @@ import {
 } from "./dealUtils";
 import { companyIsIdentified, stageRequiresSiret } from "./dealStageGuard";
 import type { Company, Contact, DealContactRoles, Sale } from "../types";
-import {
-  deciderNom,
-  JAMAIS_VU,
-  type EtatPrecedent,
-} from "./dealAutoName";
+import { deciderNom, JAMAIS_VU, type EtatPrecedent } from "./dealAutoName";
 
 export type DealFormMode = "create" | "edit";
 
@@ -222,6 +218,38 @@ const DealMainInputs = ({
           richCreate
         />
       </ReferenceInput>
+
+      {/*
+        L'intitulé redevient modifiable (Simon, 30/09/2026).
+
+        Il avait disparu de l'écran (NOS-1208) parce qu'il répétait la société
+        neuf fois sur dix — « KERSANTE » sous « Kersanté ». Le constat était
+        juste, la conclusion trop large : il reste le SEUL moyen de distinguer
+        deux affaires portées par la même société.
+
+        Le cas que Simon a rencontré : « des POC avec différents centres, par
+        exemple Oxance Marignane et Oxance Nîmes, sachant que la seule société
+        est Oxance ». Sans intitulé, ses deux fiches s'appellent « Oxance »,
+        et la recherche, le kanban et le fil d'activité ne les séparent pas.
+
+        Ce n'est pas un besoin isolé : 97 des 447 opportunités ouvertes portent
+        déjà un intitulé différent de leur société, et une partie s'en sert
+        exactement ainsi — « Clinique Bonneveine (consultation, radio etc..) »,
+        « MAISON YOKO (esthétique) ». Le champ servait ; il n'était plus
+        atteignable.
+
+        Obligatoire et prérempli, pas facultatif : `deals.name` est `not null`,
+        et `useNameFromCompany` y écrit déjà le nom de la société à chaque
+        changement de société tant que personne n'y a touché. Le champ arrive
+        donc rempli, et le vider serait refusé par la base — autant le dire au
+        formulaire plutôt qu'au serveur.
+      */}
+      <TextInput
+        source="name"
+        label="Intitulé"
+        validate={required()}
+        helperText="Par défaut le nom de la société. Précisez-le quand plusieurs affaires la partagent — « Oxance — POC Marignane »."
+      />
 
       {/* Issue #95 — growth source of this opportunity. Distinct from the
           "Vue" select above, which only routes the deal to a pipeline view. */}
