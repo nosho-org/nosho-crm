@@ -68,7 +68,7 @@ jobs:
                           echo "skip=true" >> "$GITHUB_OUTPUT"
                           exit 0
                       fi
-                      echo "::error::SUPABASE_DB_URL secret is not configured. Add it in repo settings > Secrets and variables > Actions. Use the 'Session pooler' connection string from Supabase Studio > Project Settings > Database."
+                      echo "::error::SUPABASE_DB_URL secret is not configured. Add it in repo settings > Secrets and variables > Actions. Use the restricted nosho_security_monitor role and deploy the metadata snapshot function."
                       exit 1
                   fi
                   echo "skip=false" >> "$GITHUB_OUTPUT"
