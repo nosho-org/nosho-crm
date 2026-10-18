@@ -151,6 +151,21 @@ const Header = () => {
                     to="/contacts"
                     isActive={currentPath === "/contacts"}
                   />
+                  {/*
+                    « Mapping » APRÈS les quatre, et pas au milieu (Simon,
+                    18/10/2026 : « au niveau des onglets tableau de bord,
+                    opportunités, société, contact, un autre onglet »).
+
+                    L'ordre des quatre descend du général au particulier et il
+                    a été arbitré ; la carte est une LECTURE de ce que les
+                    opportunités portent déjà, pas une cinquième entité. Elle
+                    se range donc au bout, avant les vues sur mesure.
+                  */}
+                  <NavigationTab
+                    label="Mapping"
+                    to="/mapping"
+                    isActive={currentPath === "/mapping"}
+                  />
                   {visibleViews.map((view) => (
                     <NavigationTab
                       key={view.id}

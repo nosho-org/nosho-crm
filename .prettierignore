@@ -26,3 +26,9 @@ cypress/screenshots
 !.yarn/sdks
 !.yarn/versions
 .github
+
+# Deux jeux de donnees generes, jamais edites a la main : les reformater
+# gonfle le depot de 180 Ko pour zero lisibilite (personne ne lit 6310 codes
+# postaux). Voir src/components/atomic-crm/mapping/geocoder.ts.
+src/components/atomic-crm/mapping/communes.json
+src/components/atomic-crm/mapping/departements.json

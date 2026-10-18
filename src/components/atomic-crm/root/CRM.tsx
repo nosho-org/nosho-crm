@@ -5,7 +5,7 @@ import type {
   LayoutComponent,
 } from "ra-core";
 import { CustomRoutes, localStorageStore, Resource } from "ra-core";
-import { useEffect, useMemo } from "react";
+import { lazy, useEffect, useMemo } from "react";
 import { Route } from "react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -73,6 +73,17 @@ import { ContactListMobile } from "../contacts/ContactList.tsx";
 import { ContactShow } from "../contacts/ContactShow.tsx";
 import { CompanyShow } from "../companies/CompanyShow.tsx";
 import { NoteShowPage } from "../notes/NoteShowPage.tsx";
+
+/*
+ * Chargée à la demande, et c'est ce qui rend l'index des communes acceptable :
+ * 465 Ko de codes postaux ne partent que vers qui ouvre l'onglet. Même geste
+ * que `DealList` et `DealShowPage`.
+ */
+const MappingPage = lazy(() =>
+  import("../mapping/MappingPage").then((module) => ({
+    default: module.MappingPage,
+  })),
+);
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -308,6 +319,7 @@ const DesktopAdmin = (
         <Route path={SettingsPage.path} element={<SettingsPage />} />
         <Route path={ConnectorsPage.path} element={<ConnectorsPage />} />
         <Route path={ImportPage.path} element={<ImportPage />} />
+        <Route path="/mapping" element={<MappingPage />} />
         <Route path="/views/:viewId/*" element={<DealListForView />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
