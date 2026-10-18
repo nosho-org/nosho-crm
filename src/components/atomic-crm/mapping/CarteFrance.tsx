@@ -318,6 +318,36 @@ export const CarteFrance = ({
    * la raison de chacun.
    */
   const zoom = LARGEUR / cadrage.largeur;
+
+  /*
+   * Simon, le 18/10/2026 : « quand on se rapproche vraiment des villes, il
+   * faut que ça augmente aussi un peu la taille des villes, parce que quand on
+   * zoome et qu'on est près, on ne voit vraiment pas grand-chose ».
+   *
+   * Jusqu'ici TOUT ce qui n'est pas géographique était décompensé par
+   * `echelle`, c'est-à-dire figé à sa taille d'écran. Rigoureux, et faux à
+   * l'usage : à fond de zoom on regarde deux kilomètres carrés, et il n'y
+   * reste qu'un point de quatre pixels et un nom de onze — une page blanche
+   * avec des miettes dessus.
+   *
+   * Le grossissement croît donc avec le zoom, mais en RACINE QUATRIÈME :
+   * assez pour que l'écran se remplisse quand on se rapproche, bien trop peu
+   * pour que la pastille suive le grossissement et redevienne la tache qui
+   * couvrait la Côte d'Azur. Et il plafonne, sans quoi les derniers crans de
+   * zoom finiraient par tout faire déborder.
+   *
+   * | zoom | texte | pastille |
+   * |---|---|---|
+   * | ×1 (la France) | 11 px | inchangée |
+   * | ×5 | 16 px | ×1,3 |
+   * | ×40 | 26 px | ×1,6 |
+   * | ×400 | 26 px | ×1,6 |
+   */
+  const grossissement = Math.min(2.4, Math.pow(zoom, 0.25));
+  /* La pastille grossit deux fois moins : elle est déjà le plus gros objet. */
+  const grossissementPastille = Math.min(1.6, Math.pow(grossissement, 0.55));
+  /** Une taille de dessin qui garde sa taille d'écran, puis grossit un peu. */
+  const taille = (base: number) => base * echelle * grossissement;
   const montrerDepartements = zoom >= SEUIL_DEPARTEMENTS;
   const montrerVilles = zoom >= SEUIL_VILLES;
   const montrerOpportunites = zoom >= SEUIL_OPPORTUNITES;
@@ -343,8 +373,10 @@ export const CarteFrance = ({
    * rapproche. C'est le meme raisonnement que le rayon des pastilles.
    */
   const etiquettes = useMemo(() => {
-    const hauteurTexte = 13 * echelle;
-    const largeurCaractere = 5.4 * echelle;
+    // Les boîtes de collision doivent grossir avec le texte, sinon deux noms
+    // agrandis se chevauchent alors que l'algorithme les croit séparés.
+    const hauteurTexte = 13 * echelle * grossissement;
+    const largeurCaractere = 5.4 * echelle * grossissement;
     const prises: Boite[] = [];
 
     const departementsPlaces = montrerDepartements
@@ -376,7 +408,7 @@ export const CarteFrance = ({
             x,
             // Sous la pastille, pas dessus : le nom ne doit pas cacher la
             // couleur, qui est l'information principale.
-            y: y + r * echelle + 2 * echelle,
+            y: y + r * echelle * grossissementPastille + 2 * echelle,
             texte: pastille.ville,
             poids: pastille.nombre,
             valeur: pastille,
@@ -402,7 +434,7 @@ export const CarteFrance = ({
       ).map((repere) => ({
         cle: repere.cle,
         x: repere.x,
-        y: repere.y + 2.5 * echelle,
+        y: repere.y + 2.5 * echelle * grossissement,
         texte: repere.nom,
         poids: repere.population,
         valeur: repere,
@@ -426,6 +458,8 @@ export const CarteFrance = ({
     pastillesProjetees,
     cadrage,
     echelle,
+    grossissement,
+    grossissementPastille,
   ]);
 
   /*
@@ -453,7 +487,10 @@ export const CarteFrance = ({
     if (!montrerOpportunites) return [];
     return pastillesProjetees.flatMap(({ pastille, x, y, r }) => {
       const nombre = pastille.affaires.length;
-      const rayonCouronne = Math.max(RAYON_DISPERSION, (r + 9) * echelle);
+      const rayonCouronne = Math.max(
+        RAYON_DISPERSION,
+        (r * grossissementPastille + 9 * grossissement) * echelle,
+      );
       const positions = couronne(nombre, rayonCouronne);
       return pastille.affaires.map((affaire, index) => ({
         affaire,
@@ -462,7 +499,13 @@ export const CarteFrance = ({
         y: y + positions[index].dy,
       }));
     });
-  }, [montrerOpportunites, pastillesProjetees, echelle]);
+  }, [
+    montrerOpportunites,
+    pastillesProjetees,
+    echelle,
+    grossissement,
+    grossissementPastille,
+  ]);
 
   return (
     <div className="relative w-full">
@@ -510,7 +553,7 @@ export const CarteFrance = ({
               x={etiquette.x}
               y={etiquette.y}
               textAnchor="middle"
-              fontSize={11 * echelle}
+              fontSize={taille(11)}
               className="fill-muted-foreground"
             >
               {etiquette.texte}
@@ -529,7 +572,7 @@ export const CarteFrance = ({
               <circle
                 cx={etiquette.valeur.x}
                 cy={etiquette.valeur.y}
-                r={1.5 * echelle}
+                r={taille(1.5)}
                 className="fill-muted-foreground"
                 opacity={0.65}
               />
@@ -537,12 +580,12 @@ export const CarteFrance = ({
                 x={etiquette.x}
                 y={etiquette.y + etiquettes.hauteurTexte * 0.75}
                 textAnchor="middle"
-                fontSize={9.5 * echelle}
+                fontSize={taille(9.5)}
                 className="fill-muted-foreground"
                 style={{
                   paintOrder: "stroke",
                   stroke: "var(--card)",
-                  strokeWidth: 2.5 * echelle,
+                  strokeWidth: taille(2.5),
                   strokeLinejoin: "round",
                 }}
               >
@@ -554,7 +597,7 @@ export const CarteFrance = ({
 
         <g>
           {pastillesProjetees.map(({ pastille, x, y, r }) => {
-            const rayonAffiche = r * echelle;
+            const rayonAffiche = r * echelle * grossissementPastille;
             const estSelectionnee = selection === pastille.cle;
             const segments = arcs(pastille.parEtape, pastille.nombre);
             // `stroke-dasharray` compte en longueur d'arc : on travaille donc
@@ -611,7 +654,7 @@ export const CarteFrance = ({
                   className={
                     estSelectionnee ? "stroke-foreground" : "stroke-card"
                   }
-                  strokeWidth={(estSelectionnee ? 2.2 : 0.8) * echelle}
+                  strokeWidth={taille(estSelectionnee ? 2.2 : 0.8)}
                 />
                 {/*
                   Un cercle POINTILLÉ quand la ville tient au moins une affaire
@@ -623,11 +666,11 @@ export const CarteFrance = ({
                   <circle
                     cx={x}
                     cy={y}
-                    r={rayonAffiche + 2.5 * echelle}
+                    r={rayonAffiche + taille(2.5)}
                     fill="none"
                     className="stroke-muted-foreground"
-                    strokeWidth={0.9 * echelle}
-                    strokeDasharray={`${2.5 * echelle} ${2 * echelle}`}
+                    strokeWidth={taille(0.9)}
+                    strokeDasharray={`${taille(2.5)} ${taille(2)}`}
                   />
                 )}
               </g>
@@ -642,7 +685,7 @@ export const CarteFrance = ({
               x={etiquette.x}
               y={etiquette.y + etiquettes.hauteurTexte * 0.8}
               textAnchor="middle"
-              fontSize={11 * echelle}
+              fontSize={taille(11)}
               className="fill-foreground"
               style={{
                 /* Un liseré de la couleur du fond : le nom reste lisible
@@ -650,7 +693,7 @@ export const CarteFrance = ({
                    sans qu'on ait à poser un rectangle derrière chaque mot. */
                 paintOrder: "stroke",
                 stroke: "var(--card)",
-                strokeWidth: 3 * echelle,
+                strokeWidth: taille(3),
                 strokeLinejoin: "round",
               }}
             >
@@ -686,7 +729,7 @@ export const CarteFrance = ({
               <circle
                 cx={x}
                 cy={y}
-                r={4 * echelle}
+                r={taille(4)}
                 fill={
                   affaire.deduite
                     ? "var(--card)"
@@ -695,23 +738,21 @@ export const CarteFrance = ({
                 stroke={
                   STAGE_COLORS[affaire.stage] ?? "var(--muted-foreground)"
                 }
-                strokeWidth={(affaire.deduite ? 1.6 : 1.2) * echelle}
+                strokeWidth={taille(affaire.deduite ? 1.6 : 1.2)}
                 strokeDasharray={
-                  affaire.deduite
-                    ? `${2 * echelle} ${1.5 * echelle}`
-                    : undefined
+                  affaire.deduite ? `${taille(2)} ${taille(1.5)}` : undefined
                 }
               />
               <text
                 x={x}
-                y={y - 6 * echelle}
+                y={y - taille(6)}
                 textAnchor="middle"
-                fontSize={10 * echelle}
+                fontSize={taille(10)}
                 className="fill-foreground"
                 style={{
                   paintOrder: "stroke",
                   stroke: "var(--card)",
-                  strokeWidth: 3 * echelle,
+                  strokeWidth: taille(3),
                   strokeLinejoin: "round",
                 }}
               >
