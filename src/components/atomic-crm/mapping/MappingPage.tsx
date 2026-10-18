@@ -49,7 +49,19 @@ import { agreger, type AffaireLocalisable } from "./agregation";
  */
 
 /** Les étapes ouvertes, celles sur lesquelles l'écran s'ouvre. */
-const ETAPES_FERMEES = ["closed-won", "lost", "churn"];
+/**
+ * Ce que la carte NE montre PAS tant qu'aucune étape n'est choisie.
+ *
+ * Les perdues en faisaient partie, et Simon l'a demandé deux fois le
+ * 18/10/2026 : « tu ne m'affiches toujours pas les opportunités passées en
+ * lost en rouge, je voudrais les voir ». Elles sont donc dans la vue par
+ * défaut, en rouge, et l'anneau d'une ville dit la part qu'elles y prennent.
+ *
+ * Les gagnées et les churns restent dehors : une affaire signée n'est plus un
+ * prospect, et cet écran répond à « où travaille-t-on ». Le filtre d'étape les
+ * ramène en un clic pour qui veut les voir.
+ */
+const ETAPES_FERMEES = ["closed-won", "churn"];
 
 export const MappingPage = () => {
   const { dealStages } = useConfigurationContext();
@@ -97,14 +109,29 @@ export const MappingPage = () => {
     [dealStages],
   );
 
+  const nomsDesEtapes = useMemo(
+    () => new Map(dealStages.map((etape) => [etape.value, etape.label])),
+    [dealStages],
+  );
+
+  const nomsDesCommerciaux = useMemo(
+    () =>
+      new Map(
+        (commerciaux ?? []).map((commercial) => [
+          String(commercial.id),
+          `${commercial.first_name} ${commercial.last_name}`.trim(),
+        ]),
+      ),
+    [commerciaux],
+  );
+
   const retenues = useMemo<AffaireLocalisable[]>(() => {
     const voulues = new Set(etapes);
     const proprietaires = new Set(responsables);
     return (affaires ?? [])
       .filter((affaire) => {
-        // Sans filtre d'étape, on montre le pipeline OUVERT : une carte qui
-        // s'ouvrirait sur les affaires perdues dirait où on a échoué, pas où
-        // on travaille.
+        // Sans filtre d'étape : les affaires ouvertes ET les perdues. Voir
+        // ETAPES_FERMEES pour ce qui reste dehors, et pourquoi.
         if (voulues.size === 0 && ETAPES_FERMEES.includes(affaire.stage)) {
           return false;
         }
@@ -127,6 +154,11 @@ export const MappingPage = () => {
           company_name: affaire.company_name,
           company_city: adresse?.city ?? null,
           company_zipcode: adresse?.zipcode ?? null,
+          priority: affaire.priority ?? null,
+          sales_id: affaire.sales_id ?? null,
+          expected_closing_date: affaire.expected_closing_date ?? null,
+          next_task_date: affaire.next_task_date ?? null,
+          next_task_text: affaire.next_task_text ?? null,
         };
       });
   }, [affaires, adresses, etapes, responsables]);
@@ -167,7 +199,7 @@ export const MappingPage = () => {
             )
           }
           onClear={() => setEtapes([])}
-          allLabel="Pipeline ouvert"
+          allLabel="Ouvertes et perdues"
           choices={dealStages}
         />
         <FilterMultiSelect
@@ -210,7 +242,14 @@ export const MappingPage = () => {
             maximum={mapping.maximum}
             selection={selection}
             onSelectionner={setSelection}
-            onOuvrirAffaire={(id) => navigate(`/deals/${id}/show`)}
+            rendreInfobulle={({ affaires }) => (
+              <ContenuInfobulle
+                affaires={affaires}
+                nomsDesEtapes={nomsDesEtapes}
+                nomsDesCommerciaux={nomsDesCommerciaux}
+                onOuvrir={(id) => navigate(`/deals/${id}/show`)}
+              />
+            )}
           />
 
           {/* La légende ne liste que les étapes RÉELLEMENT dessinées : une
@@ -260,6 +299,121 @@ export const MappingPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * Ce que montre l'infobulle, et pourquoi pas plus.
+ *
+ * Simon : « une infobulle avec les informations clés de l'opportunité, et si
+ * on clique ensuite dessus ça renvoie vers la page de l'opportunité ».
+ *
+ * Les informations clés sont celles qui décident si l'on ouvre la fiche :
+ * l'étape et sa couleur, l'ARR, qui la suit, quand elle doit se conclure, et
+ * la prochaine action s'il y en a une. Tout le reste est à un clic ; une bulle
+ * qui recopierait l'opportunité entière ferait un second CRM dans une bulle,
+ * et il faudrait la refermer pour travailler.
+ *
+ * La ligne entière est un bouton, pas seulement le titre : viser un lien de
+ * trois mots à la souris sur une carte où l'on vient de zoomer est un exercice
+ * qu'on rate une fois sur deux.
+ */
+const ContenuInfobulle = ({
+  affaires,
+  nomsDesEtapes,
+  nomsDesCommerciaux,
+  onOuvrir,
+}: {
+  affaires: ReturnType<typeof agreger>["pastilles"][number]["affaires"];
+  nomsDesEtapes: Map<string, string>;
+  nomsDesCommerciaux: Map<string, string>;
+  onOuvrir: (id: string | number) => void;
+}) => {
+  const { currency } = useConfigurationContext();
+  const devise = currency === "USD" ? "$" : "€";
+  return (
+    <>
+      {affaires.length > 1 && (
+        <p className="text-xs text-muted-foreground mb-1.5">
+          {affaires.length} opportunités — cliquez pour ouvrir la fiche
+        </p>
+      )}
+      {/* Au-delà de six, on déroule : une bulle plus haute que la carte la
+          cacherait entièrement. */}
+      <ul className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+        {affaires.map((affaire) => {
+          const responsable =
+            affaire.sales_id != null
+              ? nomsDesCommerciaux.get(String(affaire.sales_id))
+              : undefined;
+          return (
+            <li key={affaire.id}>
+              <button
+                type="button"
+                onClick={() => onOuvrir(affaire.id)}
+                className="w-full text-left rounded-md p-1.5 -m-0.5 hover:bg-muted transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block w-2 h-2 rounded-full shrink-0"
+                    style={{
+                      background:
+                        STAGE_COLORS[affaire.stage] ??
+                        "var(--muted-foreground)",
+                    }}
+                    aria-hidden
+                  />
+                  <span className="text-sm font-medium truncate">
+                    {affaire.name}
+                  </span>
+                  {affaire.deduite && (
+                    <span
+                      className="text-muted-foreground shrink-0"
+                      title="Placée d'après son intitulé, pas d'après une adresse"
+                    >
+                      ≈
+                    </span>
+                  )}
+                </span>
+                {affaire.company_name && (
+                  <span className="block text-xs text-muted-foreground truncate pl-3.5">
+                    {affaire.company_name}
+                  </span>
+                )}
+                <span className="block text-xs text-muted-foreground pl-3.5">
+                  {[
+                    nomsDesEtapes.get(affaire.stage) ?? affaire.stage,
+                    affaire.amount
+                      ? `${affaire.amount.toLocaleString("fr-FR")} ${devise}`
+                      : null,
+                    responsable,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+                {affaire.next_task_text ? (
+                  <span className="block text-xs text-muted-foreground pl-3.5 truncate">
+                    ⏱ {affaire.next_task_text}
+                    {affaire.next_task_date
+                      ? ` — ${new Date(affaire.next_task_date).toLocaleDateString("fr-FR")}`
+                      : ""}
+                  </span>
+                ) : (
+                  affaire.expected_closing_date && (
+                    <span className="block text-xs text-muted-foreground pl-3.5">
+                      Clôture prévue le{" "}
+                      {new Date(
+                        affaire.expected_closing_date,
+                      ).toLocaleDateString("fr-FR")}
+                    </span>
+                  )
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 };
 

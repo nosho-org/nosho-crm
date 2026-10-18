@@ -1,9 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, WheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  ReactNode,
+  PointerEvent as ReactPointerEvent,
+  WheelEvent,
+} from "react";
 
 import { STAGE_COLORS } from "../dashboard/stageColors";
 import departements from "./departements.json";
-import { arcs, rayon, type Pastille } from "./agregation";
+import { arcs, rayon, type AffairePlacee, type Pastille } from "./agregation";
 import {
   SEUIL_DEPARTEMENTS,
   SEUIL_OPPORTUNITES,
@@ -90,15 +94,42 @@ export const CarteFrance = ({
   maximum,
   selection,
   onSelectionner,
-  onOuvrirAffaire,
+  rendreInfobulle,
 }: {
   pastilles: Pastille[];
   maximum: number;
   selection: string | null;
   onSelectionner: (cle: string | null) => void;
-  onOuvrirAffaire: (id: string | number) => void;
+  /*
+   * Le contenu de l'infobulle est rendu par la PAGE, pas par la carte : il
+   * demande les libellés d'étape, les noms des commerciaux et la devise, que
+   * la carte n'a aucune raison de connaître. Elle sait où poser la bulle ; la
+   * page sait quoi mettre dedans.
+   */
+  rendreInfobulle: (contenu: {
+    ville: string;
+    affaires: AffairePlacee[];
+  }) => ReactNode;
 }) => {
   const [cadrage, setCadrage] = useState<Cadrage>(CADRAGE_ENTIER);
+  /*
+   * Simon, le 18/10/2026 : « les opportunités sont toujours pas cliquables, je
+   * veux qu'on puisse cliquer dessus et qu'on ait une infobulle avec les
+   * informations clés, et que si on clique ensuite dessus ça renvoie vers la
+   * page de l'opportunité. »
+   *
+   * Il avait raison, et la cause est un seuil : les marques d'opportunité
+   * n'apparaissaient qu'à partir d'un grossissement de 9, c'est-à-dire presque
+   * jamais. L'infobulle s'ouvre désormais sur la PASTILLE, donc à n'importe
+   * quel zoom, et les marques éclatées l'ouvrent aussi au lieu de filer droit
+   * sur la fiche. Un clic pour voir, un clic pour y aller.
+   */
+  const [infobulle, setInfobulle] = useState<{
+    ville: string;
+    affaires: AffairePlacee[];
+    x: number;
+    y: number;
+  } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const glissement = useRef<{ x: number; y: number } | null>(null);
   /*
@@ -151,6 +182,46 @@ export const CarteFrance = ({
     },
     [cadrage],
   );
+
+  /**
+   * Un point du dessin → sa position en pixels dans le conteneur.
+   *
+   * Exactement l'inverse de `pointDuPointeur`, bandes vides comprises : c'est
+   * ce qui permet à l'infobulle de rester COLLÉE à sa ville pendant qu'on
+   * zoome, au lieu de flotter là où le doigt était au moment du clic.
+   */
+  const positionEcran = useCallback(
+    (x: number, y: number) => {
+      const svg = svgRef.current;
+      if (!svg) return null;
+      const rect = svg.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      const rapportDessin = cadrage.largeur / cadrage.hauteur;
+      const rapportBoite = rect.width / rect.height;
+      const largeurUtile =
+        rapportBoite > rapportDessin ? rect.height * rapportDessin : rect.width;
+      const hauteurUtile =
+        rapportBoite > rapportDessin ? rect.height : rect.width / rapportDessin;
+      const margeX = (rect.width - largeurUtile) / 2;
+      const margeY = (rect.height - hauteurUtile) / 2;
+      return {
+        gauche: margeX + ((x - cadrage.x) / cadrage.largeur) * largeurUtile,
+        haut: margeY + ((y - cadrage.y) / cadrage.hauteur) * hauteurUtile,
+        largeurConteneur: rect.width,
+      };
+    },
+    [cadrage],
+  );
+
+  /* Échap ferme la bulle : une surcouche qu'on ne sait pas fermer est un piège. */
+  useEffect(() => {
+    if (!infobulle) return;
+    const auClavier = (evenement: KeyboardEvent) => {
+      if (evenement.key === "Escape") setInfobulle(null);
+    };
+    window.addEventListener("keydown", auClavier);
+    return () => window.removeEventListener("keydown", auClavier);
+  }, [infobulle]);
 
   const molette = (evenement: WheelEvent<SVGSVGElement>) => {
     const ancre = pointDuPointeur(evenement);
@@ -355,7 +426,9 @@ export const CarteFrance = ({
         onPointerUp={relachement}
         onPointerCancel={relachement}
         onClick={() => {
-          if (!aGlisse.current) onSelectionner(null);
+          if (aGlisse.current) return;
+          onSelectionner(null);
+          setInfobulle(null);
         }}
       >
         <g>
@@ -443,7 +516,14 @@ export const CarteFrance = ({
                 key={pastille.cle}
                 onClick={(evenement) => {
                   evenement.stopPropagation();
-                  if (!aGlisse.current) onSelectionner(pastille.cle);
+                  if (aGlisse.current) return;
+                  onSelectionner(pastille.cle);
+                  setInfobulle({
+                    ville: pastille.ville,
+                    affaires: pastille.affaires,
+                    x,
+                    y,
+                  });
                 }}
                 className="cursor-pointer"
               >
@@ -532,13 +612,16 @@ export const CarteFrance = ({
           est venu chercher à ce niveau de zoom.
         */}
         <g>
-          {affairesEclatees.map(({ affaire, x, y }) => (
+          {affairesEclatees.map(({ affaire, ville, x, y }) => (
             <g
               key={affaire.id}
               className="cursor-pointer"
               onClick={(evenement) => {
                 evenement.stopPropagation();
-                if (!aGlisse.current) onOuvrirAffaire(affaire.id);
+                if (aGlisse.current) return;
+                // Une marque éclatée désigne UNE affaire : la bulle ne montre
+                // qu'elle, et le clic suivant mène à sa fiche.
+                setInfobulle({ ville, affaires: [affaire], x, y });
               }}
             >
               <title>
@@ -585,6 +668,56 @@ export const CarteFrance = ({
           ))}
         </g>
       </svg>
+
+      {infobulle &&
+        (() => {
+          const position = positionEcran(infobulle.x, infobulle.y);
+          if (!position) return null;
+          const LARGEUR_BULLE = 272;
+          /*
+           * Collée au bord, la bulle sortirait du cadre et se couperait. On
+           * la ramène dans le conteneur plutôt que de la laisser déborder :
+           * une info qu'on ne peut pas lire ne vaut pas mieux qu'une absente.
+           */
+          const gauche = Math.min(
+            Math.max(position.gauche, LARGEUR_BULLE / 2 + 8),
+            position.largeurConteneur - LARGEUR_BULLE / 2 - 8,
+          );
+          // Trop haut, la bulle sortirait par le dessus : elle passe dessous.
+          const dessous = position.haut < 200;
+          return (
+            <div
+              role="dialog"
+              aria-label={`Opportunités de ${infobulle.ville}`}
+              className="absolute z-20 rounded-lg border bg-popover shadow-lg p-3 text-popover-foreground"
+              style={{
+                left: gauche,
+                top: position.haut + (dessous ? 14 : -14),
+                width: LARGEUR_BULLE,
+                transform: `translate(-50%, ${dessous ? "0" : "-100%"})`,
+              }}
+              onClick={(evenement) => evenement.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <p className="font-semibold text-sm leading-tight">
+                  {infobulle.ville}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setInfobulle(null)}
+                  aria-label="Fermer"
+                  className="text-muted-foreground hover:text-foreground leading-none text-base -mt-0.5"
+                >
+                  ×
+                </button>
+              </div>
+              {rendreInfobulle({
+                ville: infobulle.ville,
+                affaires: infobulle.affaires,
+              })}
+            </div>
+          );
+        })()}
 
       <div className="absolute top-2 right-2 flex flex-col gap-1">
         <BoutonCarte onClick={() => zoomBouton(1.6)} label="Zoomer">

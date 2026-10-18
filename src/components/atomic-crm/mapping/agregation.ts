@@ -39,6 +39,17 @@ export interface AffaireLocalisable {
   /** Depuis `deals_summary`, qui expose déjà l'adresse de la société. */
   company_city?: string | null;
   company_zipcode?: string | null;
+  /*
+   * Ce qui suit ne sert pas à placer le point : c'est ce que l'infobulle
+   * montre quand on clique dessus. Tout le reste de la fiche est à un clic,
+   * et une infobulle qui recopierait l'opportunité entière ferait un
+   * deuxième CRM dans une bulle.
+   */
+  priority?: string | null;
+  sales_id?: string | number | null;
+  expected_closing_date?: string | null;
+  next_task_date?: string | null;
+  next_task_text?: string | null;
 }
 
 /**
