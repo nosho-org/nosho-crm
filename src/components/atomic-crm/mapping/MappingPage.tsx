@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useGetList } from "ra-core";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,6 +56,7 @@ export const MappingPage = () => {
   const [etapes, setEtapes] = useState<string[]>([]);
   const [responsables, setResponsables] = useState<string[]>([]);
   const [selection, setSelection] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const { data: affaires, isPending: affairesEnCours } = useGetList<Deal>(
     "deals",
@@ -205,6 +206,7 @@ export const MappingPage = () => {
             maximum={mapping.maximum}
             selection={selection}
             onSelectionner={setSelection}
+            onOuvrirAffaire={(id) => navigate(`/deals/${id}/show`)}
           />
 
           {/* La légende ne liste que les étapes RÉELLEMENT dessinées : une

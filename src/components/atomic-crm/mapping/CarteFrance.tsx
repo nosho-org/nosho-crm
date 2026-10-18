@@ -5,6 +5,16 @@ import { STAGE_COLORS } from "../dashboard/stageColors";
 import departements from "./departements.json";
 import { arcs, rayon, type Pastille } from "./agregation";
 import {
+  SEUIL_DEPARTEMENTS,
+  SEUIL_OPPORTUNITES,
+  SEUIL_VILLES,
+  centreDuPlusGrandAnneau,
+  couronne,
+  placerLesEtiquettes,
+  tronquer,
+  type Boite,
+} from "./etiquettes";
+import {
   CADRAGE_ENTIER,
   HAUTEUR,
   LARGEUR,
@@ -65,7 +75,13 @@ const CHEMINS = DEPARTEMENTS.map((departement) => {
       }),
     )
     .join("");
-  return { code: departement.code, nom: departement.nom, d };
+  const centre = centreDuPlusGrandAnneau(departement.polygones);
+  return {
+    code: departement.code,
+    nom: departement.nom,
+    d,
+    etiquette: centre ? projeter(centre) : null,
+  };
 });
 
 export const CarteFrance = ({
@@ -73,11 +89,13 @@ export const CarteFrance = ({
   maximum,
   selection,
   onSelectionner,
+  onOuvrirAffaire,
 }: {
   pastilles: Pastille[];
   maximum: number;
   selection: string | null;
   onSelectionner: (cle: string | null) => void;
+  onOuvrirAffaire: (id: string | number) => void;
 }) => {
   const [cadrage, setCadrage] = useState<Cadrage>(CADRAGE_ENTIER);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -184,6 +202,16 @@ export const CarteFrance = ({
       ),
     );
 
+  /*
+   * Le zoom, en « combien de fois la France tient dans la fenetre ». C'est lui
+   * qui decide ce qui porte un nom — voir `etiquettes.ts` pour les seuils et
+   * la raison de chacun.
+   */
+  const zoom = LARGEUR / cadrage.largeur;
+  const montrerDepartements = zoom >= SEUIL_DEPARTEMENTS;
+  const montrerVilles = zoom >= SEUIL_VILLES;
+  const montrerOpportunites = zoom >= SEUIL_OPPORTUNITES;
+
   const pastillesProjetees = useMemo(
     () =>
       pastilles.map((pastille) => ({
@@ -193,6 +221,92 @@ export const CarteFrance = ({
       })),
     [pastilles, maximum],
   );
+
+  /*
+   * Les etiquettes se calculent ENSEMBLE et dans cet ordre — departements,
+   * villes, opportunites — parce que chaque couche doit eviter les boites deja
+   * prises par la precedente. Les calculer separement laisserait un nom de
+   * ville sur un nom de departement.
+   *
+   * Les tailles sont en unites du DESSIN : une etiquette doit garder la meme
+   * taille apparente quel que soit le zoom, donc elle retrecit quand on se
+   * rapproche. C'est le meme raisonnement que le rayon des pastilles.
+   */
+  const etiquettes = useMemo(() => {
+    const hauteurTexte = 13 * echelle;
+    const largeurCaractere = 5.4 * echelle;
+    const prises: Boite[] = [];
+
+    const departementsPlaces = montrerDepartements
+      ? placerLesEtiquettes(
+          CHEMINS.filter((d) => d.etiquette).map((d) => ({
+            cle: d.code,
+            x: d.etiquette!.x,
+            y: d.etiquette!.y,
+            texte: d.nom,
+            // A egalite de place, un departement en vaut un autre : l'ordre
+            // alphabetique de la cle departage, et il ne bouge pas d'un rendu
+            // a l'autre.
+            poids: 0,
+            valeur: d,
+          })),
+          {
+            largeurParCaractere: largeurCaractere,
+            hauteur: hauteurTexte,
+            deja: prises,
+          },
+        )
+      : [];
+    departementsPlaces.forEach((e) => prises.push(e.boite));
+
+    const villesPlacees = montrerVilles
+      ? placerLesEtiquettes(
+          pastillesProjetees.map(({ pastille, x, y, r }) => ({
+            cle: pastille.cle,
+            x,
+            // Sous la pastille, pas dessus : le nom ne doit pas cacher la
+            // couleur, qui est l'information principale.
+            y: y + r * echelle + 2 * echelle,
+            texte: pastille.ville,
+            poids: pastille.nombre,
+            valeur: pastille,
+          })),
+          {
+            largeurParCaractere: largeurCaractere,
+            hauteur: hauteurTexte,
+            deja: prises,
+          },
+        )
+      : [];
+    villesPlacees.forEach((e) => prises.push(e.boite));
+
+    return {
+      departements: departementsPlaces,
+      villes: villesPlacees,
+      hauteurTexte,
+    };
+  }, [montrerDepartements, montrerVilles, pastillesProjetees, echelle]);
+
+  /*
+   * Les affaires eclatees en couronne autour de leur ville, au dernier seuil.
+   *
+   * Le rayon de la couronne grandit avec le nombre pour que deux voisines ne
+   * se touchent pas : a douze affaires, un cercle fixe les collerait.
+   */
+  const affairesEclatees = useMemo(() => {
+    if (!montrerOpportunites) return [];
+    return pastillesProjetees.flatMap(({ pastille, x, y, r }) => {
+      const nombre = pastille.affaires.length;
+      const rayonCouronne = (r + 9 + nombre * 1.6) * echelle;
+      const positions = couronne(nombre, rayonCouronne);
+      return pastille.affaires.map((affaire, index) => ({
+        affaire,
+        ville: pastille.ville,
+        x: x + positions[index].dx,
+        y: y + positions[index].dy,
+      }));
+    });
+  }, [montrerOpportunites, pastillesProjetees, echelle]);
 
   return (
     <div className="relative w-full">
@@ -223,6 +337,26 @@ export const CarteFrance = ({
                  ÉCRAN, donc le trait s'affine quand la carte est petite. On la
                  lie au zoom, pas au conteneur. */
             />
+          ))}
+        </g>
+
+        {/*
+          Les noms des departements SOUS les pastilles : ils situent, ils ne
+          designent pas. Un nom de departement par-dessus une pastille cacherait
+          ce qu'on vient regarder.
+        */}
+        <g aria-hidden className="pointer-events-none">
+          {etiquettes.departements.map((etiquette) => (
+            <text
+              key={etiquette.cle}
+              x={etiquette.x}
+              y={etiquette.y}
+              textAnchor="middle"
+              fontSize={11 * echelle}
+              className="fill-muted-foreground"
+            >
+              {etiquette.texte}
+            </text>
           ))}
         </g>
 
@@ -279,6 +413,77 @@ export const CarteFrance = ({
               </g>
             );
           })}
+        </g>
+
+        <g aria-hidden className="pointer-events-none">
+          {etiquettes.villes.map((etiquette) => (
+            <text
+              key={etiquette.cle}
+              x={etiquette.x}
+              y={etiquette.y + etiquettes.hauteurTexte * 0.8}
+              textAnchor="middle"
+              fontSize={11 * echelle}
+              className="fill-foreground"
+              style={{
+                /* Un liseré de la couleur du fond : le nom reste lisible
+                   quand il tombe sur une frontière ou une autre pastille,
+                   sans qu'on ait à poser un rectangle derrière chaque mot. */
+                paintOrder: "stroke",
+                stroke: "var(--card)",
+                strokeWidth: 3 * echelle,
+                strokeLinejoin: "round",
+              }}
+            >
+              {etiquette.texte}
+            </text>
+          ))}
+        </g>
+
+        {/*
+          Les opportunités, une par marque, nommées et CLIQUABLES — la demande
+          de Simon du 18/10/2026. Au-dessus de tout le reste : c'est ce qu'on
+          est venu chercher à ce niveau de zoom.
+        */}
+        <g>
+          {affairesEclatees.map(({ affaire, x, y }) => (
+            <g
+              key={affaire.id}
+              className="cursor-pointer"
+              onClick={(evenement) => {
+                evenement.stopPropagation();
+                if (!aGlisse.current) onOuvrirAffaire(affaire.id);
+              }}
+            >
+              <title>
+                {affaire.company_name
+                  ? `${affaire.name} — ${affaire.company_name}`
+                  : affaire.name}
+              </title>
+              <circle
+                cx={x}
+                cy={y}
+                r={4 * echelle}
+                fill={STAGE_COLORS[affaire.stage] ?? "var(--muted-foreground)"}
+                className="stroke-card"
+                strokeWidth={1.2 * echelle}
+              />
+              <text
+                x={x}
+                y={y - 6 * echelle}
+                textAnchor="middle"
+                fontSize={10 * echelle}
+                className="fill-foreground"
+                style={{
+                  paintOrder: "stroke",
+                  stroke: "var(--card)",
+                  strokeWidth: 3 * echelle,
+                  strokeLinejoin: "round",
+                }}
+              >
+                {tronquer(affaire.name, 28)}
+              </text>
+            </g>
+          ))}
         </g>
       </svg>
 
