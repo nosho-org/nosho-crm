@@ -195,7 +195,11 @@ export const MappingPage = () => {
                 mapping.pastilles.length > 1 ? "s" : ""
               } · ${placees} opportunité${placees > 1 ? "s" : ""} placée${
                 placees > 1 ? "s" : ""
-              } sur ${retenues.length}`}
+              } sur ${retenues.length}${
+                mapping.deduites > 0
+                  ? `, dont ${mapping.deduites} d'après leur intitulé`
+                  : ""
+              }`}
         </p>
       </div>
 
@@ -275,6 +279,22 @@ const DetailVille = ({
             {pastille.arr > 0 &&
               ` · ${pastille.arr.toLocaleString("fr-FR")} ${currency === "USD" ? "$" : "€"}`}
           </p>
+          {/*
+            Dit à qui ouvre la ville ce qui s'y trouve de supposé, et où aller
+            le réparer : c'est l'adresse de la SOCIÉTÉ qui manque ou qui n'est
+            pas lisible, pas quelque chose sur l'affaire.
+          */}
+          {pastille.deduites > 0 && (
+            <p className="text-xs text-muted-foreground italic mt-0.5">
+              {pastille.deduites === pastille.nombre
+                ? pastille.nombre > 1
+                  ? "Toutes placées d'après leur intitulé, faute d'adresse exploitable sur les sociétés."
+                  : "Placée d'après son intitulé, faute d'adresse exploitable sur la société."
+                : `${pastille.deduites} placée${
+                    pastille.deduites > 1 ? "s" : ""
+                  } d'après leur intitulé, faute d'adresse exploitable sur la société.`}
+            </p>
+          )}
         </div>
         <ul className="flex flex-col gap-1">
           {pastille.affaires.map((affaire) => (
@@ -294,6 +314,14 @@ const DetailVille = ({
                 <span className="truncate">
                   {affaire.company_name || affaire.name}
                 </span>
+                {affaire.deduite && (
+                  <span
+                    className="text-muted-foreground shrink-0"
+                    title="Placée d'après son intitulé, pas d'après une adresse"
+                  >
+                    ≈
+                  </span>
+                )}
               </Link>
             </li>
           ))}

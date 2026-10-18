@@ -14,6 +14,7 @@ import {
   tronquer,
   type Boite,
 } from "./etiquettes";
+import { reperesVisibles } from "./reperes";
 import {
   CADRAGE_ENTIER,
   HAUTEUR,
@@ -280,12 +281,43 @@ export const CarteFrance = ({
       : [];
     villesPlacees.forEach((e) => prises.push(e.boite));
 
+    /*
+     * Les villes reperes en DERNIER : elles ne prennent que la place dont nos
+     * prospects n'ont pas voulu. Voir `reperes.ts` pour les trois regles qui
+     * les tiennent a leur rang.
+     */
+    const reperesPlaces = placerLesEtiquettes(
+      reperesVisibles(
+        cadrage,
+        new Set(pastillesProjetees.map(({ pastille }) => pastille.cle)),
+      ).map((repere) => ({
+        cle: repere.cle,
+        x: repere.x,
+        y: repere.y + 2.5 * echelle,
+        texte: repere.nom,
+        poids: repere.population,
+        valeur: repere,
+      })),
+      {
+        largeurParCaractere: largeurCaractere * 0.9,
+        hauteur: hauteurTexte,
+        deja: prises,
+      },
+    );
+
     return {
       departements: departementsPlaces,
       villes: villesPlacees,
+      reperes: reperesPlaces,
       hauteurTexte,
     };
-  }, [montrerDepartements, montrerVilles, pastillesProjetees, echelle]);
+  }, [
+    montrerDepartements,
+    montrerVilles,
+    pastillesProjetees,
+    cadrage,
+    echelle,
+  ]);
 
   /*
    * Les affaires eclatees en couronne autour de leur ville, au dernier seuil.
@@ -360,6 +392,40 @@ export const CarteFrance = ({
           ))}
         </g>
 
+        {/*
+          Les villes reperes : un point gris et un nom, sous nos pastilles.
+          Elles disent ou l'on est, elles ne disent rien de commercial — d'ou
+          le gris, la petite taille, et le fait qu'elles cedent la place.
+        */}
+        <g aria-hidden className="pointer-events-none">
+          {etiquettes.reperes.map((etiquette) => (
+            <g key={etiquette.cle}>
+              <circle
+                cx={etiquette.valeur.x}
+                cy={etiquette.valeur.y}
+                r={1.5 * echelle}
+                className="fill-muted-foreground"
+                opacity={0.65}
+              />
+              <text
+                x={etiquette.x}
+                y={etiquette.y + etiquettes.hauteurTexte * 0.75}
+                textAnchor="middle"
+                fontSize={9.5 * echelle}
+                className="fill-muted-foreground"
+                style={{
+                  paintOrder: "stroke",
+                  stroke: "var(--card)",
+                  strokeWidth: 2.5 * echelle,
+                  strokeLinejoin: "round",
+                }}
+              >
+                {etiquette.texte}
+              </text>
+            </g>
+          ))}
+        </g>
+
         <g>
           {pastillesProjetees.map(({ pastille, x, y, r }) => {
             const rayonAffiche = r * echelle;
@@ -384,6 +450,10 @@ export const CarteFrance = ({
                 <title>
                   {`${pastille.ville} — ${pastille.nombre} opportunité${
                     pastille.nombre > 1 ? "s" : ""
+                  }${
+                    pastille.deduites > 0
+                      ? ` (dont ${pastille.deduites} d'après l'intitulé)`
+                      : ""
                   }`}
                 </title>
                 {segments.map(({ stage, part, depart }) => (
@@ -410,6 +480,23 @@ export const CarteFrance = ({
                   }
                   strokeWidth={(estSelectionnee ? 2.2 : 0.8) * echelle}
                 />
+                {/*
+                  Un cercle POINTILLÉ quand la ville tient au moins une affaire
+                  placée d'après son intitulé. Le pointillé dit « supposé » sans
+                  qu'on ait à l'écrire : c'est la convention de tous les tracés
+                  incertains, et elle se lit sans légende.
+                */}
+                {pastille.deduites > 0 && (
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={rayonAffiche + 2.5 * echelle}
+                    fill="none"
+                    className="stroke-muted-foreground"
+                    strokeWidth={0.9 * echelle}
+                    strokeDasharray={`${2.5 * echelle} ${2 * echelle}`}
+                  />
+                )}
               </g>
             );
           })}
@@ -459,13 +546,25 @@ export const CarteFrance = ({
                   ? `${affaire.name} — ${affaire.company_name}`
                   : affaire.name}
               </title>
+              {/* Creuse quand le point vient de l'intitulé, pleine sinon. */}
               <circle
                 cx={x}
                 cy={y}
                 r={4 * echelle}
-                fill={STAGE_COLORS[affaire.stage] ?? "var(--muted-foreground)"}
-                className="stroke-card"
-                strokeWidth={1.2 * echelle}
+                fill={
+                  affaire.deduite
+                    ? "var(--card)"
+                    : (STAGE_COLORS[affaire.stage] ?? "var(--muted-foreground)")
+                }
+                stroke={
+                  STAGE_COLORS[affaire.stage] ?? "var(--muted-foreground)"
+                }
+                strokeWidth={(affaire.deduite ? 1.6 : 1.2) * echelle}
+                strokeDasharray={
+                  affaire.deduite
+                    ? `${2 * echelle} ${1.5 * echelle}`
+                    : undefined
+                }
               />
               <text
                 x={x}

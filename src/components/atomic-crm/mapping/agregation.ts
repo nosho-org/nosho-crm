@@ -1,4 +1,5 @@
 import { placer, type Point } from "./geocoder";
+import { villeDuTitre } from "./villeDuTitre";
 
 /**
  * ---------------------------------------------------------------------------
@@ -40,6 +41,17 @@ export interface AffaireLocalisable {
   company_zipcode?: string | null;
 }
 
+/**
+ * Une affaire posée sur la carte, et la façon dont elle y est arrivée.
+ *
+ * `deduite` vaut `true` quand le point ne vient pas d'une adresse mais du nom
+ * de l'opportunité. Ce n'est pas un détail d'implémentation : la carte doit
+ * pouvoir distinguer ce qu'elle sait de ce qu'elle suppose.
+ */
+export interface AffairePlacee extends AffaireLocalisable {
+  deduite: boolean;
+}
+
 export interface PartDEtape {
   stage: string;
   nombre: number;
@@ -56,7 +68,9 @@ export interface Pastille {
   arr: number;
   /** Trié comme les étapes de la configuration, pour que l'anneau soit lisible. */
   parEtape: PartDEtape[];
-  affaires: AffaireLocalisable[];
+  affaires: AffairePlacee[];
+  /** Combien de ces affaires ne doivent leur point qu'à leur intitulé. */
+  deduites: number;
 }
 
 export interface Mapping {
@@ -67,6 +81,8 @@ export interface Mapping {
   nonPlacees: AffaireLocalisable[];
   /** Le plus gros compte, pour mettre les rayons à l'échelle. */
   maximum: number;
+  /** Total des affaires placées d'après leur intitulé, toutes villes confondues. */
+  deduites: number;
 }
 
 /**
@@ -92,6 +108,18 @@ export interface Mapping {
  *   « Île-De-France » saisi dans le champ ville, un code postal étranger, une
  *   faute de frappe. C'est un travail de correction, et la liste nomme ce qui
  *   a été lu pour qu'on voie quoi corriger.
+ *
+ * ## Le repêchage par l'intitulé (Simon, 18/10/2026)
+ *
+ * « Celles qui ont un nom de ville dans leur titre, les mettre directement sur
+ * la carte au niveau de la ville concernée. » Beaucoup de ces 145 affaires
+ * portent le lieu dans leur nom — « CHU de Bordeaux », « IMRO Imagerie
+ * Limoges ». Quand l'adresse ne donne rien, `villeDuTitre` est tenté, et il
+ * récupère 28 affaires sur les 145.
+ *
+ * Ces points-là sont marqués `deduite`, et ils le restent jusqu'à l'écran :
+ * pastille cerclée de pointillés, compte annoncé à part. Une déduction qui se
+ * fond dans les faits est une erreur qu'on ne retrouve plus.
  */
 export function agreger(
   affaires: AffaireLocalisable[],
@@ -102,17 +130,24 @@ export function agreger(
     {
       point: Point;
       villes: Map<string, number>;
-      affaires: AffaireLocalisable[];
+      affaires: AffairePlacee[];
     }
   >();
   const sansAdresse: AffaireLocalisable[] = [];
   const nonPlacees: AffaireLocalisable[] = [];
 
   for (const affaire of affaires) {
-    const point = placer({
+    const adresse = placer({
       zipcode: affaire.company_zipcode,
       city: affaire.company_city,
     });
+    /*
+     * L'adresse d'abord, l'intitulé seulement à défaut — jamais l'inverse.
+     * Une société renseignée sait où elle est ; un nom d'opportunité est une
+     * supposition, et une supposition ne doit pas écraser un fait.
+     */
+    const deduit = adresse ? null : villeDuTitre(affaire.name);
+    const point = adresse ?? deduit?.point ?? null;
     if (!point) {
       const aQuelqueChose =
         Boolean((affaire.company_zipcode ?? "").trim()) ||
@@ -126,7 +161,7 @@ export function agreger(
       groupe = { point, villes: new Map(), affaires: [] };
       parPoint.set(cle, groupe);
     }
-    groupe.affaires.push(affaire);
+    groupe.affaires.push({ ...affaire, deduite: Boolean(deduit) });
     /*
      * Deux saisies peuvent désigner la même commune — « Aix En Provence » et
      * « AIX-EN-PROVENCE » tombent sur le même point. On affiche la forme la
@@ -134,7 +169,13 @@ export function agreger(
      * l'ordre de tri, donc du filtre courant, et le libellé changerait sous
      * les yeux de qui filtre.
      */
-    const ville = (affaire.company_city ?? "").trim();
+    /*
+     * Quand le point vient de l'intitule, le LIBELLE en vient aussi. Garder
+     * la ville de la societe poserait une pastille a Bordeaux sous le nom
+     * d'une ville que l'index n'a pas su placer — vu en recette le
+     * 18/10/2026 : un point sur Bordeaux intitule « Daphneyfort ».
+     */
+    const ville = deduit ? deduit.nom : (affaire.company_city ?? "").trim();
     if (ville) groupe.villes.set(ville, (groupe.villes.get(ville) ?? 0) + 1);
   }
 
@@ -171,6 +212,7 @@ export function agreger(
       arr,
       parEtape,
       affaires: groupe.affaires,
+      deduites: groupe.affaires.filter((a) => a.deduite).length,
     });
   }
 
@@ -187,6 +229,7 @@ export function agreger(
     sansAdresse,
     nonPlacees,
     maximum: pastilles.reduce((max, p) => Math.max(max, p.nombre), 0),
+    deduites: pastilles.reduce((total, p) => total + p.deduites, 0),
   };
 }
 

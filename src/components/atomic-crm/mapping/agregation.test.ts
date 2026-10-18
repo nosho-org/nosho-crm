@@ -237,3 +237,100 @@ describe("arcs", () => {
     expect(arcs([{ stage: "lead", nombre: 0 }], 0)[0].part).toBe(0);
   });
 });
+
+describe("le repêchage par l'intitulé", () => {
+  const sansLieu = { company_city: null, company_zipcode: null };
+
+  /*
+   * Simon, le 18/10/2026 : « celles qui ont un nom de ville dans leur titre,
+   * les mettre directement sur la carte au niveau de la ville concernée ».
+   */
+  it("place une affaire sans adresse d'après son nom", () => {
+    const { pastilles, sansAdresse, deduites } = agreger(
+      [{ ...affaire(1, "lead", sansLieu), name: "CHU de Bordeaux" }],
+      ETAPES,
+    );
+    expect(sansAdresse).toHaveLength(0);
+    expect(pastilles).toHaveLength(1);
+    expect(pastilles[0].ville).toBe("Bordeaux");
+    expect(pastilles[0].deduites).toBe(1);
+    expect(pastilles[0].affaires[0].deduite).toBe(true);
+    expect(deduites).toBe(1);
+  });
+
+  /*
+   * LA règle d'ordre : une supposition ne doit jamais écraser un fait. Si
+   * l'adresse dit Nice et le titre Bordeaux, c'est Nice — et sans marque de
+   * déduction, puisqu'il n'y en a pas eu.
+   */
+  it("laisse l'adresse gagner contre le titre", () => {
+    const { pastilles, deduites } = agreger(
+      [{ ...affaire(1, "lead"), name: "CHU de Bordeaux" }],
+      ETAPES,
+    );
+    expect(pastilles[0].ville).toBe("Nice");
+    expect(pastilles[0].affaires[0].deduite).toBe(false);
+    expect(deduites).toBe(0);
+  });
+
+  it("laisse sans adresse ce qu'aucun titre ne nomme", () => {
+    const { pastilles, sansAdresse, deduites } = agreger(
+      [
+        {
+          ...affaire(1, "lead", sansLieu),
+          name: "Groupement hospitalier privé",
+        },
+      ],
+      ETAPES,
+    );
+    expect(pastilles).toHaveLength(0);
+    expect(sansAdresse).toHaveLength(1);
+    expect(deduites).toBe(0);
+  });
+
+  /*
+   * Une ville peut porter les deux : la carte doit pouvoir dire laquelle de
+   * ses affaires est sûre, sinon le doute contamine tout le point.
+   */
+  it("compte à part les déduites d'une ville qui a aussi des adresses", () => {
+    const { pastilles } = agreger(
+      [
+        affaire(1, "lead", {
+          company_city: "Bordeaux",
+          company_zipcode: "33000",
+        }),
+        { ...affaire(2, "demo", sansLieu), name: "CHU de Bordeaux" },
+      ],
+      ETAPES,
+    );
+    expect(pastilles).toHaveLength(1);
+    expect(pastilles[0].nombre).toBe(2);
+    expect(pastilles[0].deduites).toBe(1);
+  });
+});
+
+/*
+ * Vu en recette le 18/10/2026 : une opportunité dont la société porte une
+ * ville que l'index ne reconnaît pas — « Daphneyfort » — mais dont le nom dit
+ * Bordeaux. Le point tombait sur Bordeaux, et la pastille s'appelait
+ * Daphneyfort. Un point juste sous un nom faux est pire qu'un point absent.
+ */
+describe("le libellé d'une pastille déduite", () => {
+  it("prend le nom de la ville déduite, pas la ville illisible de la société", () => {
+    const { pastilles } = agreger(
+      [
+        {
+          ...affaire(1, "lead", {
+            company_city: "Daphneyfort",
+            company_zipcode: "55919",
+          }),
+          name: "CHU de Bordeaux",
+        },
+      ],
+      ETAPES,
+    );
+    expect(pastilles).toHaveLength(1);
+    expect(pastilles[0].ville).toBe("Bordeaux");
+    expect(pastilles[0].deduites).toBe(1);
+  });
+});
