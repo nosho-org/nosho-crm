@@ -40,7 +40,7 @@
 
 export const SEUIL_DEPARTEMENTS = 2;
 export const SEUIL_VILLES = 3.5;
-export const SEUIL_OPPORTUNITES = 9;
+export const SEUIL_OPPORTUNITES = 5;
 
 export interface Boite {
   x: number;
@@ -136,11 +136,32 @@ export function couronne(
   rayon: number,
 ): { dx: number; dy: number }[] {
   if (nombre <= 1) return [{ dx: 0, dy: 0 }];
-  return Array.from({ length: nombre }, (_, index) => {
-    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / nombre;
-    return { dx: Math.cos(angle) * rayon, dy: Math.sin(angle) * rayon };
-  });
+
+  const positions: { dx: number; dy: number }[] = [];
+  let place = 0;
+  let anneau = 0;
+  while (place < nombre) {
+    // Un anneau plus large tient plus de monde : sa circonference grandit
+    // avec son rang, et sa capacite avec elle. Tout entasser sur un seul
+    // cercle collerait les marques des le douzieme prospect.
+    const capacite = PAR_ANNEAU * (anneau + 1);
+    const combien = Math.min(capacite, nombre - place);
+    const rayonAnneau = rayon * (anneau + 1);
+    for (let index = 0; index < combien; index++) {
+      const angle = -Math.PI / 2 + (index * 2 * Math.PI) / combien;
+      positions.push({
+        dx: Math.cos(angle) * rayonAnneau,
+        dy: Math.sin(angle) * rayonAnneau,
+      });
+    }
+    place += combien;
+    anneau++;
+  }
+  return positions;
 }
+
+/** Combien de marques tient le premier anneau ; les suivants, un multiple. */
+const PAR_ANNEAU = 8;
 
 /**
  * Le centre d'un département, pour y poser son nom.

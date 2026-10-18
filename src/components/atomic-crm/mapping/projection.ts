@@ -105,8 +105,22 @@ export const CADRAGE_ENTIER: Cadrage = {
   hauteur: HAUTEUR,
 };
 
-/** On ne descend pas sous le quartier, on ne remonte pas au-delà du pays. */
-export const ZOOM_MAX = 40;
+/**
+ * On ne remonte pas au-delà du pays, et on descend jusqu'au quartier.
+ *
+ * Simon, le 18/10/2026 : « dans les villes où il y a plein d'opportunités,
+ * faudrait aller au niveau du quartier et de la rue au niveau du zoom ». À 400,
+ * la fenêtre fait 2,5 unités de dessin, soit environ 2,9 km de large : c'est
+ * l'échelle d'un quartier, et les affaires d'une même ville y sont écartées
+ * de plusieurs centaines de pixels.
+ *
+ * **La rue, elle, n'est pas atteignable et ne le sera pas sans nouvelle
+ * donnée** : la base ne porte que le code postal de la société, jamais de
+ * coordonnées. Pousser le grossissement plus loin ne révélerait rien de plus —
+ * cela ne ferait qu'étaler une position inventée jusqu'à lui donner l'air
+ * d'une adresse.
+ */
+export const ZOOM_MAX = 400;
 export const ZOOM_MIN = 1;
 
 /**

@@ -67,6 +67,17 @@ interface Departement {
 const DEPARTEMENTS = (departements as { departements: Departement[] })
   .departements;
 
+/**
+ * Le rayon sur lequel les affaires d'une ville se répartissent, en unités du
+ * dessin — environ 1,5 km.
+ *
+ * Mille unités couvrent les quinze degrés de longitude de l'emprise, soit à
+ * peu près 1 160 km à la latitude de la France : une unité vaut donc 1,16 km.
+ * Le chiffre est choisi pour que l'amas tienne à l'écran au grossissement
+ * maximal tout en restant discret à l'échelle du pays.
+ */
+const RAYON_DISPERSION = 1.3;
+
 /** Le tracé d'un département, projeté une fois pour toutes. */
 const CHEMINS = DEPARTEMENTS.map((departement) => {
   const d = departement.polygones
@@ -231,10 +242,27 @@ export const CarteFrance = ({
     setCadrage((courant) => zoomer(courant, facteur, ancre.x, ancre.y));
   };
 
+  /**
+   * ⚠️ On ne capture PAS le pointeur ici, et c'est tout sauf un détail.
+   *
+   * `setPointerCapture` dès l'appui retargette les événements suivants vers
+   * l'élément capturant : le `pointerup` et donc le `click` arrivent sur le
+   * SVG au lieu de la pastille. Mesuré le 18/10/2026 sur un vrai clic :
+   * `pointerdown:circle`, puis `pointerup:svg`, `click:svg`. Résultat, le
+   * gestionnaire de la pastille ne se déclenchait jamais, et celui du fond
+   * effaçait la sélection dans la foulée — « c'est toujours pas cliquable ».
+   *
+   * La capture ne sert qu'à poursuivre un GLISSEMENT quand le doigt sort du
+   * dessin. On la prend donc au premier mouvement réel, dans `deplacement`,
+   * et jamais pour un simple clic.
+   *
+   * (Mes tests précédents simulaient le clic avec `dispatchEvent` sur le
+   * cercle, ce qui court-circuite exactement la partie cassée. Un vrai clic
+   * aurait montré le bug tout de suite.)
+   */
   const appui = (evenement: ReactPointerEvent<SVGSVGElement>) => {
     glissement.current = { x: evenement.clientX, y: evenement.clientY };
     aGlisse.current = false;
-    evenement.currentTarget.setPointerCapture(evenement.pointerId);
   };
 
   const deplacement = (evenement: ReactPointerEvent<SVGSVGElement>) => {
@@ -246,7 +274,14 @@ export const CarteFrance = ({
     if (rect.width === 0) return;
     const dx = evenement.clientX - depart.x;
     const dy = evenement.clientY - depart.y;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) aGlisse.current = true;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      // Le mouvement est franc : c'est un glissement, on peut capturer sans
+      // sacrifier le clic.
+      if (!aGlisse.current) {
+        aGlisse.current = true;
+        evenement.currentTarget.setPointerCapture(evenement.pointerId);
+      }
+    }
     glissement.current = { x: evenement.clientX, y: evenement.clientY };
     setCadrage((courant) =>
       glisser(
@@ -259,7 +294,10 @@ export const CarteFrance = ({
 
   const relachement = (evenement: ReactPointerEvent<SVGSVGElement>) => {
     glissement.current = null;
-    evenement.currentTarget.releasePointerCapture(evenement.pointerId);
+    // Relâcher une capture qu'on n'a pas prise lève une exception.
+    if (evenement.currentTarget.hasPointerCapture(evenement.pointerId)) {
+      evenement.currentTarget.releasePointerCapture(evenement.pointerId);
+    }
   };
 
   const recentrer = () => setCadrage(CADRAGE_ENTIER);
@@ -391,16 +429,31 @@ export const CarteFrance = ({
   ]);
 
   /*
-   * Les affaires eclatees en couronne autour de leur ville, au dernier seuil.
+   * Les affaires éclatées autour de leur ville.
    *
-   * Le rayon de la couronne grandit avec le nombre pour que deux voisines ne
-   * se touchent pas : a douze affaires, un cercle fixe les collerait.
+   * Simon, le 18/10/2026 : « dans les villes où il y a plein d'opportunités,
+   * faudrait aller au niveau du quartier et de la rue au niveau du zoom ».
+   *
+   * La dispersion est désormais GÉOGRAPHIQUE et non plus à taille d'écran
+   * constante : `RAYON_DISPERSION` vaut 1,3 unité de dessin, soit environ
+   * 1,5 km. Elle ne bouge donc pas quand on zoome, ce qui veut dire qu'à
+   * l'écran les affaires s'ÉCARTENT — un amas illisible à l'échelle du
+   * département devient, à fond de zoom, une poignée de points qu'on vise
+   * sans effort. C'est exactement ce qui manquait : avant, le rayon était
+   * multiplié par `echelle`, donc zoomer ne séparait jamais rien.
+   *
+   * Le plancher garde les marques hors de la pastille aux zooms faibles, où
+   * la dispersion géographique serait plus petite que le disque lui-même.
+   *
+   * ⚠️ Ces positions restent INVENTÉES : la base ne porte que le code postal.
+   * Une couronne régulière le dit — un nuage de points dispersés au hasard
+   * ressemblerait à de vraies adresses, ce qui serait un mensonge.
    */
   const affairesEclatees = useMemo(() => {
     if (!montrerOpportunites) return [];
     return pastillesProjetees.flatMap(({ pastille, x, y, r }) => {
       const nombre = pastille.affaires.length;
-      const rayonCouronne = (r + 9 + nombre * 1.6) * echelle;
+      const rayonCouronne = Math.max(RAYON_DISPERSION, (r + 9) * echelle);
       const positions = couronne(nombre, rayonCouronne);
       return pastille.affaires.map((affaire, index) => ({
         affaire,

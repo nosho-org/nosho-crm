@@ -162,3 +162,35 @@ describe("les seuils", () => {
     expect(SEUIL_VILLES).toBeLessThan(SEUIL_OPPORTUNITES);
   });
 });
+
+describe("couronne, au-delà d'un anneau", () => {
+  /*
+   * Simon, le 18/10/2026 : « dans les villes où il y a plein d'opportunités ».
+   * Vingt-cinq affaires sur un cercle unique se collent ; elles se répartissent
+   * donc sur des anneaux de plus en plus larges.
+   */
+  it("ouvre un second anneau quand le premier est plein", () => {
+    const positions = couronne(20, 10);
+    expect(positions).toHaveLength(20);
+    const rayons = positions.map(({ dx, dy }) =>
+      Math.round(Math.hypot(dx, dy)),
+    );
+    expect(rayons.filter((r) => r === 10)).toHaveLength(8);
+    expect(rayons.filter((r) => r === 20)).toHaveLength(12);
+  });
+
+  it("garde un anneau unique tant qu'il suffit", () => {
+    for (const { dx, dy } of couronne(8, 10)) {
+      expect(Math.hypot(dx, dy)).toBeCloseTo(10, 6);
+    }
+  });
+
+  /* Deux marques ne doivent jamais partager un point : on ne pourrait en viser qu'une. */
+  it("ne superpose aucune marque", () => {
+    const positions = couronne(25, 10);
+    const vues = new Set(
+      positions.map(({ dx, dy }) => `${dx.toFixed(3)},${dy.toFixed(3)}`),
+    );
+    expect(vues.size).toBe(25);
+  });
+});
